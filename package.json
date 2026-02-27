@@ -1,17 +1,48 @@
 {
+  "name": "cre",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "dashboard": "npm run dev --prefix cre-dashboard",
-    "dashboard:build": "npm run build --prefix cre-dashboard",
-    "dashboard:start": "npm run start --prefix cre-dashboard",
+    "dev": "set NEXT_DISABLE_TURBOPACK=1&& next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
     "prisma:generate": "npx prisma generate --schema prisma/schema.prisma",
     "prisma:validate": "npx prisma validate --schema prisma/schema.prisma",
     "prisma:pull": "npx prisma db pull --schema prisma/schema.prisma",
     "engine:test": "node lib/engine.ts"
   },
   "dependencies": {
-    "pg": "^8.18.0"
+    "@prisma/adapter-pg": "^7.4.1",
+    "@prisma/client": "^7.4.1",
+    "@prisma/config": "^7.4.1",
+    "@tanstack/react-query": "^5.90.21",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.3.1",
+    "jose": "^5.9.6",
+    "katex": "^0.16.33",
+    "lucide-react": "^0.575.0",
+    "next": "16.1.6",
+    "pg": "^8.18.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-katex": "^3.1.0"
   },
   "devDependencies": {
-    "prisma": "^7.4.1"
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^20",
+    "@types/pg": "^8.16.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/react-katex": "^3.0.4",
+    "autoprefixer": "^10.4.24",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "postcss": "^8.5.6",
+    "prisma": "^7.4.1",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5"
   }
 }

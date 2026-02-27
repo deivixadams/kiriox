@@ -14,13 +14,48 @@ model SecurityUser {
   tenantId      String   @map("tenant_id") @db.Uuid
   email         String   @unique
   passwordHash  String   @map("password_hash")
-  fullName      String?  @map("full_name")
+  name          String?  @map("name")
+  lastName      String?  @map("last_name")
+  whatsapp      String?  @map("whatsapp")
   roleCode      String   @map("role_code")
   isActive      Boolean  @default(true) @map("is_active")
+  mustChangePassword Boolean @default(true) @map("must_change_password")
+  lastLoginAt   DateTime? @map("last_login_at")
+  passwordUpdatedAt DateTime? @map("password_updated_at")
+  activationStatus String @default("pending") @map("activation_status")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @default(now()) @map("updated_at")
 
   @@map("security_users")
+}
+
+model SecurityUserScope {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  jurisdictionId    String?  @map("jurisdiction_id") @db.Uuid
+  frameworkVersionId String? @map("framework_version_id") @db.Uuid
+  domainId          String?  @map("domain_id") @db.Uuid
+  isAllowed         Boolean  @default(true) @map("is_allowed")
+  createdAt         DateTime @default(now()) @map("created_at")
+  createdBy         String?  @map("created_by") @db.Uuid
+
+  @@unique([userId, jurisdictionId, frameworkVersionId, domainId])
+  @@map("security_user_scope")
+}
+
+model SecurityUserToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @map("token_hash")
+  tokenType String   @map("token_type")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  @@index([userId], name: "idx_security_user_token_user")
+  @@index([expiresAt], name: "idx_security_user_token_exp")
+  @@map("security_user_token")
 }
 
 model SecurityRbac {
@@ -140,10 +175,13 @@ model CorpusFrameworkVersion {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   frameworkId String   @map("framework_id") @db.Uuid
   version     String
+  effectiveDate DateTime? @map("effective_date") @db.Date
+  changelog   String?
   status      String   @default("active")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-
+  statusId    Int?     @map("status_id") @db.SmallInt
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime? @map("updated_at") @db.Timestamptz
+  
   framework   CorpusFramework @relation(fields: [frameworkId], references: [id])
   assessments CorpusAssessment[]
   modelRuns   CorpusModelRun[]
