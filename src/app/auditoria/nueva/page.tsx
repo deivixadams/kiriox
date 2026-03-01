@@ -14,6 +14,7 @@ import ExtensionsStep from './_components/ExtensionsStep';
 const TOTAL_STEPS = 7;
 
 type Option = { id: string; name: string; code?: string; frameworkId?: string; jurisdictionId?: string; version?: string };
+type UserOption = { id: string; label: string; email?: string };
 
 type ActaData = {
   entidad_nombre: string;
@@ -24,7 +25,9 @@ type ActaData = {
   marco_normativo: string;
   metodologia: string;
   lider_equipo: string;
+  lider_equipo_id?: string;
   auditores: string;
+  auditores_ids?: string[];
   cronograma: { hito: string; fecha: string }[];
 };
 
@@ -96,7 +99,9 @@ function buildDefaultActa(): ActaData {
     marco_normativo: '',
     metodologia: '',
     lider_equipo: '',
+    lider_equipo_id: '',
     auditores: '',
+    auditores_ids: [],
     cronograma: [
       { hito: 'Inicio Auditoria', fecha: `${yyyy}-02-15` },
       { hito: 'Trabajo de Campo', fecha: `${yyyy}-03-01` },
@@ -123,6 +128,7 @@ export default function AuditoriaWizardPage() {
     { jurisdictions: [], frameworks: [], versions: [], companies: [] }
   );
   const [domainCatalog, setDomainCatalog] = useState<{ id: string; name: string }[]>([]);
+  const [companyUsers, setCompanyUsers] = useState<UserOption[]>([]);
   const [scopeState, setScopeState] = useState<ScopeState>({ domainIds: [], obligationIds: [], derivedCounts: defaultCounts });
   const [windowStart, setWindowStart] = useState('');
   const [windowEnd, setWindowEnd] = useState('');
@@ -286,6 +292,52 @@ export default function AuditoriaWizardPage() {
       setActa((prev) => ({ ...prev, entidad_nombre: selected.name }));
     }
   }, [context.companyId, options.companies, acta.entidad_nombre, autoEntidad]);
+
+  useEffect(() => {
+    if (!context.companyId) {
+      setCompanyUsers([]);
+      return;
+    }
+    const loadUsers = async () => {
+      try {
+        const res = await fetch(`/api/audit/team-users?company_id=${context.companyId}`);
+        if (!res.ok) {
+          setCompanyUsers([]);
+          return;
+        }
+        const data = await res.json();
+        const options = Array.isArray(data)
+          ? data.map((u: any) => ({
+              id: u.id,
+              label: [u.name, u.lastName].filter(Boolean).join(' ') || u.email || 'Sin nombre',
+              email: u.email
+            }))
+          : [];
+        setCompanyUsers(options);
+
+        setActa((prev) => {
+          let next = { ...prev };
+          if (next.lider_equipo_id && !options.some((o) => o.id === next.lider_equipo_id)) {
+            next.lider_equipo_id = '';
+            next.lider_equipo = '';
+          }
+          if (Array.isArray(next.auditores_ids) && next.auditores_ids.length > 0) {
+            const filteredIds = next.auditores_ids.filter((id) => options.some((o) => o.id === id));
+            if (filteredIds.length !== next.auditores_ids.length) {
+              const names = options.filter((o) => filteredIds.includes(o.id)).map((o) => o.label).join(', ');
+              next.auditores_ids = filteredIds;
+              next.auditores = names;
+            }
+          }
+          return next;
+        });
+      } catch (error) {
+        console.error('Error loading team users:', error);
+        setCompanyUsers([]);
+      }
+    };
+    loadUsers();
+  }, [context.companyId]);
 
   useEffect(() => {
     if (context.jurisdictionId && context.frameworkId && context.frameworkVersionId) return;
@@ -467,6 +519,7 @@ export default function AuditoriaWizardPage() {
           acta={acta}
           context={{ companyId: context.companyId }}
           companies={options.companies}
+          teamUsers={companyUsers}
           onChangeActa={setActa}
           onChangeContext={(next) => setContext((prev) => ({ ...prev, ...next }))}
           onAI={handleAI}

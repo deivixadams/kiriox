@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Calendar,
   Clock,
@@ -11,6 +11,7 @@ import {
 import styles from './ActaStep.module.css';
 
 type Option = { id: string; name: string };
+type UserOption = { id: string; label: string; email?: string };
 
 type ActaData = {
   entidad_nombre: string;
@@ -21,7 +22,9 @@ type ActaData = {
   marco_normativo: string;
   metodologia: string;
   lider_equipo: string;
+  lider_equipo_id?: string;
   auditores: string;
+  auditores_ids?: string[];
   cronograma: { hito: string; fecha: string }[];
 };
 
@@ -33,6 +36,7 @@ type ActaStepProps = {
   acta: ActaData;
   context: ContextState;
   companies: Option[];
+  teamUsers: UserOption[];
   onChangeActa: (next: ActaData) => void;
   onChangeContext: (next: Partial<ContextState>) => void;
   onAI: (field: string, promptCode: string) => void;
@@ -46,6 +50,7 @@ export default function ActaStep({
   acta,
   context,
   companies,
+  teamUsers,
   onChangeActa,
   onChangeContext,
   onAI,
@@ -54,6 +59,73 @@ export default function ActaStep({
   onGenerateActa,
   onNext
 }: ActaStepProps) {
+  const [leaderOpen, setLeaderOpen] = useState(false);
+  const [leaderQuery, setLeaderQuery] = useState('');
+  const [auditorOpen, setAuditorOpen] = useState(false);
+  const [auditorQuery, setAuditorQuery] = useState('');
+  const teamDisabled = !context.companyId;
+
+  const leaderOptions = useMemo(() => {
+    const query = leaderQuery.trim().toLowerCase();
+    if (!query) return teamUsers;
+    return teamUsers.filter((u) => u.label.toLowerCase().includes(query));
+  }, [teamUsers, leaderQuery]);
+
+  const auditorOptions = useMemo(() => {
+    const query = auditorQuery.trim().toLowerCase();
+    if (!query) return teamUsers;
+    return teamUsers.filter((u) => u.label.toLowerCase().includes(query));
+  }, [teamUsers, auditorQuery]);
+
+  const selectedLeader = useMemo(
+    () => teamUsers.find((u) => u.id === acta.lider_equipo_id),
+    [teamUsers, acta.lider_equipo_id]
+  );
+
+  const selectedAuditorIds = acta.auditores_ids || [];
+  const selectedAuditors = useMemo(
+    () => teamUsers.filter((u) => selectedAuditorIds.includes(u.id)),
+    [teamUsers, selectedAuditorIds]
+  );
+
+  const applyLeader = (user: UserOption | null) => {
+    onChangeActa({
+      ...acta,
+      lider_equipo_id: user?.id || '',
+      lider_equipo: user?.label || ''
+    });
+    setLeaderOpen(false);
+    setLeaderQuery('');
+  };
+
+  const toggleAuditor = (user: UserOption) => {
+    const exists = selectedAuditorIds.includes(user.id);
+    const nextIds = exists
+      ? selectedAuditorIds.filter((id) => id !== user.id)
+      : [...selectedAuditorIds, user.id];
+    const names = teamUsers
+      .filter((u) => nextIds.includes(u.id))
+      .map((u) => u.label)
+      .join(', ');
+    onChangeActa({
+      ...acta,
+      auditores_ids: nextIds,
+      auditores: names
+    });
+  };
+
+  const removeAuditor = (id: string) => {
+    const nextIds = selectedAuditorIds.filter((auditorId) => auditorId !== id);
+    const names = teamUsers
+      .filter((u) => nextIds.includes(u.id))
+      .map((u) => u.label)
+      .join(', ');
+    onChangeActa({
+      ...acta,
+      auditores_ids: nextIds,
+      auditores: names
+    });
+  };
   return (
     <div className={styles.root}>
       <div className={styles.body}>
@@ -159,19 +231,123 @@ export default function ActaStep({
               </h3>
               <div className={styles.fieldStack}>
                 <FormField label="Lider de Proyecto">
-                  <input
-                    type="text"
-                    value={acta.lider_equipo}
-                    onChange={(e) => onChangeActa({ ...acta, lider_equipo: e.target.value })}
-                    className={styles.input}
-                  />
+                  <div className={styles.combo}>
+                    <button
+                      type="button"
+                      className={`${styles.comboButton} ${teamDisabled ? styles.comboButtonDisabled : ''}`}
+                      onClick={() => {
+                        if (teamDisabled) return;
+                        setLeaderOpen((prev) => !prev);
+                        setAuditorOpen(false);
+                      }}
+                      disabled={teamDisabled}
+                    >
+                      <span className={selectedLeader ? styles.comboValue : styles.comboPlaceholder}>
+                        {selectedLeader?.label || (teamDisabled ? 'Seleccione empresa primero' : 'Seleccione un usuario')}
+                      </span>
+                      <span className={styles.comboCaret}>▾</span>
+                    </button>
+                    {leaderOpen && (
+                      <div className={styles.comboMenu}>
+                        <input
+                          className={styles.comboSearch}
+                          placeholder="Buscar usuario..."
+                          value={leaderQuery}
+                          onChange={(e) => setLeaderQuery(e.target.value)}
+                        />
+                        <div className={styles.comboOptions}>
+                          {leaderOptions.length === 0 && (
+                            <div className={styles.comboEmpty}>Sin resultados</div>
+                          )}
+                          {leaderOptions.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              className={styles.comboOption}
+                              onClick={() => applyLeader(user)}
+                            >
+                              {user.label}
+                            </button>
+                          ))}
+                          {selectedLeader && (
+                            <button
+                              type="button"
+                              className={styles.comboOptionMuted}
+                              onClick={() => applyLeader(null)}
+                            >
+                              Quitar seleccion
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </FormField>
                 <FormField label="Auditores Asignados">
-                  <textarea
-                    value={acta.auditores}
-                    onChange={(e) => onChangeActa({ ...acta, auditores: e.target.value })}
-                    className={styles.textarea}
-                  />
+                  <div className={styles.combo}>
+                    <button
+                      type="button"
+                      className={`${styles.comboButton} ${teamDisabled ? styles.comboButtonDisabled : ''}`}
+                      onClick={() => {
+                        if (teamDisabled) return;
+                        setAuditorOpen((prev) => !prev);
+                        setLeaderOpen(false);
+                      }}
+                      disabled={teamDisabled}
+                    >
+                      <div className={styles.comboTags}>
+                        {selectedAuditors.length === 0 && (
+                          <span className={styles.comboPlaceholder}>
+                            {teamDisabled ? 'Seleccione empresa primero' : 'Seleccione usuarios'}
+                          </span>
+                        )}
+                        {selectedAuditors.map((auditor) => (
+                          <span key={auditor.id} className={styles.comboTag}>
+                            {auditor.label}
+                            <button
+                              type="button"
+                              className={styles.comboTagRemove}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeAuditor(auditor.id);
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <span className={styles.comboCaret}>▾</span>
+                    </button>
+                    {auditorOpen && (
+                      <div className={styles.comboMenu}>
+                        <input
+                          className={styles.comboSearch}
+                          placeholder="Buscar usuario..."
+                          value={auditorQuery}
+                          onChange={(e) => setAuditorQuery(e.target.value)}
+                        />
+                        <div className={styles.comboOptions}>
+                          {auditorOptions.length === 0 && (
+                            <div className={styles.comboEmpty}>Sin resultados</div>
+                          )}
+                          {auditorOptions.map((user) => {
+                            const active = selectedAuditorIds.includes(user.id);
+                            return (
+                              <button
+                                key={user.id}
+                                type="button"
+                                className={active ? styles.comboOptionActive : styles.comboOption}
+                                onClick={() => toggleAuditor(user)}
+                              >
+                                {active ? '✓ ' : ''}{user.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </FormField>
               </div>
             </div>
