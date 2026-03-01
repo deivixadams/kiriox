@@ -237,7 +237,11 @@ export default function ActaStep({
                       className={`${styles.comboButton} ${teamDisabled ? styles.comboButtonDisabled : ''}`}
                       onClick={() => {
                         if (teamDisabled) return;
-                        setLeaderOpen((prev) => !prev);
+                        setLeaderOpen((prev) => {
+                          const next = !prev;
+                          if (next) setLeaderQuery('');
+                          return next;
+                        });
                         setAuditorOpen(false);
                       }}
                       disabled={teamDisabled}
@@ -290,7 +294,11 @@ export default function ActaStep({
                       className={`${styles.comboButton} ${teamDisabled ? styles.comboButtonDisabled : ''}`}
                       onClick={() => {
                         if (teamDisabled) return;
-                        setAuditorOpen((prev) => !prev);
+                        setAuditorOpen((prev) => {
+                          const next = !prev;
+                          if (next) setAuditorQuery('');
+                          return next;
+                        });
                         setLeaderOpen(false);
                       }}
                       disabled={teamDisabled}
@@ -320,7 +328,7 @@ export default function ActaStep({
                       <span className={styles.comboCaret}>▾</span>
                     </button>
                     {auditorOpen && (
-                      <div className={styles.comboMenu}>
+                      <div className={`${styles.comboMenu} ${styles.comboMenuUp}`}>
                         <input
                           className={styles.comboSearch}
                           placeholder="Buscar usuario..."

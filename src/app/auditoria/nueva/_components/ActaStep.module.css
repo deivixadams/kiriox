@@ -367,7 +367,12 @@
   border-radius: 12px;
   padding: 10px;
   box-shadow: 0 18px 30px rgba(15, 23, 42, 0.6);
-  z-index: 20;
+  z-index: 40;
+}
+
+.comboMenuUp {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 .comboSearch {
@@ -383,8 +388,9 @@
 }
 
 .comboOptions {
-  max-height: 190px;
+  max-height: 320px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 6px;
