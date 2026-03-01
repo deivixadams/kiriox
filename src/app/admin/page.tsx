@@ -42,7 +42,7 @@ const adminModules = [
         title: "Parámetros del Motor",
         description: "Gestión de pesos Wi, constantes α/β/γ y gatillos no compensables.",
         icon: Calculator,
-        href: "/admin/parametros",
+        href: "/modelo/parametros",
         color: "#db2777"
     }
 ];

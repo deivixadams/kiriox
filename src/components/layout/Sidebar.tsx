@@ -4,14 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-    Home,
     PlayCircle,
     ShieldCheck,
     Network,
     ChevronLeft,
     ChevronRight,
     ChevronDown,
-    Settings,
     Calculator,
     Shield,
     BarChart3,
@@ -20,7 +18,11 @@ import {
     RefreshCw,
     ClipboardList,
     Activity,
-    Sigma
+    Sigma,
+    TrendingUp,
+    AlertTriangle,
+    Layers,
+    CheckSquare
 } from "lucide-react";
 
 interface MenuItem {
@@ -38,50 +40,63 @@ interface MenuSection {
 
 const institutionalMenu: MenuSection[] = [
     {
-        id: "operacion",
-        title: "OPERACIÓN",
+        id: "score",
+        title: "SCORE",
         items: [
-            { icon: Home, label: "Inicio", href: "/", tooltip: "Vista ejecutiva del estado actual del programa AML." },
-            { icon: BarChart3, label: "Score", href: "/score", tooltip: "Exposición estructural y readiness por empresa o unidad." },
-            { icon: PlayCircle, label: "Evaluación", href: "/runs", tooltip: "Evaluación periódica de controles y obligaciones." },
-            { icon: ClipboardList, label: "Auditoría", href: "/auditoria", tooltip: "Módulo de auditoría y validación de hallazgos." },
-            { icon: Shield, label: "Riesgos y Controles", href: "/riesgos", tooltip: "Mapa estructural de mitigación y dependencias." },
-            { icon: ShieldCheck, label: "Evidencia", href: "/evidencia", tooltip: "Inventario de evidencia versionada y trazable." },
+            { icon: BarChart3, label: "Score", href: "/score/score", tooltip: "Resumen general del score." },
+            { icon: BarChart3, label: "Dashboard", href: "/score/dashboard", tooltip: "Vista ejecutiva unificada del score." },
+            { icon: PlayCircle, label: "Motor", href: "/score/motor", tooltip: "Motor de calculo y ejecucion de corridas." },
+            { icon: Activity, label: "Simulacion", href: "/score/simulacion", tooltip: "Simulaciones del motor y escenarios." },
+            { icon: Sigma, label: "Historico", href: "/score/historico", tooltip: "Historial de scores y corridas." },
         ]
     },
     {
-        id: "gobierno",
-        title: "GOBIERNO",
+        id: "validacion",
+        title: "VALIDACION",
         items: [
-            { icon: Calculator, label: "Gobernanza del Modelo", href: "/gobernanza/parametros", tooltip: "Parametrización oficial del motor y perfiles regulatorios." },
-            { icon: ClipboardList, label: "Comité y Decisiones", href: "/gobierno/decisiones", tooltip: "Registro formal de decisiones y actas del comité." },
+            { icon: ClipboardList, label: "Auditorias", href: "/validacion/auditorias", tooltip: "Modulo de auditoria y validacion." },
+            { icon: CheckSquare, label: "Checklists", href: "/validacion/checklists", tooltip: "Listas de verificacion y seguimiento." },
+            { icon: ShieldCheck, label: "Pruebas", href: "/validacion/pruebas", tooltip: "Ejecucion de pruebas y resultados." },
+            { icon: ShieldCheck, label: "Evidencia", href: "/validacion/evidencia", tooltip: "Evidencia versionada y trazable." },
+            { icon: AlertTriangle, label: "Hallazgos", href: "/validacion/hallazgos", tooltip: "Gestion de hallazgos." },
+            { icon: Users, label: "Auditados", href: "/validacion/auditados", tooltip: "Entidades auditadas y monitoreadas." },
         ]
     },
     {
-        id: "norma",
-        title: "NORMA",
+        id: "inteligencia",
+        title: "INTELIGENCIA",
         items: [
-            { icon: Network, label: "Corpus Normativo", href: "/back-office/corpus", tooltip: "Marco regulatorio estructurado por dominio y obligación." },
-            { icon: Sigma, label: "Metodología y Matemática", href: "/settings/methodology", tooltip: "Modelo matemático y lógica determinista del motor." },
+            { icon: TrendingUp, label: "Benchmark", href: "/score/dashboard", tooltip: "Comparativos y referencias externas." },
+            { icon: TrendingUp, label: "Tendencias", href: "/score/dashboard", tooltip: "Evolucion de score y senales." },
+            { icon: AlertTriangle, label: "Alertas", href: "/score/dashboard", tooltip: "Alertas e indicadores tempranos." },
+            { icon: Layers, label: "Comparativos", href: "/score/dashboard", tooltip: "Comparativos entre unidades y periodos." },
+        ]
+    },
+    {
+        id: "modelo",
+        title: "MODELO",
+        items: [
+            { icon: Network, label: "Corpus", href: "/modelo/corpus", tooltip: "Corpus regulatorio estructurado." },
+            { icon: Shield, label: "Parametros", href: "/modelo/parametros", tooltip: "Riesgos y controles del modelo." },
+            { icon: Calculator, label: "Versionado", href: "/modelo/versionado", tooltip: "Versiones y perfiles del modelo." },
+            { icon: ClipboardList, label: "Gobernanza", href: "/modelo/gobernanza", tooltip: "Gobernanza y decisiones del modelo." },
         ]
     },
     {
         id: "administracion",
-        title: "ADMINISTRACIÓN",
+        title: "ADMINISTRACION",
         items: [
-            { icon: Lock, label: "Configuración", href: "/admin", tooltip: "Gestión de accesos y permisos." },
-            { icon: Activity, label: "Continuidad", href: "/admin/continuidad", tooltip: "Configuración de respaldo, trazabilidad y resiliencia." },
+            { icon: Lock, label: "Configuracion", href: "/admin", tooltip: "Gestion de accesos y configuracion." },
+            { icon: RefreshCw, label: "Continuidad", href: "/admin/continuidad", tooltip: "Respaldo, trazabilidad y resiliencia." },
         ]
     }
 ];
 
 export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
-    // Closed by default as per requirement
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const pathname = usePathname();
 
-    // Persist expanded state in session (optional but mentioned in requirements)
     useEffect(() => {
         const saved = sessionStorage.getItem('sidebar_expanded');
         if (saved) {
@@ -116,7 +131,6 @@ export default function Sidebar() {
                 zIndex: 100
             }}
         >
-            {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.75rem', marginBottom: '2rem' }}>
                 {!collapsed && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -134,7 +148,6 @@ export default function Sidebar() {
                 </button>
             </div>
 
-            {/* Navigation */}
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto', overflowX: 'hidden' }}>
                 {institutionalMenu.map((section) => (
                     <div key={section.id} style={{ marginBottom: '0.5rem' }}>
@@ -183,9 +196,9 @@ export default function Sidebar() {
                                 const isActive = pathname === item.href;
                                 return (
                                     <Link
-                                        key={item.href}
+                                        key={item.href + item.label}
                                         href={item.href}
-                                        title={item.tooltip} // Built-in tooltip
+                                        title={item.tooltip}
                                         className={`sidebar-link ${isActive ? 'active' : ''}`}
                                         style={{
                                             display: 'flex',
@@ -214,28 +227,6 @@ export default function Sidebar() {
                 ))}
             </nav>
 
-            {/* Footer */}
-            <div style={{ padding: '0.75rem', borderTop: '1px solid var(--glass-border)', marginTop: '0.5rem' }}>
-                <Link
-                    href="/settings"
-                    title="Ajustes globales del sistema"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem',
-                        padding: '0.75rem',
-                        borderRadius: '12px',
-                        color: 'var(--foreground)',
-                        textDecoration: 'none',
-                        fontSize: '0.85rem'
-                    }}
-                >
-                    <Settings size={20} color="var(--primary)" />
-                    {!collapsed && <span>Ajustes</span>}
-                </Link>
-            </div>
-
-            {/* Injected custom styles for hover/scroll */}
             <style jsx global>{`
                 .sidebar-section-header:hover {
                     background: rgba(255, 255, 255, 0.05);

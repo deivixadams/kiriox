@@ -10,9 +10,9 @@ import {
     ArrowRight,
     ChevronDown,
 } from "lucide-react";
-import FormulaBlock from "../../../components/methodology/FormulaBlock";
-import ParamsTable from "../../../components/methodology/ParamsTable";
-import MethodSteps from "../../../components/methodology/MethodSteps";
+import FormulaBlock from "../../../../components/methodology/FormulaBlock";
+import ParamsTable from "../../../../components/methodology/ParamsTable";
+import MethodSteps from "../../../../components/methodology/MethodSteps";
 import styles from "./methodology.module.css";
 
 const defaultParams = [

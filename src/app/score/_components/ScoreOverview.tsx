@@ -35,13 +35,13 @@ const mockAssessments = [
     }
 ];
 
-export default function ScorePage() {
+export default function ScoreOverview() {
     return (
         <div className="animate-fade-in">
             <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <BarChart3 className="text-primary" />
-                    <h1 className="gradient-text" style={{ fontSize: '2rem', margin: 0 }}>Gestión de Score Ejecutivo</h1>
+                    <h1 className="gradient-text" style={{ fontSize: '2rem', margin: 0 }}>Gestion de Score Ejecutivo</h1>
                 </div>
                 <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Plus size={18} /> Nuevo Assessment
@@ -92,7 +92,7 @@ export default function ScorePage() {
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '3rem' }}>
                                 <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>Último Score Calificado</div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>Ultimo Score Calificado</div>
                                     <div style={{
                                         fontSize: '1.75rem',
                                         fontWeight: 800,
@@ -115,11 +115,10 @@ export default function ScorePage() {
             <div style={{ marginTop: '3rem', padding: '1.5rem', borderLeft: '3px solid var(--primary)', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '0 12px 12px 0' }}>
                 <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: 'var(--primary)' }}>Nota de Integridad</h4>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)', lineHeight: '1.5' }}>
-                    Cada score representa un <strong>ModelRun</strong> inmutable. Los resultados están vinculados a un
-                    <em>ParameterSet</em> congelado y evidencia versionada. Ningún score puede ser alterado una vez ejecutada la corrida.
+                    Cada score representa un <strong>ModelRun</strong> inmutable. Los resultados estan vinculados a un
+                    <em>ParameterSet</em> congelado y evidencia versionada. Ningun score puede ser alterado una vez ejecutada la corrida.
                 </p>
             </div>
         </div>
     );
 }
-

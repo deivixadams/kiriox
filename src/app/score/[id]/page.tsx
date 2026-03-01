@@ -43,7 +43,7 @@ export default function AssessmentDetailPage({ params }: { params: { id: string 
         <div className="animate-fade-in">
             {/* Header / Breadcrumbs */}
             <div style={{ marginBottom: '2rem' }}>
-                <Link href="/score" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--muted)', textDecoration: 'none', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                <Link href="/score/historico" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--muted)', textDecoration: 'none', fontSize: '0.9rem', marginBottom: '1rem' }}>
                     <ArrowLeft size={16} /> Volver a Expedientes
                 </Link>
 
@@ -160,7 +160,7 @@ export default function AssessmentDetailPage({ params }: { params: { id: string 
                         <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 600 }}>
                             <CheckCircle2 className="text-secondary" size={22} /> ModelRuns Inmutables
                         </h2>
-                        <Link href={`/score/${params.id}/runs`} style={{ fontSize: '0.85rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Ver Historial</Link>
+                        <Link href="/score/historico" style={{ fontSize: '0.85rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Ver Historial</Link>
                     </div>
 
                     <div style={{ display: 'grid', gap: '1rem' }}>
@@ -242,4 +242,3 @@ export default function AssessmentDetailPage({ params }: { params: { id: string 
         </div>
     );
 }
-

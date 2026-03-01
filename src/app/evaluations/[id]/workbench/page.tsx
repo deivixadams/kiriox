@@ -203,7 +203,7 @@ const AuditBanner = ({ findings }: { findings: any[] }) => {
                     Existen {openFindings.length} hallazgos abiertos impactando el score determinista.
                 </span>
             </div>
-            <Link href={`/auditoria/evaluations/${openFindings[0].evaluationId}/findings`} style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ef4444', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Link href={`/validacion/hallazgos?evaluationId=${openFindings[0].evaluationId}`} style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ef4444', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 REVISAR IMPACTO <ChevronRight size={14} />
             </Link>
         </div>

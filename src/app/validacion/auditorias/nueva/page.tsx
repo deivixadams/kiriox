@@ -478,12 +478,12 @@ export default function AuditoriaWizardPage() {
     await fetch('/api/auth/csrf');
     const res = await fetch(`/api/audit/drafts/${draftId}/materialize`, { method: 'POST' });
     if (res.ok) {
-      router.push('/auditoria');
+      router.push('/validacion/auditorias');
     }
   };
 
   const handleClose = () => {
-    router.push('/auditoria');
+    router.push('/validacion/auditorias');
   };
 
   const stepTitle = useMemo(() => {

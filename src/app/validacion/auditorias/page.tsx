@@ -63,7 +63,7 @@ export default function AuditDashboard() {
                 </div>
 
                 <Link
-                    href="/auditoria/nueva"
+                    href="/validacion/auditorias/nueva"
                     className="btn-primary"
                     style={{
                         padding: '0.85rem 1.75rem',
@@ -122,7 +122,7 @@ export default function AuditDashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {assessments.map((audit) => (
                         <Link
-                            href={`/auditoria/${audit.id}`}
+                            href={`/validacion/auditorias/${audit.id}`}
                             key={audit.id}
                             style={{ textDecoration: 'none' }}
                         >
