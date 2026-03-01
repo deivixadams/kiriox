@@ -133,7 +133,7 @@ export default function AuditoriaWizardPage() {
   const [extensions, setExtensions] = useState<ExtensionItem[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [aiLoadingField, setAiLoadingField] = useState<string | null>(null);
+  const [aiLoadingFields, setAiLoadingFields] = useState<Record<string, boolean>>({});
   const [generatingQuestionnaire, setGeneratingQuestionnaire] = useState(false);
   const [generatingGuide, setGeneratingGuide] = useState(false);
 
@@ -144,7 +144,7 @@ export default function AuditoriaWizardPage() {
   const initializedRef = useRef(false);
 
   const loadContextOptions = useCallback(async () => {
-    const res = await fetch('/api/audit/context');
+    const res = await fetch('/api/superintendence/context');
     if (!res.ok) return;
     const data = await res.json();
     setOptions({
@@ -281,12 +281,29 @@ export default function AuditoriaWizardPage() {
   useEffect(() => {
     if (!context.companyId) return;
     const selected = options.companies.find((c) => c.id === context.companyId);
-    if (!selected) return;
-    if (!acta.entidad_nombre || acta.entidad_nombre === autoEntidad) {
+    if (selected && (!acta.entidad_nombre || acta.entidad_nombre === autoEntidad)) {
       setAutoEntidad(selected.name);
       setActa((prev) => ({ ...prev, entidad_nombre: selected.name }));
     }
   }, [context.companyId, options.companies, acta.entidad_nombre, autoEntidad]);
+
+  useEffect(() => {
+    if (context.jurisdictionId && context.frameworkId && context.frameworkVersionId) return;
+    if (options.jurisdictions.length === 0 || options.versions.length === 0) return;
+
+    const rd = options.jurisdictions.find(
+      (j) => j.code === 'DO' || j.name.toLowerCase().includes('dominicana')
+    );
+    const version = options.versions[0];
+    const frameworkId = version?.frameworkId || options.frameworks[0]?.id || '';
+
+    setContext((prev) => ({
+      ...prev,
+      jurisdictionId: prev.jurisdictionId || rd?.id || options.jurisdictions[0]?.id || '',
+      frameworkId: prev.frameworkId || frameworkId,
+      frameworkVersionId: prev.frameworkVersionId || version?.id || '',
+    }));
+  }, [options.jurisdictions, options.versions, options.frameworks, context.jurisdictionId, context.frameworkId, context.frameworkVersionId]);
 
   useEffect(() => {
     if (!context.frameworkId || !context.frameworkVersionId) return;
@@ -300,25 +317,25 @@ export default function AuditoriaWizardPage() {
     }
   }, [context.frameworkId, context.frameworkVersionId, options.frameworks, options.versions, acta.marco_normativo, autoMarco]);
 
-  const handleAI = async (field: string) => {
-    setAiLoadingField(field);
+  const handleAI = async (field: string, promptCode: string) => {
+    setAiLoadingFields((prev) => ({ ...prev, [field]: true }));
     try {
       const res = await fetch('/api/ai/refine-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: (acta as any)[field] || '', field })
+        body: JSON.stringify({ text: (acta as any)[field] || '', field, promptCode })
       });
       const data = await res.json();
       if (data.refinedText) {
         setActa((prev) => ({ ...prev, [field]: data.refinedText }));
       }
     } finally {
-      setAiLoadingField(null);
+      setAiLoadingFields((prev) => ({ ...prev, [field]: false }));
     }
   };
 
   const handleObjectivesAI = async () => {
-    setAiLoadingField('objetivos');
+    setAiLoadingFields((prev) => ({ ...prev, objetivos: true }));
     try {
       const res = await fetch('/api/ai/refine-text', {
         method: 'POST',
@@ -330,7 +347,7 @@ export default function AuditoriaWizardPage() {
         setObjectivesText(data.refinedText);
       }
     } finally {
-      setAiLoadingField(null);
+      setAiLoadingFields((prev) => ({ ...prev, objetivos: false }));
     }
   };
 
@@ -453,7 +470,7 @@ export default function AuditoriaWizardPage() {
           onChangeActa={setActa}
           onChangeContext={(next) => setContext((prev) => ({ ...prev, ...next }))}
           onAI={handleAI}
-          aiLoadingField={aiLoadingField}
+          aiLoadingFields={aiLoadingFields}
           onSave={handleSave}
           onGenerateActa={handleGenerateActa}
           onNext={handleNext}
@@ -483,7 +500,7 @@ export default function AuditoriaWizardPage() {
             setObjectivesText(objectives);
           }}
           onAI={handleObjectivesAI}
-          aiLoading={aiLoadingField === 'objetivos'}
+          aiLoading={!!aiLoadingFields.objetivos}
           onBack={handleBack}
           onNext={handleNext}
           onSave={handleSave}

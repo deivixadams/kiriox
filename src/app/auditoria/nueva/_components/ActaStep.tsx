@@ -35,8 +35,8 @@ type ActaStepProps = {
   companies: Option[];
   onChangeActa: (next: ActaData) => void;
   onChangeContext: (next: Partial<ContextState>) => void;
-  onAI: (field: string) => void;
-  aiLoadingField: string | null;
+  onAI: (field: string, promptCode: string) => void;
+  aiLoadingFields: Record<string, boolean>;
   onSave: () => void;
   onGenerateActa: () => void;
   onNext: () => void;
@@ -49,7 +49,7 @@ export default function ActaStep({
   onChangeActa,
   onChangeContext,
   onAI,
-  aiLoadingField,
+  aiLoadingFields,
   onSave,
   onGenerateActa,
   onNext
@@ -120,8 +120,8 @@ export default function ActaStep({
               description="Define la meta principal de la revision (AML/CFT)."
               value={acta.objetivo}
               onChange={(val: string) => onChangeActa({ ...acta, objetivo: val })}
-              onAI={() => onAI('objetivo')}
-              isLoading={aiLoadingField === 'objetivo'}
+              onAI={() => onAI('objetivo', 'AUDIT_OBJETIVO_GEN')}
+              isLoading={!!aiLoadingFields.objetivo}
               placeholder="Describa el objetivo principal..."
               icon={Users}
             />
@@ -131,8 +131,8 @@ export default function ActaStep({
               description="Detalla los procesos, areas y periodos especificos."
               value={acta.alcance}
               onChange={(val: string) => onChangeActa({ ...acta, alcance: val })}
-              onAI={() => onAI('alcance')}
-              isLoading={aiLoadingField === 'alcance'}
+              onAI={() => onAI('alcance', 'AUDIT_ALCANCE')}
+              isLoading={!!aiLoadingFields.alcance}
               placeholder="Especifique el alcance tecnico..."
               icon={Info}
             />
@@ -142,8 +142,8 @@ export default function ActaStep({
               description="Tecnicas de muestreo y ejecucion basadas en riesgos."
               value={acta.metodologia}
               onChange={(val: string) => onChangeActa({ ...acta, metodologia: val })}
-              onAI={() => onAI('metodologia')}
-              isLoading={aiLoadingField === 'metodologia'}
+              onAI={() => onAI('metodologia', 'AUDIT_METODOLOGIA')}
+              isLoading={!!aiLoadingFields.metodologia}
               placeholder="Explique la metodologia aplicada..."
               icon={Wand2}
             />

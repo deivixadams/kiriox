@@ -1,0 +1,457 @@
+﻿table_name	ordinal_position	column_name	data_type	char_len	num_precision	num_scale	is_nullable	column_default
+corpus_assessment	1	id	uuid				NO	gen_random_uuid()
+corpus_assessment	2	company_id	uuid				NO	
+corpus_assessment	3	framework_version_id	uuid				NO	
+corpus_assessment	4	name	text				NO	
+corpus_assessment	5	scope_notes	text				YES	
+corpus_assessment	6	status_id	smallint		16	0	NO	
+corpus_assessment	7	created_at	timestamp with time zone				NO	now()
+corpus_assessment	8	created_by	text				YES	
+corpus_audit_log	1	id	bigint		64	0	NO	nextval('corpus.corpus_audit_log_id_seq'::regclass)
+corpus_audit_log	2	tenant_id	uuid				YES	
+corpus_audit_log	3	entity_name	text				NO	
+corpus_audit_log	4	entity_id	uuid				NO	
+corpus_audit_log	5	action	text				NO	
+corpus_audit_log	6	old_data	jsonb				YES	
+corpus_audit_log	7	new_data	jsonb				YES	
+corpus_audit_log	8	changed_by	uuid				YES	
+corpus_audit_log	9	changed_at	timestamp with time zone				YES	CURRENT_TIMESTAMP
+corpus_audit_log	10	ip_address	text				YES	
+corpus_audit_log	11	user_agent	text				YES	
+corpus_catalog_control_automation	1	id	smallint		16	0	NO	
+corpus_catalog_control_automation	2	code	text				NO	
+corpus_catalog_control_frequency	1	id	smallint		16	0	NO	
+corpus_catalog_control_frequency	2	code	text				NO	
+corpus_catalog_control_type	1	id	smallint		16	0	NO	
+corpus_catalog_control_type	2	code	text				NO	
+corpus_catalog_criticality	1	id	smallint		16	0	NO	
+corpus_catalog_criticality	2	code	text				NO	
+corpus_catalog_criticality	3	name	text				NO	
+corpus_catalog_criticality	4	description	text				YES	
+corpus_catalog_criticality	5	sort_order	integer		32	0	NO	0
+corpus_catalog_criticality	6	is_active	boolean				NO	true
+corpus_catalog_evidence_strength	1	id	smallint		16	0	NO	
+corpus_catalog_evidence_strength	2	code	text				NO	
+corpus_catalog_evidence_strength	3	name	text				NO	
+corpus_catalog_evidence_strength	4	description	text				YES	
+corpus_catalog_evidence_strength	5	sort_order	integer		32	0	NO	0
+corpus_catalog_evidence_strength	6	is_active	boolean				NO	true
+corpus_catalog_obligation_type	1	id	smallint		16	0	NO	nextval('corpus.corpus_catalog_obligation_type_id_seq'::regclass)
+corpus_catalog_obligation_type	2	code	text				NO	
+corpus_catalog_obligation_type	3	name	text				NO	
+corpus_catalog_obligation_type	4	description	text				YES	
+corpus_catalog_obligation_type	5	sort_order	integer		32	0	NO	0
+corpus_catalog_obligation_type	6	is_active	boolean				NO	true
+corpus_catalog_risk_layer	1	id	smallint		16	0	NO	nextval('corpus.corpus_catalog_risk_layer_id_seq'::regclass)
+corpus_catalog_risk_layer	2	code	text				NO	
+corpus_catalog_risk_layer	3	name	text				NO	
+corpus_catalog_risk_layer	4	description	text				YES	
+corpus_catalog_risk_layer	5	sort_order	integer		32	0	NO	0
+corpus_catalog_risk_layer	6	is_active	boolean				NO	true
+corpus_catalog_risk_type	1	id	smallint		16	0	NO	nextval('corpus.corpus_catalog_risk_type_id_seq'::regclass)
+corpus_catalog_risk_type	2	code	text				NO	
+corpus_catalog_risk_type	3	name	text				NO	
+corpus_catalog_risk_type	4	sort_order	integer		32	0	NO	0
+corpus_catalog_risk_type	5	is_active	boolean				NO	true
+corpus_catalog_source_type	1	id	smallint		16	0	NO	nextval('corpus.corpus_catalog_source_type_id_seq'::regclass)
+corpus_catalog_source_type	2	code	text				NO	
+corpus_catalog_source_type	3	name	text				NO	
+corpus_catalog_source_type	4	sort_order	integer		32	0	NO	0
+corpus_catalog_source_type	5	is_active	boolean				NO	true
+corpus_catalog_status	1	id	smallint		16	0	NO	nextval('corpus.corpus_catalog_status_id_seq'::regclass)
+corpus_catalog_status	2	code	text				NO	
+corpus_catalog_status	3	name	text				NO	
+corpus_catalog_status	4	sort_order	integer		32	0	NO	0
+corpus_catalog_status	5	is_active	boolean				NO	true
+corpus_catalog_test_method	1	id	smallint		16	0	NO	nextval('corpus.corpus_catalog_test_method_id_seq'::regclass)
+corpus_catalog_test_method	2	code	text				NO	
+corpus_catalog_test_method	3	name	text				NO	
+corpus_catalog_test_method	4	sort_order	integer		32	0	NO	0
+corpus_catalog_test_method	5	is_active	boolean				NO	true
+corpus_company	1	id	uuid				NO	gen_random_uuid()
+corpus_company	2	code	text				NO	
+corpus_company	3	name	text				NO	
+corpus_company	4	legal_name	text				YES	
+corpus_company	5	jurisdiction_id	uuid				YES	
+corpus_company	6	status_id	smallint		16	0	NO	
+corpus_company	7	created_at	timestamp with time zone				NO	now()
+corpus_company	8	updated_at	timestamp with time zone				NO	now()
+corpus_control	1	id	uuid				NO	gen_random_uuid()
+corpus_control	2	code	text				NO	
+corpus_control	3	name	text				NO	
+corpus_control	4	control_type_id	smallint		16	0	NO	
+corpus_control	5	automation_id	smallint		16	0	NO	
+corpus_control	6	frequency_id	smallint		16	0	NO	
+corpus_control	7	description	text				NO	
+corpus_control	8	owner_role	text				YES	
+corpus_control	9	evidence_required	boolean				NO	true
+corpus_control	10	status	text				NO	'active'::text
+corpus_control	11	status_id	smallint		16	0	NO	2
+corpus_control	12	created_at	timestamp with time zone				NO	now()
+corpus_control	13	updated_at	timestamp with time zone				NO	now()
+corpus_control	14	control_objective	text				YES	
+corpus_control	15	control_scope	text				YES	
+corpus_control	16	is_hard_gate	boolean				NO	false
+corpus_control	17	rationale	text				YES	
+corpus_control	18	primary_cf_risk_id	uuid				YES	
+corpus_control_artifact	1	id	uuid				NO	gen_random_uuid()
+corpus_control_artifact	2	control_id	uuid				NO	
+corpus_control_artifact	3	code	text				NO	
+corpus_control_artifact	4	name	text				NO	
+corpus_control_artifact	5	artifact_type	text				NO	
+corpus_control_artifact	6	version	text				NO	
+corpus_control_artifact	7	description	text				YES	
+corpus_control_artifact	8	status	text				NO	'active'::text
+corpus_control_artifact	9	created_at	timestamp with time zone				NO	now()
+corpus_control_artifact	10	updated_at	timestamp with time zone				NO	now()
+corpus_control_artifact_risk	1	artifact_id	uuid				NO	
+corpus_control_artifact_risk	2	risk_id	uuid				NO	
+corpus_control_artifact_risk	3	mitigation_strength	smallint		16	0	NO	
+corpus_control_obligation	1	control_id	uuid				NO	
+corpus_control_obligation	2	obligation_id	uuid				NO	
+corpus_control_obligation	3	compliance_strength	smallint		16	0	NO	
+corpus_control_risk_map	1	control_id	uuid				NO	
+corpus_control_risk_map	2	risk_id	uuid				NO	
+corpus_control_risk_map	3	mitigation_strength	smallint		16	0	NO	
+corpus_control_risk_map	4	framework_version_id	uuid				NO	
+corpus_control_risk_map	5	effect_type	text				NO	
+corpus_control_risk_map	6	rationale	text				YES	
+corpus_control_risk_map	7	coverage_notes	text				YES	
+corpus_control_source	1	control_id	uuid				NO	
+corpus_control_source	2	source_id	uuid				NO	
+corpus_domain	1	id	uuid				NO	gen_random_uuid()
+corpus_domain	2	framework_version_id	uuid				NO	
+corpus_domain	3	code	text				NO	
+corpus_domain	4	name	text				NO	
+corpus_domain	5	description	text				YES	
+corpus_domain	6	status	text				NO	'active'::text
+corpus_domain	7	created_at	timestamp with time zone				NO	now()
+corpus_domain	8	updated_at	timestamp with time zone				NO	now()
+corpus_domain	9	status_id	smallint		16	0	YES	
+corpus_evaluation	1	id	uuid				NO	gen_random_uuid()
+corpus_evaluation	2	assessment_id	uuid				NO	
+corpus_evaluation	3	period_start	date				NO	
+corpus_evaluation	4	period_end	date				NO	
+corpus_evaluation	5	status_id	smallint		16	0	NO	
+corpus_evaluation	6	notes	text				YES	
+corpus_evaluation	7	created_at	timestamp with time zone				NO	now()
+corpus_evaluation	8	created_by	text				YES	
+corpus_evaluation	9	updated_at	timestamp with time zone				NO	now()
+corpus_evaluation_artifact	1	evaluation_id	uuid				NO	
+corpus_evaluation_artifact	2	artifact_id	uuid				NO	
+corpus_evaluation_artifact	3	status	text				NO	
+corpus_evaluation_artifact	4	review_notes	text				YES	
+corpus_evaluation_artifact	5	reviewed_by	text				YES	
+corpus_evaluation_artifact	6	reviewed_at	timestamp with time zone				YES	
+corpus_evaluation_control_state	1	evaluation_id	uuid				NO	
+corpus_evaluation_control_state	2	control_id	uuid				NO	
+corpus_evaluation_control_state	3	implementation_status	text				NO	
+corpus_evaluation_control_state	4	design_effectiveness	numeric		6	4	YES	
+corpus_evaluation_control_state	5	operating_effectiveness	numeric		6	4	YES	
+corpus_evaluation_control_state	6	notes	text				YES	
+corpus_evaluation_control_state	7	updated_at	timestamp with time zone				NO	now()
+corpus_evaluation_control_state	8	updated_by	text				YES	
+corpus_evaluation_test_run	1	evaluation_id	uuid				NO	
+corpus_evaluation_test_run	2	test_control_run_id	uuid				NO	
+corpus_evaluation_test_run	3	included	boolean				NO	true
+corpus_evaluation_test_run	4	inclusion_reason	text				YES	
+corpus_evaluation_test_run	5	selected_by	text				YES	
+corpus_evaluation_test_run	6	selected_at	timestamp with time zone				NO	now()
+corpus_framework	1	id	uuid				NO	gen_random_uuid()
+corpus_framework	2	jurisdiction_id	uuid				NO	
+corpus_framework	3	code	text				NO	
+corpus_framework	4	name	text				NO	
+corpus_framework	5	description	text				YES	
+corpus_framework	6	status	text				NO	'active'::text
+corpus_framework	7	created_at	timestamp with time zone				NO	now()
+corpus_framework	8	updated_at	timestamp with time zone				NO	now()
+corpus_framework	9	status_id	smallint		16	0	YES	
+corpus_framework_version	1	id	uuid				NO	gen_random_uuid()
+corpus_framework_version	2	framework_id	uuid				NO	
+corpus_framework_version	3	version	text				NO	
+corpus_framework_version	4	effective_date	date				YES	
+corpus_framework_version	5	changelog	text				YES	
+corpus_framework_version	6	status	text				NO	'active'::text
+corpus_framework_version	7	created_at	timestamp with time zone				NO	now()
+corpus_framework_version	8	updated_at	timestamp with time zone				NO	now()
+corpus_framework_version	9	status_id	smallint		16	0	YES	
+corpus_jurisdiction	1	id	uuid				NO	gen_random_uuid()
+corpus_jurisdiction	2	code	text				NO	
+corpus_jurisdiction	3	name	text				NO	
+corpus_jurisdiction	4	iso2	text				YES	
+corpus_jurisdiction	5	iso3	text				YES	
+corpus_jurisdiction	6	status	text				NO	'active'::text
+corpus_jurisdiction	7	created_at	timestamp with time zone				NO	now()
+corpus_jurisdiction	8	updated_at	timestamp with time zone				NO	now()
+corpus_jurisdiction	9	status_id	smallint		16	0	YES	
+corpus_material_event	1	id	uuid				NO	gen_random_uuid()
+corpus_material_event	2	tenant_id	uuid				NO	
+corpus_material_event	3	code	text				NO	
+corpus_material_event	4	title	text				NO	
+corpus_material_event	5	description	text				YES	
+corpus_material_event	6	severity_id	integer		32	0	NO	
+corpus_material_event	7	status_id	integer		32	0	NO	
+corpus_material_event	8	evaluation_id	uuid				YES	
+corpus_material_event	9	control_id	uuid				YES	
+corpus_material_event	10	obligation_id	uuid				YES	
+corpus_material_event	11	risk_id	uuid				YES	
+corpus_material_event	12	test_control_run_id	uuid				YES	
+corpus_material_event	13	created_at	timestamp with time zone				YES	CURRENT_TIMESTAMP
+corpus_material_event	14	created_by	uuid				YES	
+corpus_material_event	15	closed_at	timestamp with time zone				YES	
+corpus_material_event	16	closed_by	uuid				YES	
+corpus_material_event	17	metadata	jsonb				YES	'{}'::jsonb
+corpus_model_run	1	id	uuid				NO	gen_random_uuid()
+corpus_model_run	2	assessment_id	uuid				NO	
+corpus_model_run	3	evaluation_id	uuid				NO	
+corpus_model_run	4	parameter_set_id	uuid				NO	
+corpus_model_run	5	engine_version	text				NO	
+corpus_model_run	6	started_at	timestamp with time zone				NO	now()
+corpus_model_run	7	ended_at	timestamp with time zone				YES	
+corpus_model_run	8	run_status	text				NO	
+corpus_model_run	9	executed_by	text				YES	
+corpus_model_run	10	input_hash	text				NO	
+corpus_model_run	11	output_hash	text				NO	
+corpus_model_run_control	1	run_id	uuid				NO	
+corpus_model_run_control	2	control_id	uuid				NO	
+corpus_model_run_control	3	implementation_status_used	text				YES	
+corpus_model_run_control	4	design_eff_used	numeric		6	4	YES	
+corpus_model_run_control	5	oper_eff_used	numeric		6	4	YES	
+corpus_model_run_control	6	evidence_status_used	text				YES	
+corpus_model_run_control	7	control_effectiveness_used	numeric		6	4	YES	
+corpus_model_run_obligation	1	run_id	uuid				NO	
+corpus_model_run_obligation	2	obligation_id	uuid				NO	
+corpus_model_run_obligation	3	weight_used	numeric		10	6	YES	
+corpus_model_run_obligation	4	effectiveness_used	numeric		6	4	YES	
+corpus_model_run_obligation	5	exposure_ei	numeric		14	6	YES	
+corpus_model_run_score	1	run_id	uuid				NO	
+corpus_model_run_score	2	score_total	numeric		10	4	YES	
+corpus_model_run_score	3	e_base	numeric		14	6	YES	
+corpus_model_run_score	4	e_conc	numeric		14	6	YES	
+corpus_model_run_score	5	e_sys	numeric		14	6	YES	
+corpus_model_run_score	6	e_final	numeric		14	6	YES	
+corpus_model_run_score	7	gatillo_max	numeric		14	6	YES	
+corpus_model_run_trigger	1	run_id	uuid				NO	
+corpus_model_run_trigger	2	trigger_code	text				NO	
+corpus_model_run_trigger	3	trigger_fired	boolean				NO	
+corpus_model_run_trigger	4	trigger_value	jsonb				YES	
+corpus_model_run_trigger	5	justification	text				YES	
+corpus_obligation	1	id	uuid				NO	gen_random_uuid()
+corpus_obligation	2	domain_id	uuid				NO	
+corpus_obligation	3	code	text				NO	
+corpus_obligation	4	title	text				NO	
+corpus_obligation	5	statement	text				NO	
+corpus_obligation	6	source_ref	text				YES	
+corpus_obligation	7	rationale	text				YES	
+corpus_obligation	8	status	text				NO	'active'::text
+corpus_obligation	9	created_at	timestamp with time zone				NO	now()
+corpus_obligation	10	updated_at	timestamp with time zone				NO	now()
+corpus_obligation	11	status_id	smallint		16	0	YES	
+corpus_obligation	12	obligation_type_id	smallint		16	0	YES	
+corpus_obligation	13	is_hard_gate	boolean				NO	false
+corpus_obligation	14	criticality	smallint		16	0	NO	3
+corpus_obligation	15	evidence_strength	smallint		16	0	NO	3
+corpus_obligation	16	criticality_id	smallint		16	0	NO	
+corpus_obligation	17	evidence_strength_id	smallint		16	0	NO	
+corpus_obligation_risk	1	obligation_id	uuid				NO	
+corpus_obligation_risk	2	risk_id	uuid				NO	
+corpus_obligation_risk	3	link_strength	smallint		16	0	NO	3
+corpus_obligation_source	1	obligation_id	uuid				NO	
+corpus_obligation_source	2	source_id	uuid				NO	
+corpus_param_change_log	1	id	uuid				NO	gen_random_uuid()
+corpus_param_change_log	2	param_id	uuid				YES	
+corpus_param_change_log	3	old_value	numeric				YES	
+corpus_param_change_log	4	new_value	numeric				YES	
+corpus_param_change_log	5	changed_by	uuid				YES	
+corpus_param_change_log	6	change_reason	text				YES	
+corpus_param_change_log	7	change_type	character varying	50			YES	
+corpus_param_change_log	8	created_at	timestamp without time zone				YES	now()
+corpus_param_profile_values	1	id	uuid				NO	gen_random_uuid()
+corpus_param_profile_values	2	profile_id	uuid				YES	
+corpus_param_profile_values	3	param_id	uuid				YES	
+corpus_param_profile_values	4	value	numeric				NO	
+corpus_param_profile_values	5	created_at	timestamp without time zone				YES	now()
+corpus_param_profiles	1	id	uuid				NO	gen_random_uuid()
+corpus_param_profiles	2	tenant_id	uuid				NO	
+corpus_param_profiles	3	profile_name	character varying	255			NO	
+corpus_param_profiles	4	jurisdiction_id	uuid				YES	
+corpus_param_profiles	5	version_number	integer		32	0	YES	1
+corpus_param_profiles	6	hash_snapshot	text				YES	
+corpus_param_profiles	7	status	character varying	50			YES	'draft'::character varying
+corpus_param_profiles	8	created_at	timestamp without time zone				YES	now()
+corpus_param_profiles	9	approved_at	timestamp without time zone				YES	
+corpus_param_profiles	10	approved_by	uuid				YES	
+corpus_param_profiles	11	activated_at	timestamp without time zone				YES	
+corpus_param_profiles	12	is_active	boolean				YES	false
+corpus_parameter_obligation_weight	1	parameter_set_id	uuid				NO	
+corpus_parameter_obligation_weight	2	obligation_id	uuid				NO	
+corpus_parameter_obligation_weight	3	weight	numeric		10	6	NO	
+corpus_parameter_set	1	id	uuid				NO	gen_random_uuid()
+corpus_parameter_set	2	framework_version_id	uuid				NO	
+corpus_parameter_set	3	version	text				NO	
+corpus_parameter_set	4	status_id	smallint		16	0	NO	
+corpus_parameter_set	5	hash	text				NO	
+corpus_parameter_set	6	approved_by	text				YES	
+corpus_parameter_set	7	approved_at	timestamp with time zone				YES	
+corpus_parameter_set	8	created_at	timestamp with time zone				NO	now()
+corpus_parameter_value	1	parameter_set_id	uuid				NO	
+corpus_parameter_value	2	key	text				NO	
+corpus_parameter_value	3	value	jsonb				NO	
+corpus_parameter_value	4	notes	text				YES	
+corpus_params	1	id	uuid				NO	gen_random_uuid()
+corpus_params	2	tenant_id	uuid				NO	
+corpus_params	3	param_code	character varying	100			NO	
+corpus_params	4	param_name	character varying	255			NO	
+corpus_params	5	category	character varying	50			NO	
+corpus_params	6	description	text				NO	
+corpus_params	7	technical_description	text				NO	
+corpus_params	8	default_value	numeric				NO	
+corpus_params	9	configurable_value	numeric				NO	
+corpus_params	10	min_allowed_value	numeric				NO	
+corpus_params	11	max_allowed_value	numeric				NO	
+corpus_params	12	requires_approval	boolean				YES	true
+corpus_params	13	is_active	boolean				YES	true
+corpus_params	14	is_locked	boolean				YES	false
+corpus_params	15	version_number	integer		32	0	YES	1
+corpus_params	16	effective_from	timestamp without time zone				YES	now()
+corpus_params	17	effective_to	timestamp without time zone				YES	
+corpus_params	18	created_at	timestamp without time zone				YES	now()
+corpus_params	19	created_by	uuid				YES	
+corpus_params	20	updated_at	timestamp without time zone				YES	now()
+corpus_params	21	updated_by	uuid				YES	
+corpus_risk	1	id	uuid				NO	gen_random_uuid()
+corpus_risk	2	code	text				NO	
+corpus_risk	3	name	text				NO	
+corpus_risk	4	risk_type	text				NO	
+corpus_risk	5	description	text				YES	
+corpus_risk	6	status	text				NO	'active'::text
+corpus_risk	7	created_at	timestamp with time zone				NO	now()
+corpus_risk	8	updated_at	timestamp with time zone				NO	now()
+corpus_risk	9	status_id	smallint		16	0	YES	
+corpus_risk	10	risk_type_id	smallint		16	0	YES	
+corpus_risk	11	risk_layer_id	smallint		16	0	NO	2
+corpus_risk	12	parent_risk_id	uuid				YES	
+corpus_risk_source	1	risk_id	uuid				NO	
+corpus_risk_source	2	source_id	uuid				NO	
+corpus_source	1	id	uuid				NO	gen_random_uuid()
+corpus_source	2	framework_version_id	uuid				YES	
+corpus_source	3	source_type	text				NO	
+corpus_source	4	citation	text				NO	
+corpus_source	5	url	text				YES	
+corpus_source	6	published_date	date				YES	
+corpus_source	7	notes	text				YES	
+corpus_source	8	status	text				NO	'active'::text
+corpus_source	9	created_at	timestamp with time zone				NO	now()
+corpus_source	10	updated_at	timestamp with time zone				NO	now()
+corpus_source	11	status_id	smallint		16	0	YES	
+corpus_source	12	source_type_id	smallint		16	0	YES	
+corpus_test	1	id	uuid				NO	gen_random_uuid()
+corpus_test	2	code	text				NO	
+corpus_test	3	name	text				NO	
+corpus_test	4	method	text				NO	
+corpus_test	5	expected_result	text				YES	
+corpus_test	6	evidence_type	text				YES	
+corpus_test	7	description	text				YES	
+corpus_test	8	status	text				NO	'active'::text
+corpus_test	9	created_at	timestamp with time zone				NO	now()
+corpus_test	10	updated_at	timestamp with time zone				NO	now()
+corpus_test	11	status_id	smallint		16	0	YES	
+corpus_test	12	method_id	smallint		16	0	YES	
+corpus_test	13	expected_artifacts	text				YES	
+corpus_test	14	severity_if_fail	smallint		16	0	YES	3
+corpus_test	15	automation_compatibility	text				YES	
+corpus_test_control	1	control_id	uuid				NO	
+corpus_test_control	2	test_id	uuid				NO	
+corpus_test_control	3	applicability	text				YES	'always'::text
+corpus_test_control	4	default_frequency_id	smallint		16	0	YES	
+corpus_test_control	5	pass_threshold	numeric		6	4	YES	0.8000
+corpus_test_control	6	rationale	text				YES	
+corpus_test_control	7	created_at	timestamp with time zone				YES	now()
+corpus_test_control	8	updated_at	timestamp with time zone				YES	now()
+corpus_test_control_procedure	1	id	uuid				NO	gen_random_uuid()
+corpus_test_control_procedure	2	control_id	uuid				NO	
+corpus_test_control_procedure	3	test_id	uuid				NO	
+corpus_test_control_procedure	4	framework_version_id	uuid				YES	
+corpus_test_control_procedure	5	version	text				NO	
+corpus_test_control_procedure	6	title	text				NO	
+corpus_test_control_procedure	7	objective	text				YES	
+corpus_test_control_procedure	8	steps	jsonb				YES	
+corpus_test_control_procedure	9	procedure_text	text				YES	
+corpus_test_control_procedure	10	expected_artifacts	text				YES	
+corpus_test_control_procedure	11	parameters_schema	jsonb				YES	
+corpus_test_control_procedure	12	owner_role	text				YES	
+corpus_test_control_procedure	13	status_id	smallint		16	0	NO	
+corpus_test_control_procedure	14	approved_by	text				YES	
+corpus_test_control_procedure	15	approved_at	timestamp with time zone				YES	
+corpus_test_control_procedure	16	effective_from	date				NO	CURRENT_DATE
+corpus_test_control_procedure	17	effective_to	date				YES	
+corpus_test_control_procedure	18	created_at	timestamp with time zone				NO	now()
+corpus_test_control_procedure	19	updated_at	timestamp with time zone				NO	now()
+corpus_test_control_run	1	id	uuid				NO	gen_random_uuid()
+corpus_test_control_run	2	control_id	uuid				NO	
+corpus_test_control_run	3	test_id	uuid				NO	
+corpus_test_control_run	4	executed_at	timestamp with time zone				NO	now()
+corpus_test_control_run	5	executed_by	text				YES	
+corpus_test_control_run	6	run_type	text				NO	
+corpus_test_control_run	7	result	text				NO	
+corpus_test_control_run	8	score	numeric		6	4	NO	
+corpus_test_control_run	9	sample_size	integer		32	0	YES	
+corpus_test_control_run	10	population_size	integer		32	0	YES	
+corpus_test_control_run	11	parameters	jsonb				YES	
+corpus_test_control_run	12	query_hash	text				YES	
+corpus_test_control_run	13	script_version	text				YES	
+corpus_test_control_run	14	output_summary	jsonb				YES	
+corpus_test_control_run	15	evidence_ref	text				YES	
+corpus_test_control_run	16	notes	text				YES	
+corpus_test_control_run	17	created_at	timestamp with time zone				NO	now()
+corpus_test_control_run	18	updated_at	timestamp with time zone				NO	now()
+corpus_test_control_run	19	script_id	uuid				YES	
+corpus_test_script	1	id	uuid				NO	gen_random_uuid()
+corpus_test_script	2	test_id	uuid				NO	
+corpus_test_script	3	code	text				NO	
+corpus_test_script	4	name	text				NO	
+corpus_test_script	5	engine	text				NO	
+corpus_test_script	6	body	text				YES	
+corpus_test_script	7	path	text				YES	
+corpus_test_script	8	version	text				NO	
+corpus_test_script	9	hash	text				NO	
+corpus_test_script	10	is_active	boolean				NO	true
+corpus_test_script	11	created_at	timestamp with time zone				NO	now()
+corpus_test_source	1	test_id	uuid				NO	
+corpus_test_source	2	source_id	uuid				NO	
+security_rbac	1	id	uuid				NO	gen_random_uuid()
+security_rbac	2	role_code	character varying	50			NO	
+security_rbac	3	permission_code	character varying	100			NO	
+security_rbac	4	created_at	timestamp without time zone				YES	now()
+security_user_scope	1	id	uuid				NO	gen_random_uuid()
+security_user_scope	2	user_id	uuid				NO	
+security_user_scope	3	jurisdiction_id	uuid				YES	
+security_user_scope	4	framework_version_id	uuid				YES	
+security_user_scope	5	domain_id	uuid				YES	
+security_user_scope	6	is_allowed	boolean				NO	true
+security_user_scope	7	created_at	timestamp with time zone				NO	now()
+security_user_scope	8	created_by	uuid				YES	
+security_user_token	1	id	uuid				NO	gen_random_uuid()
+security_user_token	2	user_id	uuid				NO	
+security_user_token	3	token_hash	text				NO	
+security_user_token	4	token_type	text				NO	
+security_user_token	5	expires_at	timestamp with time zone				NO	
+security_user_token	6	used_at	timestamp with time zone				YES	
+security_user_token	7	created_at	timestamp with time zone				NO	now()
+security_user_token	8	created_by	uuid				YES	
+security_users	1	id	uuid				NO	gen_random_uuid()
+security_users	2	tenant_id	uuid				NO	
+security_users	3	email	character varying	255			NO	
+security_users	4	password_hash	text				NO	
+security_users	5	name	character varying	255			YES	
+security_users	6	role_code	character varying	50			NO	
+security_users	7	is_active	boolean				YES	true
+security_users	8	created_at	timestamp without time zone				YES	now()
+security_users	9	updated_at	timestamp without time zone				YES	now()
+security_users	10	must_change_password	boolean				NO	true
+security_users	11	last_login_at	timestamp with time zone				YES	
+security_users	12	password_updated_at	timestamp with time zone				YES	
+security_users	13	activation_status	text				NO	'pending'::text
+security_users	14	last_name	text				YES	
+security_users	15	whatsapp	text				YES	
+(455 rows)
