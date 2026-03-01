@@ -1,0 +1,182 @@
+.root {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: #e2e8f0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardHighlight {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardTitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 800;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardTitleSimple {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+.cardIcon {
+  width: 16px;
+  height: 16px;
+  color: #67e8f9;
+}
+
+.cardIconAccent {
+  width: 16px;
+  height: 16px;
+  color: #93c5fd;
+}
+
+.scrollList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toggleGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.toggleOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.helperText {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.counts {
+  font-size: 13px;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+}
+
+.backButton {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ghostButton {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 10px 16px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

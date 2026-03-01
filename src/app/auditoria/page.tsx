@@ -62,7 +62,8 @@ export default function AuditDashboard() {
                     </div>
                 </div>
 
-                <button
+                <Link
+                    href="/auditoria/nueva"
                     className="btn-primary"
                     style={{
                         padding: '0.85rem 1.75rem',
@@ -77,7 +78,7 @@ export default function AuditDashboard() {
                     }}
                 >
                     <Plus size={20} /> Nueva Auditoría
-                </button>
+                </Link>
             </div>
 
             {/* Stats Overview */}
@@ -194,3 +195,7 @@ export default function AuditDashboard() {
         </div>
     );
 }
+
+
+
+

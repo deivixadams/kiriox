@@ -1,0 +1,275 @@
+import React from 'react';
+import {
+  Calendar,
+  Clock,
+  Download,
+  Info,
+  Sparkles,
+  Users,
+  Wand2
+} from 'lucide-react';
+import styles from './ActaStep.module.css';
+
+type Option = { id: string; name: string };
+
+type ActaData = {
+  entidad_nombre: string;
+  periodo_inicio: string;
+  periodo_fin: string;
+  objetivo: string;
+  alcance: string;
+  marco_normativo: string;
+  metodologia: string;
+  lider_equipo: string;
+  auditores: string;
+  cronograma: { hito: string; fecha: string }[];
+};
+
+type ContextState = {
+  companyId: string;
+};
+
+type ActaStepProps = {
+  acta: ActaData;
+  context: ContextState;
+  companies: Option[];
+  onChangeActa: (next: ActaData) => void;
+  onChangeContext: (next: Partial<ContextState>) => void;
+  onAI: (field: string) => void;
+  aiLoadingField: string | null;
+  onSave: () => void;
+  onGenerateActa: () => void;
+  onNext: () => void;
+};
+
+export default function ActaStep({
+  acta,
+  context,
+  companies,
+  onChangeActa,
+  onChangeContext,
+  onAI,
+  aiLoadingField,
+  onSave,
+  onGenerateActa,
+  onNext
+}: ActaStepProps) {
+  return (
+    <div className={styles.root}>
+      <div className={styles.body}>
+        <div className={styles.card}>
+          <div className={styles.formStack}>
+            <FormField label="Empresa" icon={Info}>
+              <select
+                value={context.companyId}
+                onChange={(e) => onChangeContext({ companyId: e.target.value })}
+                className={styles.select}
+              >
+                <option value="">Seleccione...</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+
+          <div className={styles.divider} />
+
+          <div className={styles.gridTwo}>
+            <FormField label="Entidad a Auditar" icon={Info}>
+              <input
+                type="text"
+                value={acta.entidad_nombre}
+                onChange={(e) => onChangeActa({ ...acta, entidad_nombre: e.target.value })}
+                className={styles.input}
+              />
+            </FormField>
+            <FormField label="Periodo de Auditoria (Anual)" icon={Calendar}>
+              <div className={styles.dateRow}>
+                <input
+                  type="date"
+                  value={acta.periodo_inicio}
+                  onChange={(e) => onChangeActa({ ...acta, periodo_inicio: e.target.value })}
+                  className={styles.input}
+                />
+                <div className={styles.dateDivider} />
+                <input
+                  type="date"
+                  value={acta.periodo_fin}
+                  onChange={(e) => onChangeActa({ ...acta, periodo_fin: e.target.value })}
+                  className={styles.input}
+                />
+              </div>
+            </FormField>
+          </div>
+
+          <FormField label="Marco Normativo" icon={Info}>
+            <input
+              type="text"
+              value={acta.marco_normativo}
+              onChange={(e) => onChangeActa({ ...acta, marco_normativo: e.target.value })}
+              className={styles.input}
+            />
+          </FormField>
+
+          <div className={styles.divider} />
+
+          <div className={styles.gridThree}>
+            <TextSection
+              title="Objetivo General"
+              description="Define la meta principal de la revision (AML/CFT)."
+              value={acta.objetivo}
+              onChange={(val: string) => onChangeActa({ ...acta, objetivo: val })}
+              onAI={() => onAI('objetivo')}
+              isLoading={aiLoadingField === 'objetivo'}
+              placeholder="Describa el objetivo principal..."
+              icon={Users}
+            />
+
+            <TextSection
+              title="Alcance de la Auditoria"
+              description="Detalla los procesos, areas y periodos especificos."
+              value={acta.alcance}
+              onChange={(val: string) => onChangeActa({ ...acta, alcance: val })}
+              onAI={() => onAI('alcance')}
+              isLoading={aiLoadingField === 'alcance'}
+              placeholder="Especifique el alcance tecnico..."
+              icon={Info}
+            />
+
+            <TextSection
+              title="Metodologia de Trabajo"
+              description="Tecnicas de muestreo y ejecucion basadas en riesgos."
+              value={acta.metodologia}
+              onChange={(val: string) => onChangeActa({ ...acta, metodologia: val })}
+              onAI={() => onAI('metodologia')}
+              isLoading={aiLoadingField === 'metodologia'}
+              placeholder="Explique la metodologia aplicada..."
+              icon={Wand2}
+            />
+          </div>
+
+          <div className={styles.divider} />
+
+          <div className={styles.gridTwoWide}>
+            <div>
+              <h3 className={styles.sectionTitle}>
+                <Users className={styles.sectionIcon} />
+                Equipo Auditor
+              </h3>
+              <div className={styles.fieldStack}>
+                <FormField label="Lider de Proyecto">
+                  <input
+                    type="text"
+                    value={acta.lider_equipo}
+                    onChange={(e) => onChangeActa({ ...acta, lider_equipo: e.target.value })}
+                    className={styles.input}
+                  />
+                </FormField>
+                <FormField label="Auditores Asignados">
+                  <textarea
+                    value={acta.auditores}
+                    onChange={(e) => onChangeActa({ ...acta, auditores: e.target.value })}
+                    className={styles.textarea}
+                  />
+                </FormField>
+              </div>
+            </div>
+            <div>
+              <h3 className={styles.sectionTitle}>
+                <Clock className={styles.sectionIcon} />
+                Cronograma Estimado
+              </h3>
+              <div className={styles.timeline}>
+                {acta.cronograma.map((item, idx) => (
+                  <div key={idx} className={styles.timelineItem}>
+                    <span className={styles.timelineLabel}>{item.hito}</span>
+                    <input
+                      type="date"
+                      value={item.fecha}
+                      onChange={(e) => {
+                        const updated = [...acta.cronograma];
+                        updated[idx] = { ...updated[idx], fecha: e.target.value };
+                        onChangeActa({ ...acta, cronograma: updated });
+                      }}
+                      className={styles.timelineDate}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.footer}>
+        <div className={styles.footerInner}>
+          <div className={styles.footerActions}>
+            <button className={styles.ghostButton} onClick={onSave}>
+              Guardar Borrador
+            </button>
+            <button
+              onClick={onGenerateActa}
+              className={styles.primaryButton}
+            >
+              <Download className={styles.buttonIcon} />
+              Generar Acta
+            </button>
+            <button
+              onClick={onNext}
+              className={styles.secondaryButton}
+            >
+              Continuar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FormField({ label, icon: Icon, children }: { label: string; icon?: any; children: React.ReactNode }) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.fieldLabel}>
+        {Icon && <Icon className={styles.fieldIcon} />}
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function TextSection({ title, description, value, onChange, onAI, isLoading, placeholder, icon: Icon }: any) {
+  return (
+    <div className={styles.textSection}>
+      <div className={styles.textHeader}>
+        <div>
+          <h3 className={styles.textTitle}>
+            <Icon className={styles.textIcon} />
+            {title}
+          </h3>
+          <p className={styles.textDescription}>{description}</p>
+        </div>
+        <button
+          onClick={onAI}
+          disabled={isLoading}
+          className={styles.aiButton}
+        >
+          {isLoading ? (
+            <div className={styles.spinner} />
+          ) : (
+            <Sparkles className={styles.aiIcon} />
+          )}
+          IA
+        </button>
+      </div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={styles.textarea}
+      />
+    </div>
+  );
+}
