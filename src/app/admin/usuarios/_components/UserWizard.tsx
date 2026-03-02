@@ -151,7 +151,7 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
                 setName(data.user.name || '');
                 setLastName(data.user.lastName || '');
                 setWhatsapp(data.user.whatsapp || '');
-                setRoleCode(data.user.roleCode);
+                setRoleCode(data.user.role?.roleCode || 'OPERATOR');
                 if (typeof data.user.mustChangePassword === 'boolean') {
                     setMustChangePassword(data.user.mustChangePassword);
                 }
@@ -622,7 +622,7 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
                         </div>
                     )}
 
-                    
+
 
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <button

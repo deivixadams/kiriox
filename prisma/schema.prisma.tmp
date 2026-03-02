@@ -1,21 +1,19 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["partialIndexes", "multiSchema"]
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
-  schemas  = ["corpus", "security"]
   provider = "postgresql"
 }
 
+@@schema(" corpus\)
 model SecurityUser {
-  @@schema("security")
   id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId            String              @map("tenant_id") @db.Uuid
   email               String              @unique(map: "idx_security_users_email_unique") @db.VarChar(255)
   passwordHash        String              @map("password_hash")
   name                String?             @map("name") @db.VarChar(255)
-  lastName            String?             @map("last_name")
   isActive            Boolean?            @default(true) @map("is_active")
   createdAt           DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt           DateTime?           @default(now()) @map("updated_at") @db.Timestamp(6)
@@ -23,9 +21,9 @@ model SecurityUser {
   lastLoginAt         DateTime?           @map("last_login_at") @db.Timestamptz(6)
   passwordUpdatedAt   DateTime?           @map("password_updated_at") @db.Timestamptz(6)
   activationStatus    String              @default("pending") @map("activation_status")
+  lastName            String?             @map("last_name")
   whatsapp            String?             @map("whatsapp")
   roleId              String?             @map("role_id") @db.Uuid
-  
   role                SecurityRbac?       @relation("UserPrimaryRole", fields: [roleId], references: [id])
   security_user_scope SecurityUserScope[]
   security_user_token SecurityUserToken[]
@@ -34,8 +32,8 @@ model SecurityUser {
   @@map("security_users")
 }
 
+@@schema(" corpus\)
 model SecurityUserScope {
-  @@schema("security")
   id                       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                   String                  @map("user_id") @db.Uuid
   jurisdictionId           String?                 @map("jurisdiction_id") @db.Uuid
@@ -53,8 +51,8 @@ model SecurityUserScope {
   @@map("security_user_scope")
 }
 
+@@schema(" corpus\)
 model SecurityUserToken {
-  @@schema("security")
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId         String       @map("user_id") @db.Uuid
   tokenHash      String       @map("token_hash")
@@ -70,24 +68,24 @@ model SecurityUserToken {
   @@map("security_user_token")
 }
 
+@@schema(" corpus\)
 model SecurityRbac {
-  @@schema("security")
-  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  roleCode        String         @unique @map("role_code") @db.VarChar(50)
-  permission_code String?        @db.VarChar(100)
-  createdAt       DateTime?      @default(now()) @map("created_at") @db.Timestamp(6)
-  roleName        String?        @map("role_name") @db.VarChar(100)
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleCode        String      @unique @map("role_code") @db.VarChar(50)
+  permission_code String?     @db.VarChar(100)
+  createdAt       DateTime?   @default(now()) @map("created_at") @db.Timestamp(6)
+  roleName        String?     @map("role_name") @db.VarChar(100)
   description     String?
-  isActive        Boolean?       @default(true) @map("is_active")
-  updatedAt       DateTime?      @default(now()) @map("updated_at") @db.Timestamp(6)
+  isActive        Boolean?    @default(true) @map("is_active")
+  updatedAt       DateTime?   @default(now()) @map("updated_at") @db.Timestamp(6)
   security_users  SecurityUser[] @relation("UserPrimaryRole")
   user_x_rbac     UserXRbac[]
 
   @@map("security_rbac")
 }
 
+@@schema(" corpus\)
 model UserXRbac {
-  @@schema("security")
   id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId    String       @map("user_id") @db.Uuid
   roleId    String       @map("role_id") @db.Uuid
@@ -101,8 +99,8 @@ model UserXRbac {
   @@map("user_x_rbac")
 }
 
+@@schema(" corpus\)
 model CorpusParam {
-  @@schema("corpus")
   id                   String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId             String                    @map("tenant_id") @db.Uuid
   paramCode            String                    @unique @map("param_code") @db.VarChar(100)
@@ -130,8 +128,8 @@ model CorpusParam {
   @@map("corpus_params")
 }
 
+@@schema(" corpus\)
 model CorpusParamProfile {
-  @@schema("corpus")
   id             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId       String                    @map("tenant_id") @db.Uuid
   profileName    String                    @map("profile_name") @db.VarChar(255)
@@ -149,8 +147,8 @@ model CorpusParamProfile {
   @@map("corpus_param_profiles")
 }
 
+@@schema(" corpus\)
 model CorpusParamProfileValue {
-  @@schema("corpus")
   id        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   profileId String?             @map("profile_id") @db.Uuid
   paramId   String?             @map("param_id") @db.Uuid
@@ -162,8 +160,8 @@ model CorpusParamProfileValue {
   @@map("corpus_param_profile_values")
 }
 
+@@schema(" corpus\)
 model CorpusParamChangeLog {
-  @@schema("corpus")
   id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   paramId      String?      @map("param_id") @db.Uuid
   oldValue     Decimal?     @map("old_value") @db.Decimal
@@ -177,8 +175,8 @@ model CorpusParamChangeLog {
   @@map("corpus_param_change_log")
 }
 
+@@schema(" corpus\)
 model CorpusJurisdiction {
-  @@schema("corpus")
   id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code                  String                 @unique
   name                  String
@@ -192,13 +190,12 @@ model CorpusJurisdiction {
   frameworks            CorpusFramework[]
   corpus_catalog_status corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_jurisdiction_status_id")
   security_user_scope   SecurityUserScope[]
-  superintendenceProfiles CorpusSuperintendence[]
 
   @@map("corpus_jurisdiction")
 }
 
+@@schema(" corpus\)
 model CorpusFramework {
-  @@schema("corpus")
   id                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   jurisdictionId        String                   @map("jurisdiction_id") @db.Uuid
   code                  String                   @unique
@@ -211,14 +208,13 @@ model CorpusFramework {
   jurisdiction          CorpusJurisdiction       @relation(fields: [jurisdictionId], references: [id], onUpdate: NoAction)
   corpus_catalog_status corpus_catalog_status?   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_framework_status_id")
   versions              CorpusFrameworkVersion[]
-  superintendenceProfiles CorpusSuperintendence[]
 
   @@index([jurisdictionId], map: "idx_corpus_framework_jurisdiction_id")
   @@map("corpus_framework")
 }
 
+@@schema(" corpus\)
 model CorpusFrameworkVersion {
-  @@schema("corpus")
   id                            String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   frameworkId                   String                          @map("framework_id") @db.Uuid
   version                       String
@@ -237,15 +233,14 @@ model CorpusFrameworkVersion {
   corpus_source                 corpus_source[]
   corpus_test_control_procedure corpus_test_control_procedure[]
   security_user_scope           SecurityUserScope[]
-  superintendenceProfiles       CorpusSuperintendence[]
 
   @@unique([frameworkId, version])
   @@index([frameworkId], map: "idx_corpus_framework_version_framework_id")
   @@map("corpus_framework_version")
 }
 
+@@schema(" corpus\)
 model CorpusCompany {
-  @@schema("corpus")
   id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code                  String                @unique
   name                  String
@@ -257,13 +252,12 @@ model CorpusCompany {
   assessments           CorpusAssessment[]
   jurisdiction          CorpusJurisdiction?   @relation(fields: [jurisdictionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   corpus_catalog_status corpus_catalog_status @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  superintendenceProfiles CorpusSuperintendence[]
 
   @@map("corpus_company")
 }
 
+@@schema(" corpus\)
 model CorpusDomain {
-  @@schema("corpus")
   id                       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   framework_version_id     String                 @db.Uuid
   code                     String
@@ -275,17 +269,16 @@ model CorpusDomain {
   status_id                Int?                   @db.SmallInt
   corpus_framework_version CorpusFrameworkVersion @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   corpus_catalog_status    corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_domain_status_id")
-  obligations           CorpusObligation[]
-  security_user_scope   SecurityUserScope[]
-  scopes                CorpusEvaluationScope[]
+  obligations              CorpusObligation[]
+  security_user_scope      SecurityUserScope[]
 
   @@unique([framework_version_id, code])
   @@index([framework_version_id], map: "idx_corpus_domain_framework_version_id")
   @@map("corpus_domain")
 }
 
+@@schema(" corpus\)
 model CorpusObligation {
-  @@schema("corpus")
   id                               String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   domainId                         String                            @map("domain_id") @db.Uuid
   code                             String
@@ -314,8 +307,6 @@ model CorpusObligation {
   corpus_obligation_risk           corpus_obligation_risk[]
   corpus_obligation_source         corpus_obligation_source[]
   weights                          CorpusParameterObligationWeight[]
-  findings                         CorpusAuditFinding[]
-  scopes                           CorpusEvaluationScope[]
 
   @@unique([domainId, code])
   @@index([criticalityId], map: "idx_corpus_obligation_criticality_id")
@@ -327,8 +318,8 @@ model CorpusObligation {
   @@map("corpus_obligation")
 }
 
+@@schema(" corpus\)
 model CorpusControl {
-  @@schema("corpus")
   id                                String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code                              String                            @unique
   name                              String
@@ -347,9 +338,6 @@ model CorpusControl {
   is_hard_gate                      Boolean                           @default(false)
   rationale                         String?
   primary_cf_risk_id                String?                           @db.Uuid
-  designDescription                 String                            @default("") @map("design_description")
-  criticalityLevel                  Int                               @default(3) @map("criticality_level") @db.SmallInt
-  inherentMitigationStrength       Decimal                           @default(1.000) @map("inherent_mitigation_strength") @db.Decimal(4, 3)
   corpus_catalog_control_automation corpus_catalog_control_automation @relation(fields: [automationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   corpus_catalog_control_type       corpus_catalog_control_type       @relation(fields: [controlTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   corpus_catalog_control_frequency  corpus_catalog_control_frequency  @relation(fields: [frequencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -363,14 +351,13 @@ model CorpusControl {
   corpus_test_control               corpus_test_control[]
   corpus_test_control_procedure     corpus_test_control_procedure[]
   corpus_test_control_run           corpus_test_control_run[]
-  findings                          CorpusAuditFinding[]
 
   @@index([primary_cf_risk_id], map: "idx_control_primary_cf")
   @@map("corpus_control")
 }
 
+@@schema(" corpus\)
 model CorpusControlObligation {
-  @@schema("corpus")
   controlId           String           @map("control_id") @db.Uuid
   obligationId        String           @map("obligation_id") @db.Uuid
   compliance_strength Int              @db.SmallInt
@@ -382,8 +369,8 @@ model CorpusControlObligation {
   @@map("corpus_control_obligation")
 }
 
+@@schema(" corpus\)
 model CorpusAssessment {
-  @@schema("corpus")
   id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId             String                 @map("company_id") @db.Uuid
   frameworkVersionId    String                 @map("framework_version_id") @db.Uuid
@@ -401,8 +388,8 @@ model CorpusAssessment {
   @@map("corpus_assessment")
 }
 
+@@schema(" corpus\)
 model CorpusEvaluation {
-  @@schema("corpus")
   id                    String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   assessmentId          String                         @map("assessment_id") @db.Uuid
   periodStart           DateTime                       @map("period_start") @db.Date
@@ -419,28 +406,18 @@ model CorpusEvaluation {
   testRuns              CorpusEvaluationTestRun[]
   corpus_material_event corpus_material_event[]
   modelRuns             CorpusModelRun[]
-  findings              CorpusAuditFinding[]
-  scopes                CorpusEvaluationScope[]
 
   @@map("corpus_evaluation")
 }
 
+@@schema(" corpus\)
 model CorpusEvaluationControlState {
-  @@schema("corpus")
   evaluationId            String           @map("evaluation_id") @db.Uuid
   controlId               String           @map("control_id") @db.Uuid
   implementation_status   String
   design_effectiveness    Decimal?         @db.Decimal(6, 4)
   operating_effectiveness Decimal?         @db.Decimal(6, 4)
   notes                   String?
-  formalizationEffectiveness Decimal?      @map("formalization_effectiveness") @db.Decimal(6, 4)
-  coverageEffectiveness      Decimal?      @map("coverage_effectiveness") @db.Decimal(6, 4)
-  recencyEffectiveness       Decimal?      @map("recency_effectiveness") @db.Decimal(6, 4)
-  evidenceValidated          Boolean       @default(false) @map("evidence_validated")
-  applicability              String        @default("applicable") @map("applicability")
-  notApplicableReason        String?       @map("not_applicable_reason")
-  finalEffectiveness         Decimal?      @map("final_effectiveness") @db.Decimal(6, 4)
-  computedAt                 DateTime?     @map("computed_at") @db.Timestamptz(6)
   updated_at              DateTime         @default(now()) @db.Timestamptz(6)
   updated_by              String?
   control                 CorpusControl    @relation(fields: [controlId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -450,8 +427,8 @@ model CorpusEvaluationControlState {
   @@map("corpus_evaluation_control_state")
 }
 
+@@schema(" corpus\)
 model CorpusEvaluationTestRun {
-  @@schema("corpus")
   evaluationId            String                  @map("evaluation_id") @db.Uuid
   testControlRunId        String                  @map("test_control_run_id") @db.Uuid
   included                Boolean                 @default(true)
@@ -465,8 +442,8 @@ model CorpusEvaluationTestRun {
   @@map("corpus_evaluation_test_run")
 }
 
+@@schema(" corpus\)
 model CorpusEvaluationArtifact {
-  @@schema("corpus")
   evaluationId            String                  @map("evaluation_id") @db.Uuid
   artifactId              String                  @map("artifact_id") @db.Uuid
   status                  String
@@ -480,8 +457,8 @@ model CorpusEvaluationArtifact {
   @@map("corpus_evaluation_artifact")
 }
 
+@@schema(" corpus\)
 model CorpusModelRun {
-  @@schema("corpus")
   id                          String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   assessmentId                String                     @map("assessment_id") @db.Uuid
   evaluationId                String                     @map("evaluation_id") @db.Uuid
@@ -504,8 +481,8 @@ model CorpusModelRun {
   @@map("corpus_model_run")
 }
 
+@@schema(" corpus\)
 model CorpusModelRunScore {
-  @@schema("corpus")
   run_id           String         @id @db.Uuid
   score_total      Decimal?       @db.Decimal(10, 4)
   e_base           Decimal?       @db.Decimal(14, 6)
@@ -518,8 +495,8 @@ model CorpusModelRunScore {
   @@map("corpus_model_run_score")
 }
 
+@@schema(" corpus\)
 model CorpusModelRunControl {
-  @@schema("corpus")
   run_id                     String         @db.Uuid
   controlId                  String         @map("control_id") @db.Uuid
   implementation_status_used String?
@@ -534,8 +511,8 @@ model CorpusModelRunControl {
   @@map("corpus_model_run_control")
 }
 
+@@schema(" corpus\)
 model CorpusModelRunObligation {
-  @@schema("corpus")
   run_id             String           @db.Uuid
   obligationId       String           @map("obligation_id") @db.Uuid
   weight_used        Decimal?         @db.Decimal(10, 6)
@@ -548,8 +525,8 @@ model CorpusModelRunObligation {
   @@map("corpus_model_run_obligation")
 }
 
+@@schema(" corpus\)
 model CorpusModelRunTrigger {
-  @@schema("corpus")
   run_id           String         @db.Uuid
   triggerCode      String         @map("trigger_code")
   triggerFired     Boolean        @map("trigger_fired")
@@ -561,8 +538,8 @@ model CorpusModelRunTrigger {
   @@map("corpus_model_run_trigger")
 }
 
+@@schema(" corpus\)
 model CorpusParameterSet {
-  @@schema("corpus")
   id                       String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   framework_version_id     String                            @db.Uuid
   version                  String
@@ -580,8 +557,8 @@ model CorpusParameterSet {
   @@map("corpus_parameter_set")
 }
 
+@@schema(" corpus\)
 model CorpusParameterValue {
-  @@schema("corpus")
   parameterSetId String             @map("parameter_set_id") @db.Uuid
   key            String
   value          Json
@@ -592,8 +569,8 @@ model CorpusParameterValue {
   @@map("corpus_parameter_value")
 }
 
+@@schema(" corpus\)
 model CorpusParameterObligationWeight {
-  @@schema("corpus")
   parameterSetId String             @map("parameter_set_id") @db.Uuid
   obligationId   String             @map("obligation_id") @db.Uuid
   weight         Decimal            @db.Decimal(10, 6)
@@ -604,10 +581,25 @@ model CorpusParameterObligationWeight {
   @@map("corpus_parameter_obligation_weight")
 }
 
+@@schema(" corpus\)
+model CorpusAuditLog {
+  id         BigInt    @id @default(autoincrement())
+  tenantId   String?   @map("tenant_id") @db.Uuid
+  entityName String    @map("entity_name")
+  entityId   String    @map("entity_id") @db.Uuid
+  action     String
+  oldData    Json?     @map("old_data")
+  newData    Json?     @map("new_data")
+  changedBy  String?   @map("changed_by") @db.Uuid
+  changedAt  DateTime? @default(now()) @map("changed_at") @db.Timestamptz(6)
+  ipAddress  String?   @map("ip_address")
+  userAgent  String?   @map("user_agent")
 
+  @@map("corpus_audit_log")
+}
 
+@@schema(" corpus\)
 model corpus_assessment_draft {
-  @@schema("corpus")
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id            String    @db.Uuid
   created_by           String?   @db.Uuid
@@ -635,29 +627,29 @@ model corpus_assessment_draft {
   @@index([tenant_id], map: "idx_corpus_assessment_draft_tenant")
 }
 
+@@schema(" corpus\)
 model corpus_catalog_control_automation {
-  @@schema("corpus")
   id             Int             @id @default(autoincrement()) @db.SmallInt
   code           String          @unique
   corpus_control CorpusControl[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_control_frequency {
-  @@schema("corpus")
   id             Int             @id @default(autoincrement()) @db.SmallInt
   code           String          @unique
   corpus_control CorpusControl[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_control_type {
-  @@schema("corpus")
   id             Int             @id @default(autoincrement()) @db.SmallInt
   code           String          @unique
   corpus_control CorpusControl[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_criticality {
-  @@schema("corpus")
   id                    Int                     @id @db.SmallInt
   code                  String                  @unique
   name                  String
@@ -668,8 +660,8 @@ model corpus_catalog_criticality {
   corpus_obligation     CorpusObligation[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_evidence_strength {
-  @@schema("corpus")
   id                Int                @id @db.SmallInt
   code              String             @unique
   name              String
@@ -679,8 +671,8 @@ model corpus_catalog_evidence_strength {
   corpus_obligation CorpusObligation[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_obligation_type {
-  @@schema("corpus")
   id                Int                @id @default(autoincrement()) @db.SmallInt
   code              String             @unique
   name              String
@@ -690,8 +682,8 @@ model corpus_catalog_obligation_type {
   corpus_obligation CorpusObligation[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_risk_layer {
-  @@schema("corpus")
   id          Int           @id @default(autoincrement()) @db.SmallInt
   code        String        @unique
   name        String
@@ -701,8 +693,8 @@ model corpus_catalog_risk_layer {
   corpus_risk corpus_risk[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_risk_type {
-  @@schema("corpus")
   id          Int           @id @default(autoincrement()) @db.SmallInt
   code        String        @unique
   name        String
@@ -711,8 +703,8 @@ model corpus_catalog_risk_type {
   corpus_risk corpus_risk[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_source_type {
-  @@schema("corpus")
   id            Int             @id @default(autoincrement()) @db.SmallInt
   code          String          @unique
   name          String
@@ -722,8 +714,8 @@ model corpus_catalog_source_type {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_catalog_status {
-  @@schema("corpus")
   id                            Int                             @id @default(autoincrement()) @db.SmallInt
   code                          String                          @unique
   name                          String
@@ -745,8 +737,8 @@ model corpus_catalog_status {
   corpus_test_control_procedure corpus_test_control_procedure[]
 }
 
+@@schema(" corpus\)
 model corpus_catalog_test_method {
-  @@schema("corpus")
   id          Int           @id @default(autoincrement()) @db.SmallInt
   code        String        @unique
   name        String
@@ -756,8 +748,8 @@ model corpus_catalog_test_method {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_control_artifact {
-  @@schema("corpus")
   id                           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   control_id                   String                         @db.Uuid
   code                         String                         @unique
@@ -776,8 +768,8 @@ model corpus_control_artifact {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_control_artifact_risk {
-  @@schema("corpus")
   artifact_id             String                  @db.Uuid
   risk_id                 String                  @db.Uuid
   mitigation_strength     Int                     @db.SmallInt
@@ -788,8 +780,8 @@ model corpus_control_artifact_risk {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_control_risk_map {
-  @@schema("corpus")
   control_id               String                 @db.Uuid
   risk_id                  String                 @db.Uuid
   mitigation_strength      Int                    @db.SmallInt
@@ -808,8 +800,8 @@ model corpus_control_risk_map {
   @@index([risk_id, framework_version_id], map: "idx_crm_risk_fv")
 }
 
+@@schema(" corpus\)
 model corpus_control_source {
-  @@schema("corpus")
   control_id    String        @db.Uuid
   source_id     String        @db.Uuid
   corpus_source corpus_source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
@@ -817,8 +809,8 @@ model corpus_control_source {
   @@id([control_id, source_id])
 }
 
+@@schema(" corpus\)
 model corpus_material_event {
-  @@schema("corpus")
   id                         String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id                  String                     @db.Uuid
   code                       String
@@ -846,8 +838,8 @@ model corpus_material_event {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_obligation_risk {
-  @@schema("corpus")
   obligation_id     String           @db.Uuid
   risk_id           String           @db.Uuid
   link_strength     Int              @default(3) @db.SmallInt
@@ -861,8 +853,8 @@ model corpus_obligation_risk {
   @@index([risk_id], map: "idx_obligation_risk_risk")
 }
 
+@@schema(" corpus\)
 model corpus_obligation_source {
-  @@schema("corpus")
   obligation_id     String           @db.Uuid
   source_id         String           @db.Uuid
   corpus_obligation CorpusObligation @relation(fields: [obligation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -871,8 +863,8 @@ model corpus_obligation_source {
   @@id([obligation_id, source_id])
 }
 
+@@schema(" corpus\)
 model corpus_risk {
-  @@schema("corpus")
   id                           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code                         String                         @unique
   name                         String
@@ -896,14 +888,13 @@ model corpus_risk {
   corpus_catalog_risk_type     corpus_catalog_risk_type?      @relation(fields: [risk_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_risk_type_id")
   corpus_catalog_status        corpus_catalog_status?         @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_status_id")
   corpus_risk_source           corpus_risk_source[]
-  findings                     CorpusAuditFinding[]
 
   @@index([parent_risk_id], map: "idx_corpus_risk_parent_risk_id")
   @@index([risk_layer_id], map: "idx_corpus_risk_risk_layer_id")
 }
 
+@@schema(" corpus\)
 model corpus_risk_source {
-  @@schema("corpus")
   risk_id       String        @db.Uuid
   source_id     String        @db.Uuid
   corpus_risk   corpus_risk   @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -912,8 +903,8 @@ model corpus_risk_source {
   @@id([risk_id, source_id])
 }
 
+@@schema(" corpus\)
 model corpus_source {
-  @@schema("corpus")
   id                         String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   framework_version_id       String?                     @db.Uuid
   source_type                String
@@ -936,8 +927,8 @@ model corpus_source {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_test {
-  @@schema("corpus")
   id                            String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code                          String                          @unique
   name                          String
@@ -958,7 +949,6 @@ model corpus_test {
   corpus_test_control           corpus_test_control[]
   corpus_test_control_procedure corpus_test_control_procedure[]
   corpus_test_control_run       corpus_test_control_run[]
-
   corpus_test_script            corpus_test_script[]
   corpus_test_source            corpus_test_source[]
 
@@ -968,8 +958,8 @@ model corpus_test {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_test_control {
-  @@schema("corpus")
   control_id           String        @db.Uuid
   test_id              String        @db.Uuid
   applicability        String?       @default("always")
@@ -986,8 +976,8 @@ model corpus_test_control {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_test_control_procedure {
-  @@schema("corpus")
   id                       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   control_id               String                  @db.Uuid
   test_id                  String                  @db.Uuid
@@ -1021,8 +1011,8 @@ model corpus_test_control_procedure {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_test_control_run {
-  @@schema("corpus")
   id                         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   control_id                 String                    @db.Uuid
   test_id                    String                    @db.Uuid
@@ -1044,7 +1034,6 @@ model corpus_test_control_run {
   script_id                  String?                   @db.Uuid
   corpus_evaluation_test_run CorpusEvaluationTestRun[]
   corpus_material_event      corpus_material_event[]
-  findings                   CorpusAuditFinding[]
   corpus_control             CorpusControl             @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_run_control_id_fkey")
   corpus_test                corpus_test               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_run_test_id_fkey")
   corpus_test_script         corpus_test_script?       @relation(fields: [script_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_test_control_run_script_fk")
@@ -1057,8 +1046,8 @@ model corpus_test_control_run {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+@@schema(" corpus\)
 model corpus_test_script {
-  @@schema("corpus")
   id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   test_id                 String                    @db.Uuid
   code                    String
@@ -1077,8 +1066,8 @@ model corpus_test_script {
   @@index([test_id, is_active], map: "idx_test_script_active")
 }
 
+@@schema(" corpus\)
 model corpus_test_source {
-  @@schema("corpus")
   test_id       String        @db.Uuid
   source_id     String        @db.Uuid
   corpus_source corpus_source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
@@ -1087,8 +1076,8 @@ model corpus_test_source {
   @@id([test_id, source_id])
 }
 
+@@schema(" corpus\)
 model llm_master_prompts {
-  @@schema("corpus")
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String   @unique
   name        String
@@ -1102,171 +1091,4 @@ model llm_master_prompts {
 
   @@index([code, is_active], map: "idx_master_prompts_active_code")
   @@index([module_name, text_area, is_active], map: "idx_master_prompts_lookup")
-}
-model CorpusSuperintendence {
-  @@schema("corpus")
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId          String              @map("company_id") @db.Uuid
-  jurisdictionId     String              @map("jurisdiction_id") @db.Uuid
-  frameworkId        String              @map("framework_id") @db.Uuid
-  frameworkVersionId String              @map("framework_version_id") @db.Uuid
-  status             String              @default("draft")
-  alpha              Decimal?            @db.Decimal
-  beta               Decimal?            @db.Decimal
-  gamma              Decimal?            @db.Decimal
-  materialMultiplier Decimal?            @map("material_multiplier") @db.Decimal
-  isActive           Boolean             @default(false) @map("is_active")
-  hashSnapshot       String?             @map("hash_snapshot")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @default(now()) @map("updated_at")
-  
-  company            CorpusCompany       @relation(fields: [companyId], references: [id])
-  jurisdiction       CorpusJurisdiction  @relation(fields: [jurisdictionId], references: [id])
-  framework          CorpusFramework     @relation(fields: [frameworkId], references: [id])
-  frameworkVersion   CorpusFrameworkVersion @relation(fields: [frameworkVersionId], references: [id])
-  
-  eventWeights       CorpusSuperintendenceEventWeight[]
-  triggerThresholds  CorpusSuperintendenceTriggerThreshold[]
-
-  @@map("corpus_superintendence")
-}
-
-model CorpusSuperintendenceEventWeight {
-  @@schema("corpus")
-  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  superintendenceId     String                @map("superintendence_id") @db.Uuid
-  eventTypeCode         String                @map("event_type_code")
-  sensitivityWeight     Decimal               @map("sensitivity_weight") @db.Decimal
-  severityMultiplier    Decimal               @map("severity_multiplier") @db.Decimal
-  readinessPenalty      Decimal               @map("readiness_penalty") @db.Decimal
-  exposureFloor         Decimal               @map("exposure_floor") @db.Decimal
-  isHardTrigger         Boolean               @default(false) @map("is_hard_trigger")
-  
-  superintendence       CorpusSuperintendence @relation(fields: [superintendenceId], references: [id], onDelete: Cascade)
-
-  @@unique([superintendenceId, eventTypeCode])
-  @@map("corpus_superintendence_event_weight")
-}
-
-model CorpusSuperintendenceTriggerThreshold {
-  @@schema("corpus")
-  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  superintendenceId     String                @map("superintendence_id") @db.Uuid
-  triggerCode           String                @map("trigger_code")
-  thresholdValue        Decimal               @map("threshold_value") @db.Decimal
-  exposureFloor         Decimal               @map("exposure_floor") @db.Decimal
-  enabled               Boolean               @default(true)
-  
-  superintendence       CorpusSuperintendence @relation(fields: [superintendenceId], references: [id], onDelete: Cascade)
-
-  @@unique([superintendenceId, triggerCode])
-  @@map("corpus_superintendence_trigger_threshold")
-}
-
-model CorpusCatalogAuditFindingType {
-  @@schema("corpus")
-  id                    Int      @id @db.SmallInt
-  code                  String   @unique
-  name                  String
-  description           String?
-  defaultSeverity       Int      @default(3) @map("default_severity") @db.SmallInt
-  defaultExposureFloor  Decimal  @default(0.0000) @map("default_exposure_floor") @db.Decimal(6, 4)
-  defaultReadinessPenalty Int    @default(0) @map("default_readiness_penalty")
-  defaultOwnerRole      String?  @map("default_owner_role")
-  defaultDueDays        Int?     @map("default_due_days")
-  isActive              Boolean  @default(true) @map("is_active")
-  sortOrder             Int      @default(0) @map("sort_order")
-  
-  findings              CorpusAuditFinding[]
-
-  @@map("corpus_catalog_audit_finding_type")
-}
-
-model CorpusAuditFinding {
-  @@schema("corpus")
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId              String   @map("tenant_id") @db.Uuid
-  code                  String
-  title                 String
-  description           String?
-  
-  eventTypeId           Int      @map("event_type_id") @db.SmallInt
-  severity              Int      @db.SmallInt
-  status                String
-  
-  exposureFloor         Decimal  @default(0.0000) @map("exposure_floor") @db.Decimal(6, 4)
-  readinessPenalty      Int      @default(0) @map("readiness_penalty")
-  ownerRole             String?  @map("owner_role")
-  dueDate               DateTime? @map("due_date") @db.Date
-  
-  rootCause             String?  @map("root_cause")
-  evidenceLinks         Json     @default("[]") @map("evidence_links")
-  dedupeKey             String?  @unique @map("dedupe_key")
-  
-  severityId            Int?     @map("severity_id")
-  statusId              Int?     @map("status_id")
-  
-  evaluationId          String?  @map("evaluation_id") @db.Uuid
-  controlId             String?  @map("control_id") @db.Uuid
-  obligationId          String?  @map("obligation_id") @db.Uuid
-  riskId                String?  @map("risk_id") @db.Uuid
-  testControlRunId      String?  @map("test_control_run_id") @db.Uuid
-  
-  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy             String?  @map("created_by") @db.Uuid
-  updatedAt             DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  updatedBy             String?  @map("updated_by") @db.Uuid
-  closedAt              DateTime? @map("closed_at") @db.Timestamptz(6)
-  closedBy              String?  @map("closed_by") @db.Uuid
-  
-  metadata              Json?    @default("{}")
-  
-  eventType             CorpusCatalogAuditFindingType @relation(fields: [eventTypeId], references: [id])
-  evaluation            CorpusEvaluation?           @relation(fields: [evaluationId], references: [id])
-  control               CorpusControl?              @relation(fields: [controlId], references: [id])
-  obligation            CorpusObligation?           @relation(fields: [obligationId], references: [id])
-  risk                  corpus_risk?                @relation(fields: [riskId], references: [id])
-  testControlRun        corpus_test_control_run?    @relation(fields: [testControlRunId], references: [id])
-
-  @@index([evaluationId, status], map: "idx_finding_eval_status")
-  @@index([evaluationId, severity], map: "idx_finding_eval_severity")
-  @@map("corpus_audit_finding")
-}
-
-model CorpusAuditLog {
-  @@schema("corpus")
-  id           BigInt   @id @default(autoincrement())
-  tenantId     String?  @map("tenant_id") @db.Uuid
-  entityName   String   @map("entity_name")
-  entityId     String   @map("entity_id") @db.Uuid
-  action       String
-  oldData      Json?    @map("old_data")
-  newData      Json?    @map("new_data")
-  changedBy    String?  @map("changed_by") @db.Uuid
-  changedAt    DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
-  ipAddress    String?  @map("ip_address")
-  userAgent    String?  @map("user_agent")
-
-  @@map("corpus_audit_log")
-}
-
-model CorpusEvaluationScope {
-  @@schema("corpus")
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  evaluationId  String   @map("evaluation_id") @db.Uuid
-  scopeType     String   @map("scope_type")
-  domainId      String?  @map("domain_id") @db.Uuid
-  obligationId  String?  @map("obligation_id") @db.Uuid
-  isInScope     Boolean  @default(true) @map("is_in_scope")
-  rationale     String?
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  evaluation    CorpusEvaluation @relation(fields: [evaluationId], references: [id])
-  domain        CorpusDomain?    @relation(fields: [domainId], references: [id])
-  obligation    CorpusObligation? @relation(fields: [obligationId], references: [id])
-
-  @@unique([evaluationId, scopeType, domainId, obligationId])
-  @@index([evaluationId], map: "idx_eval_scope_evaluation")
-  @@map("corpus_evaluation_scope")
 }

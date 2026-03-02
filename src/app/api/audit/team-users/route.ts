@@ -30,7 +30,11 @@ export async function GET(request: Request) {
         email: true,
         name: true,
         lastName: true,
-        roleCode: true,
+        role: {
+          select: {
+            roleCode: true
+          }
+        },
       },
       orderBy: { name: 'asc' },
     });

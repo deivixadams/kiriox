@@ -15,20 +15,22 @@ import {
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id: evaluationId } = params;
+        const { id: evaluationId } = await params;
 
         // 1. GATHER DATA
-        const evaluation = await prisma.corpusEvaluation.findUnique({
+        const evaluation = await (prisma as any).corpusEvaluation.findUnique({
             where: { id: evaluationId },
             include: {
                 assessment: true,
                 controlStates: {
-                    include: { control: true }
+                    include: { corpus_control: true }
                 },
-                testRuns: true,
+                testRuns: {
+                    include: { test_control_run: true }
+                },
                 scopes: true
             }
         });
@@ -39,7 +41,7 @@ export async function POST(
         // Fetch Active Supervisor Profile (Capa 2) for parameters
         const supervisorProfile = await (prisma as any).corpusSuperintendence.findFirst({
             where: {
-                companyId: evaluation.assessment.companyId,
+                companyId: (evaluation as any).assessment?.companyId,
                 isActive: true
             }
         });
@@ -59,7 +61,7 @@ export async function POST(
             parseFloat(parameterSet?.values.find((v: any) => v.key === 'alpha')?.value.toString() || '0.3');
 
         // 2. FETCH AUDIT FINDINGS
-        const findings = await prisma.corpusAuditFinding.findMany({
+        const findings = await (prisma as any).corpusAuditFinding.findMany({
             where: { evaluationId, status: 'open' }
         });
 
@@ -71,10 +73,10 @@ export async function POST(
         };
 
         // Group controls by obligation using prisma
-        const controlObligationMap = await prisma.corpusControlObligation.findMany();
+        const controlObligationMap = await (prisma as any).corpusControlObligation.findMany();
 
         // Loop through obligations in scope
-        const obligationsInScope = await prisma.corpusObligation.findMany({
+        const obligationsInScope = await (prisma as any).corpusObligation.findMany({
             include: { domain: true }
         });
 
@@ -86,7 +88,7 @@ export async function POST(
                 .filter((m: any) => m.obligationId === obl.id)
                 .map((m: any) => m.controlId);
 
-            const relatedStates = evaluation.controlStates.filter((s: any) => relatedControlIds.includes(s.controlId));
+            const relatedStates = (evaluation as any).controlStates.filter((s: any) => relatedControlIds.includes(s.controlId));
 
             let maxMitigation = 0;
             for (const state of relatedStates) {
@@ -100,7 +102,7 @@ export async function POST(
                     applicable: state.applicability === 'applicable'
                 }) || 0;
 
-                const sj = C * parseFloat(state.control.inherentMitigationStrength.toString());
+                const sj = C * parseFloat(state.corpus_control?.inherentMitigationStrength?.toString() || '0');
                 if (sj > maxMitigation) maxMitigation = sj;
 
                 runResults.controls.push({ controlId: state.controlId, score: C });
@@ -141,7 +143,7 @@ export async function POST(
         // 3. GENERATE STABLE HASHES
         const inputSnapshot = {
             evaluationId,
-            states: evaluation.controlStates,
+            states: (evaluation as any).controlStates,
             parameterSetId: parameterSet.id
         };
         const inputHash = computeStableHash(inputSnapshot);
@@ -152,11 +154,11 @@ export async function POST(
             // Create Model Run
             const run = await tx.corpusModelRun.create({
                 data: {
-                    tenantId: evaluation.tenantId,
+                    tenantId: (evaluation as any).assessment?.tenantId || 'system',
                     assessmentId: evaluation.assessmentId,
                     evaluationId: evaluation.id,
                     parameterSetId: parameterSet.id,
-                    frameworkVersionId: evaluation.frameworkVersionId,
+                    frameworkVersionId: (evaluation as any).assessment?.frameworkVersionId || 'default',
                     engineVersion: '3.0-V3',
                     runStatus: 'completed',
                     inputHash,

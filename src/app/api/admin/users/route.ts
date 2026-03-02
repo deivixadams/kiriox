@@ -25,18 +25,31 @@ export async function GET() {
                 email: true,
                 name: true,
                 lastName: true,
-                roleCode: true,
                 isActive: true,
                 activationStatus: true,
-                mustChangePassword: true,
-                lastLoginAt: true,
                 createdAt: true,
-                updatedAt: true
+                user_x_rbac: {
+                    where: { isActive: true },
+                    select: {
+                        role: {
+                            select: {
+                                roleCode: true,
+                                roleName: true
+                            }
+                        }
+                    }
+                }
             },
             orderBy: { createdAt: 'desc' }
         });
 
-        return NextResponse.json(users);
+        // Flatten roles for the frontend
+        const formattedUsers = users.map(u => ({
+            ...u,
+            roles: u.user_x_rbac.map(ux => ux.role)
+        }));
+
+        return NextResponse.json(formattedUsers);
     } catch (error: any) {
         console.error('Error fetching users:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -80,6 +93,10 @@ export async function POST(request: Request) {
 
         const passwordHash = await hashPassword(password);
 
+        const role = await prisma.securityRbac.findUnique({
+            where: { roleCode: roleCode || 'OPERATOR' }
+        });
+
         const newUser = await prisma.securityUser.create({
             data: {
                 tenantId,
@@ -88,7 +105,7 @@ export async function POST(request: Request) {
                 name,
                 lastName: lastName || null,
                 whatsapp: whatsapp || null,
-                roleCode: roleCode || 'OPERATOR',
+                roleId: role ? role.id : null,
                 isActive: true,
                 activationStatus: 'active',
                 mustChangePassword: mustChangePassword !== false,
@@ -121,7 +138,7 @@ export async function POST(request: Request) {
                     email: newUser.email,
                     name: newUser.name,
                     lastName: newUser.lastName,
-                    roleCode: newUser.roleCode,
+                    roleCode: roleCode || 'OPERATOR',
                     isActive: newUser.isActive,
                     activationStatus: newUser.activationStatus
                 },

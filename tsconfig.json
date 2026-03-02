@@ -46,6 +46,7 @@
     "./cre-dashboard/src/dashboard/**/*.tsx"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "back-office-api"
   ]
 }

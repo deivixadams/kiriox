@@ -14,7 +14,8 @@ function generateTempPassword() {
     return randomBytes(8).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const auth = await getAuthContext();
     if (!auth) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -28,7 +29,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     try {
         const user = await prisma.securityUser.findFirst({
-            where: { id: params.id, tenantId: auth.tenantId }
+            where: { id: id, tenantId: auth.tenantId }
         });
 
         if (!user) {
@@ -39,7 +40,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         const passwordHash = await hashPassword(tempPassword);
 
         await prisma.securityUser.update({
-            where: { id: params.id },
+            where: { id: id },
             data: {
                 passwordHash,
                 mustChangePassword: true,
@@ -52,7 +53,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
             data: {
                 tenantId: auth.tenantId,
                 entityName: 'security_users',
-                entityId: params.id,
+                entityId: id,
                 action: 'reset_password',
                 newData: {
                     mustChangePassword: true

@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 // PATCH /api/audit/findings/[id]/status
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = params;
+    const { id } = await params;
     try {
         const body = await req.json();
         const { status, resolution, userId, userRole } = body;
@@ -33,13 +31,13 @@ export async function PATCH(
             updateData.metadata = { resolution };
         }
 
-        const finding = await prisma.corpusAuditFinding.update({
+        const finding = await (prisma as any).corpusAuditFinding.update({
             where: { id },
             data: updateData
         });
 
         // 4. Log
-        await prisma.corpusAuditLog.create({
+        await (prisma as any).corpusAuditLog.create({
             data: {
                 tenantId: finding.tenantId,
                 entityName: 'corpus_audit_finding',

@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
 
         // 1. Fetch the profile and its children
-        const profile = await prisma.corpusSuperintendence.findUnique({
+        const profile = await (prisma as any).corpusSuperintendence.findUnique({
             where: { id },
             include: {
                 eventWeights: true,
@@ -34,8 +34,8 @@ export async function POST(
                 gamma: profile.gamma,
                 materialMultiplier: profile.materialMultiplier
             },
-            events: profile.eventWeights
-                .sort((a, b) => a.eventTypeCode.localeCompare(b.eventTypeCode))
+            events: (profile.eventWeights as any[])
+                .sort((a, b) => (a.eventTypeCode || '').localeCompare(b.eventTypeCode || ''))
                 .map(e => ({
                     code: e.eventTypeCode,
                     w: e.sensitivityWeight,
@@ -44,8 +44,8 @@ export async function POST(
                     f: e.exposureFloor,
                     h: e.isHardTrigger
                 })),
-            triggers: profile.triggerThresholds
-                .sort((a, b) => a.triggerCode.localeCompare(b.triggerCode))
+            triggers: (profile.triggerThresholds as any[])
+                .sort((a, b) => (a.triggerCode || '').localeCompare(b.triggerCode || ''))
                 .map(t => ({
                     code: t.triggerCode,
                     v: t.thresholdValue,
@@ -57,9 +57,9 @@ export async function POST(
         const hash = crypto.createHash('sha256').update(JSON.stringify(snapshot)).digest('hex');
 
         // 3. Transaction: Archive current active and Activate this one
-        await prisma.$transaction([
+        await (prisma as any).$transaction([
             // Archive current active profile for same company/jurisdiction/framework
-            prisma.corpusSuperintendence.updateMany({
+            (prisma as any).corpusSuperintendence.updateMany({
                 where: {
                     companyId: profile.companyId,
                     jurisdictionId: profile.jurisdictionId,
@@ -72,7 +72,7 @@ export async function POST(
                 }
             }),
             // Activate new one
-            prisma.corpusSuperintendence.update({
+            (prisma as any).corpusSuperintendence.update({
                 where: { id },
                 data: {
                     status: 'active',

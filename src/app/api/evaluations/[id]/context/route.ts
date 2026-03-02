@@ -3,12 +3,12 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
 
-        const evaluation = await prisma.corpusEvaluation.findUnique({
+        const evaluation = await (prisma as any).corpusEvaluation.findUnique({
             where: { id },
             include: {
                 assessment: {
@@ -28,7 +28,7 @@ export async function GET(
         }
 
         // Fetch Framework Version details separately if needed
-        const frameworkVersion = await prisma.corpusFrameworkVersion.findUnique({
+        const frameworkVersion = await (prisma as any).corpusFrameworkVersion.findUnique({
             where: { id: evaluation.frameworkVersionId },
             include: {
                 framework: true

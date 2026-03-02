@@ -137,7 +137,7 @@ export default function ParamManager() {
                         <Target className="text-warning" />
                         <div>
                             <div style={{ fontWeight: '600' }}>Incumplimiento Crítico en Reportes (ROS)</div>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Si Efectividad < 0.20 → Marcar Score como CRÍTICO automáticamente.</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Si Efectividad &lt; 0.20 → Marcar Score como CRÍTICO automáticamente.</div>
                         </div>
                     </div>
                 </div>

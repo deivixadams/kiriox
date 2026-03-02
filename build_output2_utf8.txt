@@ -1,0 +1,40 @@
+﻿
+> cre@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 5.0s
+  Running TypeScript ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\donde\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], RemoteExce 
+   ption
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./acta-auditor├¡a-v1.ts:250:60
+Type error: Argument of type 'string | undefined' is not assignable to parameter of 
+type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+[0m [90m 248 |[39m           labelValue([32m'Entidad Auditada'[39m[33m,[39m 
+entidad_nombre [33m||[39m [32m'ΓÇö'[39m)[33m,[39m
+ [90m 249 |[39m           labelValue([32m'C├│digo de Auditor├¡a'[39m[33m,[39m 
+resolvedCodigo)[33m,[39m
+[31m[1m>[22m[39m[90m 250 |[39m           labelValue([32m'Periodo de 
+Auditor├¡a'[39m[33m,[39m [32m`${formatDate(periodo_inicio)} ΓÇö 
+${formatDate(periodo_fin)}`[39m)[33m,[39m
+ [90m     |[39m                                                            
+[31m[1m^[22m[39m
+ [90m 251 |[39m           labelValue([32m'Fecha de Emisi├│n'[39m[33m,[39m 
+formatDate([36mnew[39m [33mDate[39m()[33m.[39mtoISOString()[33m.[39msplit([32m
+'T'[39m)[[35m0[39m]))[33m,[39m
+ [90m 252 |[39m
+ [90m 253 |[39m           sectionTitle([32m'2. OBJETIVO 
+GENERAL'[39m)[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

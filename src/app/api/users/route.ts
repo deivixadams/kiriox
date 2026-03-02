@@ -16,7 +16,13 @@ export async function GET() {
                 name: true,
                 lastName: true,
                 whatsapp: true,
-                roleCode: true,
+                roleId: true,
+                role: {
+                    select: {
+                        roleCode: true,
+                        roleName: true
+                    }
+                },
                 isActive: true,
                 createdAt: true,
                 updatedAt: true

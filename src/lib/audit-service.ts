@@ -15,11 +15,11 @@ export async function generateFindingFromTestRun(
     userId: string
 ) {
     // 1. Fetch the test run and related control/obligation
-    const testRun = await prisma.corpusTestControlRun.findUnique({
+    const testRun = await (prisma as any).corpus_test_control_run.findUnique({
         where: { id: testRunId },
         include: {
-            control: true,
-            testDefinition: true
+            corpus_control: true,
+            corpus_test: true
         }
     });
 
@@ -35,7 +35,7 @@ export async function generateFindingFromTestRun(
     // For v1, we use a default based on result severity
     const defaultTypeCode = testRun.result === 'critical' ? 'CTRL_CRITICAL_FAIL' : 'CTRL_SIG_FAIL';
 
-    const findingType = await prisma.corpusAuditFindingType.findUnique({
+    const findingType = await (prisma as any).corpusCatalogAuditFindingType.findUnique({
         where: { code: defaultTypeCode }
     });
 
@@ -45,7 +45,7 @@ export async function generateFindingFromTestRun(
 
     // 4. Create Dedupe Key: evaluation_id + control_id + type_code
     // This ensures we only have one OPEN finding for the same issue in the same evaluation
-    const dedupeKey = `${evaluationId}:${testRun.controlId}:${defaultTypeCode}`;
+    const dedupeKey = `${evaluationId}:${(testRun as any).control_id}:${defaultTypeCode}`;
 
     // 5. Create or Update Finding
     const severity = testRun.result === 'critical' ? 5 : 4;
@@ -56,22 +56,22 @@ export async function generateFindingFromTestRun(
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + (dueDays as number));
 
-    const finding = await prisma.corpusAuditFinding.upsert({
+    const finding = await (prisma as any).corpusAuditFinding.upsert({
         where: { dedupeKey },
         update: {
-            status: 'open', // Re-open if it was closed but new failure occurred
+            status: 'open',
             evidenceLinks: {
                 push: { testRunId: testRunId, date: new Date().toISOString() }
-            },
+            } as any,
             updatedAt: new Date(),
             updatedBy: userId
         },
         create: {
             tenantId,
             code: `AUDIT-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
-            title: `Falla en Control: ${testRun.control.name}`,
-            description: `Hallazgo detectado automáticamente tras ejecución de prueba ${testRun.testDefinition.code}. Resultado: ${testRun.result}.`,
-            eventTypeId: findingType?.id || 1,
+            title: `Falla en Control: ${(testRun as any).corpus_control?.name || 'Desconocido'}`,
+            description: `Hallazgo detectado automáticamente tras ejecución de prueba ${(testRun as any).corpus_test?.code || 'N/A'}. Resultado: ${testRun.result}.`,
+            eventTypeId: findingType?.id || '1',
             severity,
             status: 'open',
             exposureFloor,
@@ -79,18 +79,17 @@ export async function generateFindingFromTestRun(
             dueDate,
             dedupeKey,
             evaluationId,
-            controlId: testRun.controlId,
+            controlId: (testRun as any).control_id,
             testControlRunId: testRunId,
             createdBy: userId,
-            evidenceLinks: [{ testRunId: testRunId, date: new Date().toISOString() }],
-            // Legacy fallbacks
+            evidenceLinks: [{ testRunId: testRunId, date: new Date().toISOString() }] as any,
             severityId: severity,
             statusId: 1
         }
     });
 
     // 6. Log change
-    await prisma.corpusAuditLog.create({
+    await (prisma as any).corpusAuditLog.create({
         data: {
             tenantId,
             entityName: 'corpus_audit_finding',

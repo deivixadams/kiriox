@@ -44,6 +44,10 @@ export async function POST(request: Request) {
         const tempPassword = generateTempPassword();
         const passwordHash = await hashPassword(tempPassword);
 
+        const role = await prisma.securityRbac.findUnique({
+            where: { roleCode: roleCode || 'OPERATOR' }
+        });
+
         // Create the user
         const newUser = await prisma.securityUser.create({
             data: {
@@ -53,7 +57,7 @@ export async function POST(request: Request) {
                 name,
                 lastName: lastName || null,
                 whatsapp: whatsapp || null,
-                roleCode: roleCode || 'OPERATOR',
+                roleId: role ? role.id : null,
                 isActive: true,
                 activationStatus: 'active',
                 mustChangePassword: true,

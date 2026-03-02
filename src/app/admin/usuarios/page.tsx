@@ -22,7 +22,10 @@ interface UserRow {
     name: string | null;
     lastName?: string | null;
     email: string;
-    roleCode: string;
+    role?: {
+        roleCode: string;
+        roleName?: string | null;
+    };
     isActive: boolean;
     activationStatus: string;
     createdAt: string;
@@ -183,7 +186,7 @@ export default function UserManagementPage() {
                 </div>
                 <div className="glass-card" style={{ padding: '1.25rem' }}>
                     <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05rem', marginBottom: '0.5rem' }}>Administradores</p>
-                    <p style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary)', margin: 0 }}>{users.filter(u => u.roleCode === 'ADMIN').length}</p>
+                    <p style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary)', margin: 0 }}>{users.filter(u => u.role?.roleCode === 'ADMIN').length}</p>
                 </div>
                 <div className="glass-card" style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gridColumn: 'span 2' }}>
                     <Search size={18} style={{ color: 'var(--muted)', marginRight: '1rem' }} />
@@ -258,7 +261,7 @@ export default function UserManagementPage() {
                                                 <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>
                                                     {`${user.name ?? ''} ${user.lastName ?? ''}`.trim() || 'Sin nombre'}
                                                 </p>
-                                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--muted)' }}>{user.roleCode}</p>
+                                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--muted)' }}>{user.role?.roleCode || 'Sin Rol'}</p>
                                             </div>
                                         </div>
                                     </td>
@@ -270,10 +273,10 @@ export default function UserManagementPage() {
                                             padding: '0.2rem 0.5rem',
                                             borderRadius: '6px',
                                             border: '1px solid var(--glass-border)',
-                                            color: user.roleCode === 'ADMIN' ? 'var(--primary)' : 'var(--muted)',
+                                            color: user.role?.roleCode === 'ADMIN' ? 'var(--primary)' : 'var(--muted)',
                                             background: 'rgba(255,255,255,0.02)'
                                         }}>
-                                            {user.roleCode}
+                                            {user.role?.roleCode || 'Sin Rol'}
                                         </span>
                                     </td>
                                     <td style={{ padding: '1rem 1.5rem' }}>
@@ -329,7 +332,7 @@ export default function UserManagementPage() {
                                                     <Lock size={14} /> Reset password
                                                 </button>
                                                 <button
-                                                    onClick={() => openRolePermissions(user.roleCode)}
+                                                    onClick={() => openRolePermissions(user.role?.roleCode || '')}
                                                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', color: 'white', background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
                                                 >
                                                     <ShieldCheck size={14} /> Ver permisos del rol

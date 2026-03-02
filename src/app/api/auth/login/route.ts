@@ -14,7 +14,8 @@ export async function POST(request: Request) {
 
         // Find the user
         const user = await prisma.securityUser.findUnique({
-            where: { email }
+            where: { email },
+            include: { role: true }
         });
 
         if (!user || !user.isActive) {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
         const token = await signAuthToken({
             userId: user.id,
             tenantId: user.tenantId,
-            roleCode: user.roleCode,
+            roleCode: user.role?.roleCode || 'USER',
             email: user.email
         });
         const csrfToken = createCsrfToken();

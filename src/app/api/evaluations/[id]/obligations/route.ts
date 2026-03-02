@@ -3,15 +3,15 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
 
         // 1. Get evaluation to know the framework version
         const evaluation = await prisma.corpusEvaluation.findUnique({
             where: { id },
-            select: { frameworkVersionId: true }
+            include: { assessment: { select: { frameworkVersionId: true } } }
         });
 
         if (!evaluation) return NextResponse.json({ error: 'Evaluation not found' }, { status: 404 });
@@ -34,9 +34,6 @@ export async function GET(
                             }
                         }
                     }
-                },
-                scopes: {
-                    where: { evaluationId: id }
                 }
             }
         });

@@ -17,20 +17,26 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const roleCode = searchParams.get('role_code');
-    if (!roleCode) {
-        return NextResponse.json({ error: 'Missing role_code' }, { status: 400 });
-    }
 
     try {
-        const permissions = await prisma.securityRbac.findMany({
-            where: { roleCode },
-            select: { permissionCode: true }
+        if (roleCode) {
+            const role = await prisma.securityRbac.findFirst({
+                where: { roleCode }
+            });
+
+            return NextResponse.json({
+                roleCode,
+                permissions: role ? [role.roleName || roleCode] : []
+            });
+        }
+
+        // Return all active roles if no specific roleCode requested
+        const roles = await prisma.securityRbac.findMany({
+            where: { isActive: true },
+            orderBy: { createdAt: 'asc' }
         });
 
-        return NextResponse.json({
-            roleCode,
-            permissions: permissions.map((p) => p.permissionCode)
-        });
+        return NextResponse.json(roles);
     } catch (error: any) {
         console.error('Error fetching RBAC:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

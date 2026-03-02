@@ -78,7 +78,7 @@ export async function buildActaInicioDoc(payload: ActaInicioPayload) {
       spacing: { after: 60 },
     });
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string) => {
     if (!dateStr) return '—';
     try {
       return new Date(dateStr).toLocaleDateString('es-DO', {

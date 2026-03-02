@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  schemas  = ["corpus", "security"]
+  schemas = ["corpus", "security"]
   provider = "postgresql"
 }
 
@@ -15,7 +15,6 @@ model SecurityUser {
   email               String              @unique(map: "idx_security_users_email_unique") @db.VarChar(255)
   passwordHash        String              @map("password_hash")
   name                String?             @map("name") @db.VarChar(255)
-  lastName            String?             @map("last_name")
   isActive            Boolean?            @default(true) @map("is_active")
   createdAt           DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt           DateTime?           @default(now()) @map("updated_at") @db.Timestamp(6)
@@ -23,9 +22,9 @@ model SecurityUser {
   lastLoginAt         DateTime?           @map("last_login_at") @db.Timestamptz(6)
   passwordUpdatedAt   DateTime?           @map("password_updated_at") @db.Timestamptz(6)
   activationStatus    String              @default("pending") @map("activation_status")
+  lastName            String?             @map("last_name")
   whatsapp            String?             @map("whatsapp")
   roleId              String?             @map("role_id") @db.Uuid
-  
   role                SecurityRbac?       @relation("UserPrimaryRole", fields: [roleId], references: [id])
   security_user_scope SecurityUserScope[]
   security_user_token SecurityUserToken[]
@@ -72,14 +71,14 @@ model SecurityUserToken {
 
 model SecurityRbac {
   @@schema("security")
-  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  roleCode        String         @unique @map("role_code") @db.VarChar(50)
-  permission_code String?        @db.VarChar(100)
-  createdAt       DateTime?      @default(now()) @map("created_at") @db.Timestamp(6)
-  roleName        String?        @map("role_name") @db.VarChar(100)
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleCode        String      @unique @map("role_code") @db.VarChar(50)
+  permission_code String?     @db.VarChar(100)
+  createdAt       DateTime?   @default(now()) @map("created_at") @db.Timestamp(6)
+  roleName        String?     @map("role_name") @db.VarChar(100)
   description     String?
-  isActive        Boolean?       @default(true) @map("is_active")
-  updatedAt       DateTime?      @default(now()) @map("updated_at") @db.Timestamp(6)
+  isActive        Boolean?    @default(true) @map("is_active")
+  updatedAt       DateTime?   @default(now()) @map("updated_at") @db.Timestamp(6)
   security_users  SecurityUser[] @relation("UserPrimaryRole")
   user_x_rbac     UserXRbac[]
 
@@ -192,7 +191,6 @@ model CorpusJurisdiction {
   frameworks            CorpusFramework[]
   corpus_catalog_status corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_jurisdiction_status_id")
   security_user_scope   SecurityUserScope[]
-  superintendenceProfiles CorpusSuperintendence[]
 
   @@map("corpus_jurisdiction")
 }
@@ -211,7 +209,6 @@ model CorpusFramework {
   jurisdiction          CorpusJurisdiction       @relation(fields: [jurisdictionId], references: [id], onUpdate: NoAction)
   corpus_catalog_status corpus_catalog_status?   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_framework_status_id")
   versions              CorpusFrameworkVersion[]
-  superintendenceProfiles CorpusSuperintendence[]
 
   @@index([jurisdictionId], map: "idx_corpus_framework_jurisdiction_id")
   @@map("corpus_framework")
@@ -237,7 +234,6 @@ model CorpusFrameworkVersion {
   corpus_source                 corpus_source[]
   corpus_test_control_procedure corpus_test_control_procedure[]
   security_user_scope           SecurityUserScope[]
-  superintendenceProfiles       CorpusSuperintendence[]
 
   @@unique([frameworkId, version])
   @@index([frameworkId], map: "idx_corpus_framework_version_framework_id")
@@ -257,7 +253,6 @@ model CorpusCompany {
   assessments           CorpusAssessment[]
   jurisdiction          CorpusJurisdiction?   @relation(fields: [jurisdictionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   corpus_catalog_status corpus_catalog_status @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  superintendenceProfiles CorpusSuperintendence[]
 
   @@map("corpus_company")
 }
@@ -275,9 +270,8 @@ model CorpusDomain {
   status_id                Int?                   @db.SmallInt
   corpus_framework_version CorpusFrameworkVersion @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   corpus_catalog_status    corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_domain_status_id")
-  obligations           CorpusObligation[]
-  security_user_scope   SecurityUserScope[]
-  scopes                CorpusEvaluationScope[]
+  obligations              CorpusObligation[]
+  security_user_scope      SecurityUserScope[]
 
   @@unique([framework_version_id, code])
   @@index([framework_version_id], map: "idx_corpus_domain_framework_version_id")
@@ -314,8 +308,6 @@ model CorpusObligation {
   corpus_obligation_risk           corpus_obligation_risk[]
   corpus_obligation_source         corpus_obligation_source[]
   weights                          CorpusParameterObligationWeight[]
-  findings                         CorpusAuditFinding[]
-  scopes                           CorpusEvaluationScope[]
 
   @@unique([domainId, code])
   @@index([criticalityId], map: "idx_corpus_obligation_criticality_id")
@@ -347,9 +339,6 @@ model CorpusControl {
   is_hard_gate                      Boolean                           @default(false)
   rationale                         String?
   primary_cf_risk_id                String?                           @db.Uuid
-  designDescription                 String                            @default("") @map("design_description")
-  criticalityLevel                  Int                               @default(3) @map("criticality_level") @db.SmallInt
-  inherentMitigationStrength       Decimal                           @default(1.000) @map("inherent_mitigation_strength") @db.Decimal(4, 3)
   corpus_catalog_control_automation corpus_catalog_control_automation @relation(fields: [automationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   corpus_catalog_control_type       corpus_catalog_control_type       @relation(fields: [controlTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   corpus_catalog_control_frequency  corpus_catalog_control_frequency  @relation(fields: [frequencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -363,7 +352,6 @@ model CorpusControl {
   corpus_test_control               corpus_test_control[]
   corpus_test_control_procedure     corpus_test_control_procedure[]
   corpus_test_control_run           corpus_test_control_run[]
-  findings                          CorpusAuditFinding[]
 
   @@index([primary_cf_risk_id], map: "idx_control_primary_cf")
   @@map("corpus_control")
@@ -419,8 +407,6 @@ model CorpusEvaluation {
   testRuns              CorpusEvaluationTestRun[]
   corpus_material_event corpus_material_event[]
   modelRuns             CorpusModelRun[]
-  findings              CorpusAuditFinding[]
-  scopes                CorpusEvaluationScope[]
 
   @@map("corpus_evaluation")
 }
@@ -433,14 +419,6 @@ model CorpusEvaluationControlState {
   design_effectiveness    Decimal?         @db.Decimal(6, 4)
   operating_effectiveness Decimal?         @db.Decimal(6, 4)
   notes                   String?
-  formalizationEffectiveness Decimal?      @map("formalization_effectiveness") @db.Decimal(6, 4)
-  coverageEffectiveness      Decimal?      @map("coverage_effectiveness") @db.Decimal(6, 4)
-  recencyEffectiveness       Decimal?      @map("recency_effectiveness") @db.Decimal(6, 4)
-  evidenceValidated          Boolean       @default(false) @map("evidence_validated")
-  applicability              String        @default("applicable") @map("applicability")
-  notApplicableReason        String?       @map("not_applicable_reason")
-  finalEffectiveness         Decimal?      @map("final_effectiveness") @db.Decimal(6, 4)
-  computedAt                 DateTime?     @map("computed_at") @db.Timestamptz(6)
   updated_at              DateTime         @default(now()) @db.Timestamptz(6)
   updated_by              String?
   control                 CorpusControl    @relation(fields: [controlId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -604,7 +582,22 @@ model CorpusParameterObligationWeight {
   @@map("corpus_parameter_obligation_weight")
 }
 
+model CorpusAuditLog {
+  @@schema("corpus")
+  id         BigInt    @id @default(autoincrement())
+  tenantId   String?   @map("tenant_id") @db.Uuid
+  entityName String    @map("entity_name")
+  entityId   String    @map("entity_id") @db.Uuid
+  action     String
+  oldData    Json?     @map("old_data")
+  newData    Json?     @map("new_data")
+  changedBy  String?   @map("changed_by") @db.Uuid
+  changedAt  DateTime? @default(now()) @map("changed_at") @db.Timestamptz(6)
+  ipAddress  String?   @map("ip_address")
+  userAgent  String?   @map("user_agent")
 
+  @@map("corpus_audit_log")
+}
 
 model corpus_assessment_draft {
   @@schema("corpus")
@@ -896,7 +889,6 @@ model corpus_risk {
   corpus_catalog_risk_type     corpus_catalog_risk_type?      @relation(fields: [risk_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_risk_type_id")
   corpus_catalog_status        corpus_catalog_status?         @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_status_id")
   corpus_risk_source           corpus_risk_source[]
-  findings                     CorpusAuditFinding[]
 
   @@index([parent_risk_id], map: "idx_corpus_risk_parent_risk_id")
   @@index([risk_layer_id], map: "idx_corpus_risk_risk_layer_id")
@@ -958,7 +950,6 @@ model corpus_test {
   corpus_test_control           corpus_test_control[]
   corpus_test_control_procedure corpus_test_control_procedure[]
   corpus_test_control_run       corpus_test_control_run[]
-
   corpus_test_script            corpus_test_script[]
   corpus_test_source            corpus_test_source[]
 
@@ -1044,7 +1035,6 @@ model corpus_test_control_run {
   script_id                  String?                   @db.Uuid
   corpus_evaluation_test_run CorpusEvaluationTestRun[]
   corpus_material_event      corpus_material_event[]
-  findings                   CorpusAuditFinding[]
   corpus_control             CorpusControl             @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_run_control_id_fkey")
   corpus_test                corpus_test               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_run_test_id_fkey")
   corpus_test_script         corpus_test_script?       @relation(fields: [script_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_test_control_run_script_fk")
@@ -1102,171 +1092,4 @@ model llm_master_prompts {
 
   @@index([code, is_active], map: "idx_master_prompts_active_code")
   @@index([module_name, text_area, is_active], map: "idx_master_prompts_lookup")
-}
-model CorpusSuperintendence {
-  @@schema("corpus")
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId          String              @map("company_id") @db.Uuid
-  jurisdictionId     String              @map("jurisdiction_id") @db.Uuid
-  frameworkId        String              @map("framework_id") @db.Uuid
-  frameworkVersionId String              @map("framework_version_id") @db.Uuid
-  status             String              @default("draft")
-  alpha              Decimal?            @db.Decimal
-  beta               Decimal?            @db.Decimal
-  gamma              Decimal?            @db.Decimal
-  materialMultiplier Decimal?            @map("material_multiplier") @db.Decimal
-  isActive           Boolean             @default(false) @map("is_active")
-  hashSnapshot       String?             @map("hash_snapshot")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @default(now()) @map("updated_at")
-  
-  company            CorpusCompany       @relation(fields: [companyId], references: [id])
-  jurisdiction       CorpusJurisdiction  @relation(fields: [jurisdictionId], references: [id])
-  framework          CorpusFramework     @relation(fields: [frameworkId], references: [id])
-  frameworkVersion   CorpusFrameworkVersion @relation(fields: [frameworkVersionId], references: [id])
-  
-  eventWeights       CorpusSuperintendenceEventWeight[]
-  triggerThresholds  CorpusSuperintendenceTriggerThreshold[]
-
-  @@map("corpus_superintendence")
-}
-
-model CorpusSuperintendenceEventWeight {
-  @@schema("corpus")
-  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  superintendenceId     String                @map("superintendence_id") @db.Uuid
-  eventTypeCode         String                @map("event_type_code")
-  sensitivityWeight     Decimal               @map("sensitivity_weight") @db.Decimal
-  severityMultiplier    Decimal               @map("severity_multiplier") @db.Decimal
-  readinessPenalty      Decimal               @map("readiness_penalty") @db.Decimal
-  exposureFloor         Decimal               @map("exposure_floor") @db.Decimal
-  isHardTrigger         Boolean               @default(false) @map("is_hard_trigger")
-  
-  superintendence       CorpusSuperintendence @relation(fields: [superintendenceId], references: [id], onDelete: Cascade)
-
-  @@unique([superintendenceId, eventTypeCode])
-  @@map("corpus_superintendence_event_weight")
-}
-
-model CorpusSuperintendenceTriggerThreshold {
-  @@schema("corpus")
-  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  superintendenceId     String                @map("superintendence_id") @db.Uuid
-  triggerCode           String                @map("trigger_code")
-  thresholdValue        Decimal               @map("threshold_value") @db.Decimal
-  exposureFloor         Decimal               @map("exposure_floor") @db.Decimal
-  enabled               Boolean               @default(true)
-  
-  superintendence       CorpusSuperintendence @relation(fields: [superintendenceId], references: [id], onDelete: Cascade)
-
-  @@unique([superintendenceId, triggerCode])
-  @@map("corpus_superintendence_trigger_threshold")
-}
-
-model CorpusCatalogAuditFindingType {
-  @@schema("corpus")
-  id                    Int      @id @db.SmallInt
-  code                  String   @unique
-  name                  String
-  description           String?
-  defaultSeverity       Int      @default(3) @map("default_severity") @db.SmallInt
-  defaultExposureFloor  Decimal  @default(0.0000) @map("default_exposure_floor") @db.Decimal(6, 4)
-  defaultReadinessPenalty Int    @default(0) @map("default_readiness_penalty")
-  defaultOwnerRole      String?  @map("default_owner_role")
-  defaultDueDays        Int?     @map("default_due_days")
-  isActive              Boolean  @default(true) @map("is_active")
-  sortOrder             Int      @default(0) @map("sort_order")
-  
-  findings              CorpusAuditFinding[]
-
-  @@map("corpus_catalog_audit_finding_type")
-}
-
-model CorpusAuditFinding {
-  @@schema("corpus")
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId              String   @map("tenant_id") @db.Uuid
-  code                  String
-  title                 String
-  description           String?
-  
-  eventTypeId           Int      @map("event_type_id") @db.SmallInt
-  severity              Int      @db.SmallInt
-  status                String
-  
-  exposureFloor         Decimal  @default(0.0000) @map("exposure_floor") @db.Decimal(6, 4)
-  readinessPenalty      Int      @default(0) @map("readiness_penalty")
-  ownerRole             String?  @map("owner_role")
-  dueDate               DateTime? @map("due_date") @db.Date
-  
-  rootCause             String?  @map("root_cause")
-  evidenceLinks         Json     @default("[]") @map("evidence_links")
-  dedupeKey             String?  @unique @map("dedupe_key")
-  
-  severityId            Int?     @map("severity_id")
-  statusId              Int?     @map("status_id")
-  
-  evaluationId          String?  @map("evaluation_id") @db.Uuid
-  controlId             String?  @map("control_id") @db.Uuid
-  obligationId          String?  @map("obligation_id") @db.Uuid
-  riskId                String?  @map("risk_id") @db.Uuid
-  testControlRunId      String?  @map("test_control_run_id") @db.Uuid
-  
-  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy             String?  @map("created_by") @db.Uuid
-  updatedAt             DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  updatedBy             String?  @map("updated_by") @db.Uuid
-  closedAt              DateTime? @map("closed_at") @db.Timestamptz(6)
-  closedBy              String?  @map("closed_by") @db.Uuid
-  
-  metadata              Json?    @default("{}")
-  
-  eventType             CorpusCatalogAuditFindingType @relation(fields: [eventTypeId], references: [id])
-  evaluation            CorpusEvaluation?           @relation(fields: [evaluationId], references: [id])
-  control               CorpusControl?              @relation(fields: [controlId], references: [id])
-  obligation            CorpusObligation?           @relation(fields: [obligationId], references: [id])
-  risk                  corpus_risk?                @relation(fields: [riskId], references: [id])
-  testControlRun        corpus_test_control_run?    @relation(fields: [testControlRunId], references: [id])
-
-  @@index([evaluationId, status], map: "idx_finding_eval_status")
-  @@index([evaluationId, severity], map: "idx_finding_eval_severity")
-  @@map("corpus_audit_finding")
-}
-
-model CorpusAuditLog {
-  @@schema("corpus")
-  id           BigInt   @id @default(autoincrement())
-  tenantId     String?  @map("tenant_id") @db.Uuid
-  entityName   String   @map("entity_name")
-  entityId     String   @map("entity_id") @db.Uuid
-  action       String
-  oldData      Json?    @map("old_data")
-  newData      Json?    @map("new_data")
-  changedBy    String?  @map("changed_by") @db.Uuid
-  changedAt    DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
-  ipAddress    String?  @map("ip_address")
-  userAgent    String?  @map("user_agent")
-
-  @@map("corpus_audit_log")
-}
-
-model CorpusEvaluationScope {
-  @@schema("corpus")
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  evaluationId  String   @map("evaluation_id") @db.Uuid
-  scopeType     String   @map("scope_type")
-  domainId      String?  @map("domain_id") @db.Uuid
-  obligationId  String?  @map("obligation_id") @db.Uuid
-  isInScope     Boolean  @default(true) @map("is_in_scope")
-  rationale     String?
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  evaluation    CorpusEvaluation @relation(fields: [evaluationId], references: [id])
-  domain        CorpusDomain?    @relation(fields: [domainId], references: [id])
-  obligation    CorpusObligation? @relation(fields: [obligationId], references: [id])
-
-  @@unique([evaluationId, scopeType, domainId, obligationId])
-  @@index([evaluationId], map: "idx_eval_scope_evaluation")
-  @@map("corpus_evaluation_scope")
 }

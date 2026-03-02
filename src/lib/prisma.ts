@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const prismaClientSingleton = () => {
-    const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL!.replace(/\?schema=\w+/, '') }, { schema: "corpus" });
+    const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL!.replace(/\?schema=\w+/, '') });
     return new PrismaClient({ adapter });
 };
 

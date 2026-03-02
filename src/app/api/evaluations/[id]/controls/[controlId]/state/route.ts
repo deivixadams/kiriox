@@ -3,10 +3,10 @@ import prisma from '@/lib/prisma';
 
 export async function PUT(
     request: Request,
-    { params }: { params: { id: string, controlId: string } }
+    { params }: { params: Promise<{ id: string, controlId: string }> }
 ) {
     try {
-        const { id: evaluationId, controlId } = params;
+        const { id: evaluationId, controlId } = await params;
         const body = await request.json();
 
         // Fields allowed to update
@@ -22,12 +22,12 @@ export async function PUT(
         } = body;
 
         // Upsert the state record
-        const updatedState = await prisma.corpusEvaluationControlState.upsert({
+        const updatedState = await (prisma as any).corpusEvaluationControlState.upsert({
             where: {
-                // Since we don't have a unique constraint on (evaluationId, controlId) in Prisma schema yet 
-                // (but we should), we'll find first or use ID if provided.
-                // For this implementation, let's assume we find it by evaluationId + controlId
-                id: body.id || 'new-uuid' // If ID is provided, use it, otherwise we'll search
+                evaluationId_controlId: {
+                    evaluationId,
+                    controlId
+                }
             },
             create: {
                 evaluationId,
