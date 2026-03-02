@@ -312,16 +312,24 @@ export default function ActaStep({
                         {selectedAuditors.map((auditor) => (
                           <span key={auditor.id} className={styles.comboTag}>
                             {auditor.label}
-                            <button
-                              type="button"
+                            <span
+                              role="button"
+                              tabIndex={0}
                               className={styles.comboTagRemove}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 removeAuditor(auditor.id);
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  removeAuditor(auditor.id);
+                                }
+                              }}
                             >
-                              ×
-                            </button>
+                              ?
+                            </span>
                           </span>
                         ))}
                       </div>
