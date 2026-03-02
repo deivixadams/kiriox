@@ -50,18 +50,20 @@ export async function getAuthContext(): Promise<AuthContext | null> {
         if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
             try {
                 const adminUser = await prisma.securityUser.findFirst({
-                    where: { isActive: true, roleCode: 'ADMIN' },
+                    where: { isActive: true, role: { roleCode: 'ADMIN' } },
+                    include: { role: true },
                     orderBy: { createdAt: 'asc' }
                 });
                 const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
                     where: { isActive: true },
+                    include: { role: true },
                     orderBy: { createdAt: 'asc' }
                 });
                 if (fallbackUser) {
                     return {
                         userId: fallbackUser.id,
                         tenantId: fallbackUser.tenantId,
-                        roleCode: fallbackUser.roleCode,
+                        roleCode: fallbackUser.role?.roleCode || 'ADMIN',
                         email: fallbackUser.email
                     };
                 }
@@ -92,18 +94,20 @@ export async function getAuthContext(): Promise<AuthContext | null> {
         if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
             try {
                 const adminUser = await prisma.securityUser.findFirst({
-                    where: { isActive: true, roleCode: 'ADMIN' },
+                    where: { isActive: true, role: { roleCode: 'ADMIN' } },
+                    include: { role: true },
                     orderBy: { createdAt: 'asc' }
                 });
                 const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
                     where: { isActive: true },
+                    include: { role: true },
                     orderBy: { createdAt: 'asc' }
                 });
                 if (fallbackUser) {
                     return {
                         userId: fallbackUser.id,
                         tenantId: fallbackUser.tenantId,
-                        roleCode: fallbackUser.roleCode,
+                        roleCode: fallbackUser.role?.roleCode || 'ADMIN',
                         email: fallbackUser.email
                     };
                 }
