@@ -5,13 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import WizardShell from './_components/WizardShell';
 import ActaStep from './_components/ActaStep';
 import ScopeStep from './_components/ScopeStep';
-import ObjectivesStep from './_components/ObjectivesStep';
 import TeamStep from './_components/TeamStep';
 import QuestionnaireStep from './_components/QuestionnaireStep';
 import GuideStep from './_components/GuideStep';
 import ExtensionsStep from './_components/ExtensionsStep';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 6;
 
 type Option = { id: string; name: string; code?: string; frameworkId?: string; jurisdictionId?: string; version?: string };
 type UserOption = { id: string; label: string; email?: string };
@@ -70,7 +69,7 @@ type ScopeState = {
   derivedCounts: DerivedCounts;
 };
 
-type TeamMember = { name: string; role: string };
+type TeamMember = { name: string; role: string; sourceId?: string; sourceType?: 'leader' | 'auditor' | 'manual' };
 
 type QuestionnaireItem = { area: string; entrevistar: string[] };
 
@@ -154,6 +153,50 @@ export default function AuditoriaWizardPage() {
 
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
   const initializedRef = useRef(false);
+  const seededTeamRef = useRef(false);
+
+  const buildTeamFromActa = useCallback((): TeamMember[] => {
+    const idToLabel = new Map(companyUsers.map((user) => [user.id, user.label]));
+    const next: TeamMember[] = [];
+
+    const leaderName = acta.lider_equipo_id
+      ? (idToLabel.get(acta.lider_equipo_id) || acta.lider_equipo || '')
+      : (acta.lider_equipo || '');
+    if (leaderName.trim()) {
+      next.push({
+        name: leaderName,
+        role: 'Lider de Proyecto',
+        sourceId: acta.lider_equipo_id || undefined,
+        sourceType: 'leader'
+      });
+    }
+
+    const auditorIds = acta.auditores_ids ?? [];
+    let auditorNames = auditorIds.length > 0
+      ? auditorIds
+          .map((id) => idToLabel.get(id))
+          .filter((name): name is string => Boolean(name))
+      : [];
+    if (auditorNames.length === 0 && acta.auditores) {
+      auditorNames = acta.auditores
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean);
+    }
+
+    auditorNames.forEach((name, idx) => {
+      const auditorId = auditorIds[idx];
+      if (!name) return;
+      next.push({
+        name,
+        role: 'Auditor',
+        sourceId: auditorId || undefined,
+        sourceType: 'auditor'
+      });
+    });
+
+    return next;
+  }, [acta.lider_equipo, acta.lider_equipo_id, acta.auditores, acta.auditores_ids, companyUsers]);
 
   const loadContextOptions = useCallback(async () => {
     const res = await fetch('/api/superintendence/context');
@@ -176,7 +219,8 @@ export default function AuditoriaWizardPage() {
 
   const hydrateDraft = useCallback((draft: DraftRecord) => {
     setDraftId(draft.id);
-    setStep(draft.step || 1);
+    const safeStep = Math.min(Math.max(draft.step || 1, 1), TOTAL_STEPS);
+    setStep(safeStep);
     setContext({
       jurisdictionId: draft.jurisdictionId ?? '',
       frameworkId: draft.frameworkId ?? '',
@@ -293,6 +337,20 @@ export default function AuditoriaWizardPage() {
   }, [acta, context, scopeState, windowStart, windowEnd, objectivesText, team, questionnaire, guide, extensions, step, saveDraft]);
 
   useEffect(() => {
+    if (step !== 2) return;
+    if (seededTeamRef.current) return;
+    if (team.length > 0) {
+      seededTeamRef.current = true;
+      return;
+    }
+    const seeded = buildTeamFromActa();
+    if (seeded.length > 0) {
+      setTeam(seeded);
+      seededTeamRef.current = true;
+    }
+  }, [step, team.length, buildTeamFromActa]);
+
+  useEffect(() => {
     if (!context.companyId) return;
     const selected = options.companies.find((c) => c.id === context.companyId);
     if (selected && (!acta.entidad_nombre || acta.entidad_nombre === autoEntidad)) {
@@ -394,23 +452,6 @@ export default function AuditoriaWizardPage() {
     }
   };
 
-  const handleObjectivesAI = async () => {
-    setAiLoadingFields((prev) => ({ ...prev, objetivos: true }));
-    try {
-      const res = await fetch('/api/ai/refine-text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: objectivesText, field: 'objetivo' })
-      });
-      const data = await res.json();
-      if (data.refinedText) {
-        setObjectivesText(data.refinedText);
-      }
-    } finally {
-      setAiLoadingFields((prev) => ({ ...prev, objetivos: false }));
-    }
-  };
-
   const handleGenerateActa = async () => {
     const res = await fetch('/api/acta-inicio/export', {
       method: 'POST',
@@ -496,12 +537,11 @@ export default function AuditoriaWizardPage() {
 
   const stepTitle = useMemo(() => {
     if (step === 1) return 'Configuracion: Acta de Inicio';
-    if (step === 2) return 'Seleccion de auditoria';
-    if (step === 3) return 'Ventana y objetivos';
-    if (step === 4) return 'Equipo';
-    if (step === 5) return 'Cuestionarios';
-    if (step === 6) return 'Guia automatica';
-    if (step === 7) return 'Extensiones manuales';
+    if (step === 2) return 'Equipo';
+    if (step === 3) return 'Seleccion de auditoria';
+    if (step === 4) return 'Cuestionarios';
+    if (step === 5) return 'Guia automatica';
+    if (step === 6) return 'Extensiones manuales';
     return 'Wizard';
   }, [step]);
 
@@ -539,6 +579,10 @@ export default function AuditoriaWizardPage() {
       )}
 
       {step === 2 && (
+        <TeamStep team={team} onChange={setTeam} onBack={handleBack} onNext={handleNext} onSave={handleSave} />
+      )}
+
+      {step === 3 && (
         <ScopeStep
           domainIds={scopeState.domainIds}
           obligationIds={scopeState.obligationIds}
@@ -551,29 +595,7 @@ export default function AuditoriaWizardPage() {
         />
       )}
 
-      {step === 3 && (
-        <ObjectivesStep
-          windowStart={windowStart}
-          windowEnd={windowEnd}
-          objectives={objectivesText}
-          onChange={({ windowStart: ws, windowEnd: we, objectives }) => {
-            setWindowStart(ws);
-            setWindowEnd(we);
-            setObjectivesText(objectives);
-          }}
-          onAI={handleObjectivesAI}
-          aiLoading={!!aiLoadingFields.objetivos}
-          onBack={handleBack}
-          onNext={handleNext}
-          onSave={handleSave}
-        />
-      )}
-
       {step === 4 && (
-        <TeamStep team={team} onChange={setTeam} onBack={handleBack} onNext={handleNext} onSave={handleSave} />
-      )}
-
-      {step === 5 && (
         <QuestionnaireStep
           questionnaire={questionnaire}
           domains={domainCatalog}
@@ -586,7 +608,7 @@ export default function AuditoriaWizardPage() {
         />
       )}
 
-      {step === 6 && (
+      {step === 5 && (
         <GuideStep
           guide={guide}
           onChange={setGuide}
@@ -598,7 +620,7 @@ export default function AuditoriaWizardPage() {
         />
       )}
 
-      {step === 7 && (
+      {step === 6 && (
         <ExtensionsStep
           extensions={extensions}
           onChange={setExtensions}

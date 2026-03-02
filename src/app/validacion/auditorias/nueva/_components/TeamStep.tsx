@@ -4,7 +4,7 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import styles from './TeamStep.module.css';
 
-type TeamMember = { name: string; role: string };
+type TeamMember = { name: string; role: string; sourceId?: string; sourceType?: 'leader' | 'auditor' | 'manual' };
 
 type TeamStepProps = {
   team: TeamMember[];
@@ -16,7 +16,7 @@ type TeamStepProps = {
 
 export default function TeamStep({ team, onChange, onBack, onNext, onSave }: TeamStepProps) {
   const addMember = () => {
-    onChange([...team, { name: '', role: '' }]);
+    onChange([...team, { name: '', role: '', sourceType: 'manual' }]);
   };
 
   const updateMember = (index: number, field: keyof TeamMember, value: string) => {
