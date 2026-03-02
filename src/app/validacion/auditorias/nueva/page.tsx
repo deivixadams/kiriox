@@ -69,7 +69,7 @@ type ScopeState = {
   derivedCounts: DerivedCounts;
 };
 
-type TeamMember = { name: string; role: string; sourceId?: string; sourceType?: 'leader' | 'auditor' | 'manual' };
+type TeamMember = { name: string; role: string; userId?: string; sourceType?: 'leader' | 'auditor' | 'manual' };
 
 type QuestionnaireItem = { area: string; entrevistar: string[] };
 
@@ -166,7 +166,7 @@ export default function AuditoriaWizardPage() {
       next.push({
         name: leaderName,
         role: 'Lider de Proyecto',
-        sourceId: acta.lider_equipo_id || undefined,
+        userId: acta.lider_equipo_id || undefined,
         sourceType: 'leader'
       });
     }
@@ -190,7 +190,7 @@ export default function AuditoriaWizardPage() {
       next.push({
         name,
         role: 'Auditor',
-        sourceId: auditorId || undefined,
+        userId: auditorId || undefined,
         sourceType: 'auditor'
       });
     });
@@ -579,7 +579,14 @@ export default function AuditoriaWizardPage() {
       )}
 
       {step === 2 && (
-        <TeamStep team={team} onChange={setTeam} onBack={handleBack} onNext={handleNext} onSave={handleSave} />
+        <TeamStep
+          team={team}
+          teamUsers={companyUsers}
+          onChange={setTeam}
+          onBack={handleBack}
+          onNext={handleNext}
+          onSave={handleSave}
+        />
       )}
 
       {step === 3 && (

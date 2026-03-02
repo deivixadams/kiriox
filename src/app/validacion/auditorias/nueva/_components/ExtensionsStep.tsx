@@ -61,8 +61,8 @@ export default function ExtensionsStep({ extensions, onChange, onBack, onFinish,
       </button>
 
       <div className={styles.footer}>
-        <button className={styles.backButton} onClick={onBack}>Volver</button>
         <div className={styles.footerActions}>
+          <button className={styles.backButton} onClick={onBack}>Volver</button>
           <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
           <button className={styles.primaryButton} onClick={onFinish}>Crear Auditoria</button>
         </div>

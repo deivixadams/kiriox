@@ -83,8 +83,8 @@ export default function GuideStep({ guide, onChange, onGenerate, generating, onB
       </div>
 
       <div className={styles.footer}>
-        <button className={styles.backButton} onClick={onBack}>Volver</button>
         <div className={styles.footerActions}>
+          <button className={styles.backButton} onClick={onBack}>Volver</button>
           <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
           <button className={styles.primaryButton} onClick={onNext}>Continuar</button>
         </div>
