@@ -109,20 +109,28 @@ export default function ScopeStep({ domainIds, obligationIds, riskIds, derivedCo
 
     const loadRisks = async () => {
       setRisksLoading(true);
-      const params = new URLSearchParams();
-      domainIds.forEach((id) => params.append('domain_id', id));
-      if (mode === 'subset') {
-        obligationIds.forEach((id) => params.append('obligation_id', id));
-      }
-      const res = await fetch(`/api/audit/catalog/risks?${params.toString()}`);
-      if (!res.ok) {
-        setRisks([]);
+      try {
+        let res: Response;
+        if (mode === 'subset') {
+          res = await fetch('/api/audit/catalog/risks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domainIds, obligationIds })
+          });
+        } else {
+          const params = new URLSearchParams();
+          domainIds.forEach((id) => params.append('domain_id', id));
+          res = await fetch(`/api/audit/catalog/risks?${params.toString()}`);
+        }
+        if (!res.ok) {
+          setRisks([]);
+          return;
+        }
+        const data = await res.json();
+        setRisks(Array.isArray(data) ? data : []);
+      } finally {
         setRisksLoading(false);
-        return;
       }
-      const data = await res.json();
-      setRisks(Array.isArray(data) ? data : []);
-      setRisksLoading(false);
     };
 
     loadRisks();
