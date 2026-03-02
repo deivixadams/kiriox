@@ -1,12 +1,23 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Layers3, ShieldCheck } from 'lucide-react';
+import { Layers3, ShieldCheck, CheckSquare, FilterX } from 'lucide-react';
 import styles from './ScopeStep.module.css';
 
 type Domain = { id: string; name: string; code?: string };
 
 type Obligation = { id: string; title: string; code?: string; domainId?: string };
+
+type Risk = {
+  id: string;
+  code?: string | null;
+  name: string;
+  description?: string | null;
+  status?: string | null;
+  riskTypeName?: string | null;
+  riskLayerName?: string | null;
+  domainIds?: string[];
+};
 
 type DerivedCounts = {
   obligationCount: number;
@@ -18,8 +29,9 @@ type DerivedCounts = {
 type ScopeStepProps = {
   domainIds: string[];
   obligationIds: string[];
+  riskIds: string[];
   derivedCounts: DerivedCounts;
-  onChange: (next: { domainIds: string[]; obligationIds: string[]; derivedCounts: DerivedCounts }) => void;
+  onChange: (next: { domainIds: string[]; obligationIds: string[]; riskIds: string[]; derivedCounts: DerivedCounts }) => void;
   onBack: () => void;
   onNext: () => void;
   onSave: () => void;
@@ -27,9 +39,12 @@ type ScopeStepProps = {
 
 const defaultCounts: DerivedCounts = { obligationCount: 0, riskCount: 0, controlCount: 0, testCount: 0 };
 
-export default function ScopeStep({ domainIds, obligationIds, derivedCounts, onChange, onBack, onNext, onSave }: ScopeStepProps) {
+export default function ScopeStep({ domainIds, obligationIds, riskIds, derivedCounts, onChange, onBack, onNext, onSave }: ScopeStepProps) {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [obligations, setObligations] = useState<Obligation[]>([]);
+  const [obligationsLoading, setObligationsLoading] = useState(false);
+  const [risks, setRisks] = useState<Risk[]>([]);
+  const [risksLoading, setRisksLoading] = useState(false);
   const [mode, setMode] = useState<'all' | 'subset'>('all');
 
   useEffect(() => {
@@ -45,15 +60,22 @@ export default function ScopeStep({ domainIds, obligationIds, derivedCounts, onC
   useEffect(() => {
     if (domainIds.length === 0) {
       setObligations([]);
+      setObligationsLoading(false);
       return;
     }
 
     const loadObligations = async () => {
+      setObligationsLoading(true);
       const query = domainIds.map((id) => `domain_id=${encodeURIComponent(id)}`).join('&');
       const res = await fetch(`/api/audit/catalog/obligations?${query}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setObligations([]);
+        setObligationsLoading(false);
+        return;
+      }
       const data = await res.json();
       setObligations(data || []);
+      setObligationsLoading(false);
     };
     loadObligations();
   }, [domainIds]);
@@ -67,11 +89,53 @@ export default function ScopeStep({ domainIds, obligationIds, derivedCounts, onC
       });
       if (!res.ok) return;
       const data = await res.json();
-      onChange({ domainIds, obligationIds, derivedCounts: data });
+      onChange({ domainIds, obligationIds, riskIds, derivedCounts: data });
     };
 
     derive();
   }, [domainIds, obligationIds, mode, onChange]);
+
+  useEffect(() => {
+    if (domainIds.length === 0) {
+      setRisks([]);
+      setRisksLoading(false);
+      return;
+    }
+    if (mode === 'subset' && obligationIds.length === 0) {
+      setRisks([]);
+      setRisksLoading(false);
+      return;
+    }
+
+    const loadRisks = async () => {
+      setRisksLoading(true);
+      const params = new URLSearchParams();
+      domainIds.forEach((id) => params.append('domain_id', id));
+      if (mode === 'subset') {
+        obligationIds.forEach((id) => params.append('obligation_id', id));
+      }
+      const res = await fetch(`/api/audit/catalog/risks?${params.toString()}`);
+      if (!res.ok) {
+        setRisks([]);
+        setRisksLoading(false);
+        return;
+      }
+      const data = await res.json();
+      setRisks(Array.isArray(data) ? data : []);
+      setRisksLoading(false);
+    };
+
+    loadRisks();
+  }, [domainIds, obligationIds, mode]);
+
+  useEffect(() => {
+    if (riskIds.length === 0) return;
+    const allowed = new Set(risks.map((risk) => risk.id));
+    const filtered = riskIds.filter((riskId) => allowed.has(riskId));
+    if (filtered.length !== riskIds.length) {
+      onChange({ domainIds, obligationIds, riskIds: filtered, derivedCounts: derivedCounts ?? defaultCounts });
+    }
+  }, [risks, riskIds, domainIds, obligationIds, derivedCounts, onChange]);
 
   const obligationsVisible = useMemo(() => {
     if (mode === 'all') return [];
@@ -82,21 +146,62 @@ export default function ScopeStep({ domainIds, obligationIds, derivedCounts, onC
     const next = domainIds.includes(id)
       ? domainIds.filter((d) => d !== id)
       : [...domainIds, id];
-    onChange({ domainIds: next, obligationIds: [], derivedCounts: derivedCounts ?? defaultCounts });
+    const allowedRiskIds = next.length
+      ? new Set(
+          risks
+            .filter((risk) => risk.domainIds?.some((domainId) => next.includes(domainId)))
+            .map((risk) => risk.id)
+        )
+      : null;
+    const nextRiskIds = allowedRiskIds
+      ? riskIds.filter((riskId) => allowedRiskIds.has(riskId))
+      : [];
+    onChange({
+      domainIds: next,
+      obligationIds: [],
+      riskIds: nextRiskIds,
+      derivedCounts: derivedCounts ?? defaultCounts
+    });
   };
 
   const toggleObligation = (id: string) => {
     const next = obligationIds.includes(id)
       ? obligationIds.filter((o) => o !== id)
       : [...obligationIds, id];
-    onChange({ domainIds, obligationIds: next, derivedCounts: derivedCounts ?? defaultCounts });
+    onChange({ domainIds, obligationIds: next, riskIds, derivedCounts: derivedCounts ?? defaultCounts });
+  };
+
+  const toggleRisk = (id: string) => {
+    const next = riskIds.includes(id)
+      ? riskIds.filter((r) => r !== id)
+      : [...riskIds, id];
+    onChange({ domainIds, obligationIds, riskIds: next, derivedCounts: derivedCounts ?? defaultCounts });
+  };
+
+  const selectAllRisks = () => {
+    const next = risks.map((risk) => risk.id);
+    onChange({ domainIds, obligationIds, riskIds: next, derivedCounts: derivedCounts ?? defaultCounts });
+  };
+
+  const clearRisks = () => {
+    onChange({ domainIds, obligationIds, riskIds: [], derivedCounts: derivedCounts ?? defaultCounts });
+  };
+
+  const allSelected = risks.length > 0 && riskIds.length === risks.length;
+
+  const getLayerClass = (label: string) => {
+    const upper = label.toUpperCase();
+    if (upper.includes('ALTO') || upper.includes('CRIT')) return styles.levelHigh;
+    if (upper.includes('MED')) return styles.levelMedium;
+    if (upper.includes('BAJ')) return styles.levelLow;
+    return styles.levelNeutral;
   };
 
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Alcance regulatorio</h2>
-        <p className={styles.subtitle}>Selecciona dominios y obligaciones para estimar riesgos, controles y pruebas.</p>
+        <h2 className={styles.title}>Seleccion de auditoria</h2>
+        <p className={styles.subtitle}>Define dominios, obligaciones y riesgos para construir el alcance operativo.</p>
       </div>
 
       <div className={styles.grid}>
@@ -132,23 +237,31 @@ export default function ScopeStep({ domainIds, obligationIds, derivedCounts, onC
               </label>
             </div>
           </div>
-          {mode === 'subset' && (
-            <div className={styles.scrollList}>
-              {obligationsVisible.map((obl) => (
-                <label key={obl.id} className={styles.optionRow}>
-                  <input
-                    type="checkbox"
-                    checked={obligationIds.includes(obl.id)}
-                    onChange={() => toggleObligation(obl.id)}
-                  />
-                  {obl.title}
-                </label>
-              ))}
-            </div>
-          )}
           {mode === 'all' && (
             <p className={styles.helperText}>Se incluyen todas las obligaciones de los dominios seleccionados.</p>
           )}
+          <div className={styles.scrollList}>
+            {domainIds.length === 0 && (
+              <div className={styles.helperText}>Selecciona dominios para cargar obligaciones.</div>
+            )}
+            {domainIds.length > 0 && obligationsLoading && (
+              <div className={styles.helperText}>Cargando obligaciones...</div>
+            )}
+            {domainIds.length > 0 && !obligationsLoading && obligations.length === 0 && (
+              <div className={styles.helperText}>Sin obligaciones para los dominios seleccionados.</div>
+            )}
+            {domainIds.length > 0 && !obligationsLoading && (mode === 'subset' ? obligationsVisible : obligations).map((obl) => (
+              <label key={obl.id} className={styles.optionRow}>
+                <input
+                  type="checkbox"
+                  checked={mode === 'all' ? true : obligationIds.includes(obl.id)}
+                  disabled={mode === 'all'}
+                  onChange={() => toggleObligation(obl.id)}
+                />
+                {obl.title}
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className={styles.cardHighlight}>
@@ -157,10 +270,97 @@ export default function ScopeStep({ domainIds, obligationIds, derivedCounts, onC
           </div>
           <div className={styles.counts}>
             <div>Obligaciones: <strong>{derivedCounts.obligationCount}</strong></div>
-            <div>Riesgos: <strong>{derivedCounts.riskCount}</strong></div>
+            <div>Riesgos derivados: <strong>{derivedCounts.riskCount}</strong></div>
+            <div>Riesgos seleccionados: <strong>{riskIds.length}</strong></div>
             <div>Controles: <strong>{derivedCounts.controlCount}</strong></div>
             <div>Pruebas: <strong>{derivedCounts.testCount}</strong></div>
           </div>
+        </div>
+      </div>
+
+      <div className={styles.tableCard}>
+        <div className={styles.tableHeader}>
+          <div>
+            <div className={styles.tableTitle}>Riesgos</div>
+            <div className={styles.tableSubtitle}>Selecciona los riesgos aplicables por obligaciones.</div>
+          </div>
+          <div className={styles.tableActions}>
+            <span className={styles.countPill}>{risks.length} Total</span>
+            <button className={styles.actionButton} onClick={selectAllRisks} disabled={risks.length === 0}>
+              <CheckSquare size={14} /> Seleccionar todo
+            </button>
+            <button
+              className={`${styles.actionButton} ${styles.actionGhost}`}
+              onClick={clearRisks}
+              disabled={riskIds.length === 0}
+            >
+              <FilterX size={14} /> Limpiar seleccion
+            </button>
+          </div>
+        </div>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead className={styles.thead}>
+              <tr>
+                <th className={styles.th}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={() => (allSelected ? clearRisks() : selectAllRisks())}
+                    className={styles.checkbox}
+                  />
+                </th>
+                <th className={styles.th}>Nivel</th>
+                <th className={styles.th}>Riesgo</th>
+                <th className={styles.th}>Tipo</th>
+                <th className={styles.th}>Estado</th>
+              </tr>
+            </thead>
+            <tbody className={styles.tbody}>
+              {risksLoading && (
+                <tr className={styles.emptyRow}>
+                  <td colSpan={5}>Cargando riesgos...</td>
+                </tr>
+              )}
+              {!risksLoading && risks.length === 0 && (
+                <tr className={styles.emptyRow}>
+                  <td colSpan={5}>
+                    {mode === 'subset' && obligationIds.length === 0
+                      ? 'Selecciona obligaciones para ver riesgos.'
+                      : 'Sin riesgos para los criterios seleccionados.'}
+                  </td>
+                </tr>
+              )}
+              {risks.map((risk) => {
+                const selected = riskIds.includes(risk.id);
+                const layerLabel = (risk.riskLayerName || 'Sin capa').toUpperCase();
+                return (
+                  <tr key={risk.id} className={`${styles.tr} ${selected ? styles.trSelected : ''}`}>
+                    <td className={styles.td}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => toggleRisk(risk.id)}
+                        className={styles.checkbox}
+                      />
+                    </td>
+                    <td className={styles.td}>
+                      <span className={`${styles.levelPill} ${getLayerClass(layerLabel)}`}>
+                        {layerLabel}
+                      </span>
+                    </td>
+                    <td className={styles.td}>
+                      <div className={styles.riskTitle}>{risk.name}</div>
+                      {risk.description && <div className={styles.riskSubtitle}>{risk.description}</div>}
+                      {risk.code && <div className={styles.riskMeta}>{risk.code}</div>}
+                    </td>
+                    <td className={styles.tdMuted}>{risk.riskTypeName || 'Sin tipo'}</td>
+                    <td className={styles.tdMuted}>{risk.status || 'Sin estado'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 

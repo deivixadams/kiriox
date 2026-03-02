@@ -12,6 +12,15 @@ export type AuthContext = {
     email?: string;
 };
 
+function getDevBypassFallback(): AuthContext {
+    return {
+        userId: process.env.DEV_AUTH_USER_ID || '00000000-0000-0000-0000-000000000001',
+        tenantId: process.env.DEV_AUTH_TENANT_ID || '00000000-0000-0000-0000-000000000001',
+        roleCode: process.env.DEV_AUTH_ROLE_CODE || 'ADMIN',
+        email: process.env.DEV_AUTH_EMAIL || 'dev@local'
+    };
+}
+
 function getJwtSecret(): Uint8Array {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
@@ -39,22 +48,28 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     const token = cookieStore.get(JWT_COOKIE)?.value;
     if (!token) {
         if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
-            const adminUser = await prisma.securityUser.findFirst({
-                where: { isActive: true, roleCode: 'ADMIN' },
-                orderBy: { createdAt: 'asc' }
-            });
-            const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
-                where: { isActive: true },
-                orderBy: { createdAt: 'asc' }
-            });
-            if (fallbackUser) {
-                return {
-                    userId: fallbackUser.id,
-                    tenantId: fallbackUser.tenantId,
-                    roleCode: fallbackUser.roleCode,
-                    email: fallbackUser.email
-                };
+            try {
+                const adminUser = await prisma.securityUser.findFirst({
+                    where: { isActive: true, roleCode: 'ADMIN' },
+                    orderBy: { createdAt: 'asc' }
+                });
+                const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
+                    where: { isActive: true },
+                    orderBy: { createdAt: 'asc' }
+                });
+                if (fallbackUser) {
+                    return {
+                        userId: fallbackUser.id,
+                        tenantId: fallbackUser.tenantId,
+                        roleCode: fallbackUser.roleCode,
+                        email: fallbackUser.email
+                    };
+                }
+            } catch (error) {
+                console.warn('DEV_AUTH_BYPASS fallback used due to auth lookup error:', error);
+                return getDevBypassFallback();
             }
+            return getDevBypassFallback();
         }
         return null;
     }
@@ -75,22 +90,28 @@ export async function getAuthContext(): Promise<AuthContext | null> {
         };
     } catch {
         if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
-            const adminUser = await prisma.securityUser.findFirst({
-                where: { isActive: true, roleCode: 'ADMIN' },
-                orderBy: { createdAt: 'asc' }
-            });
-            const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
-                where: { isActive: true },
-                orderBy: { createdAt: 'asc' }
-            });
-            if (fallbackUser) {
-                return {
-                    userId: fallbackUser.id,
-                    tenantId: fallbackUser.tenantId,
-                    roleCode: fallbackUser.roleCode,
-                    email: fallbackUser.email
-                };
+            try {
+                const adminUser = await prisma.securityUser.findFirst({
+                    where: { isActive: true, roleCode: 'ADMIN' },
+                    orderBy: { createdAt: 'asc' }
+                });
+                const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
+                    where: { isActive: true },
+                    orderBy: { createdAt: 'asc' }
+                });
+                if (fallbackUser) {
+                    return {
+                        userId: fallbackUser.id,
+                        tenantId: fallbackUser.tenantId,
+                        roleCode: fallbackUser.roleCode,
+                        email: fallbackUser.email
+                    };
+                }
+            } catch (error) {
+                console.warn('DEV_AUTH_BYPASS fallback used due to auth lookup error:', error);
+                return getDevBypassFallback();
             }
+            return getDevBypassFallback();
         }
         return null;
     }

@@ -21,9 +21,17 @@ export async function POST(request: Request) {
 
     const obligationCount = resolvedObligationIds.length;
 
+    let riskCount = 0;
     let controlCount = 0;
     if (resolvedObligationIds.length > 0) {
       const prisma = (await import('@/lib/prisma')).default;
+      const risks = await prisma.$queryRaw<{ risk_id: string }[]>`
+        SELECT DISTINCT risk_id
+        FROM corpus.corpus_obligation_risk
+        WHERE obligation_id = ANY(${resolvedObligationIds}::uuid[])
+      `;
+      riskCount = (risks || []).length;
+
       const controls = await prisma.$queryRaw<{ control_id: string }[]>`
         SELECT control_id
         FROM corpus.corpus_control_obligation
@@ -34,7 +42,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       obligationCount,
-      riskCount: 0,
+      riskCount,
       controlCount,
       testCount: 0,
     });

@@ -66,6 +66,7 @@ type DerivedCounts = {
 type ScopeState = {
   domainIds: string[];
   obligationIds: string[];
+  riskIds: string[];
   derivedCounts: DerivedCounts;
 };
 
@@ -129,7 +130,12 @@ export default function AuditoriaWizardPage() {
   );
   const [domainCatalog, setDomainCatalog] = useState<{ id: string; name: string }[]>([]);
   const [companyUsers, setCompanyUsers] = useState<UserOption[]>([]);
-  const [scopeState, setScopeState] = useState<ScopeState>({ domainIds: [], obligationIds: [], derivedCounts: defaultCounts });
+  const [scopeState, setScopeState] = useState<ScopeState>({
+    domainIds: [],
+    obligationIds: [],
+    riskIds: [],
+    derivedCounts: defaultCounts
+  });
   const [windowStart, setWindowStart] = useState('');
   const [windowEnd, setWindowEnd] = useState('');
   const [objectivesText, setObjectivesText] = useState('');
@@ -184,6 +190,7 @@ export default function AuditoriaWizardPage() {
       setScopeState({
         domainIds: draft.scopeConfig.domain_ids ?? [],
         obligationIds: draft.scopeConfig.obligation_ids ?? [],
+        riskIds: draft.scopeConfig.risk_ids ?? [],
         derivedCounts: draft.scopeConfig.derived_counts ?? defaultCounts
       });
     }
@@ -243,6 +250,7 @@ export default function AuditoriaWizardPage() {
         scopeConfig: {
           domain_ids: scopeState.domainIds,
           obligation_ids: scopeState.obligationIds,
+          risk_ids: scopeState.riskIds,
           derived_counts: scopeState.derivedCounts
         },
         windowStart: windowStart || null,
@@ -488,7 +496,7 @@ export default function AuditoriaWizardPage() {
 
   const stepTitle = useMemo(() => {
     if (step === 1) return 'Configuracion: Acta de Inicio';
-    if (step === 2) return 'Alcance regulatorio';
+    if (step === 2) return 'Seleccion de auditoria';
     if (step === 3) return 'Ventana y objetivos';
     if (step === 4) return 'Equipo';
     if (step === 5) return 'Cuestionarios';
@@ -534,6 +542,7 @@ export default function AuditoriaWizardPage() {
         <ScopeStep
           domainIds={scopeState.domainIds}
           obligationIds={scopeState.obligationIds}
+          riskIds={scopeState.riskIds}
           derivedCounts={scopeState.derivedCounts}
           onChange={setScopeState}
           onBack={handleBack}
