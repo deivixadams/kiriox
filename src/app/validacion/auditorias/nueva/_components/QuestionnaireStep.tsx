@@ -236,9 +236,8 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
     }
   };
 
-  const handleRefineNotes = async (riskId: string, control: ControlItem, notes: string) => {
+  const handleRefineNotes = async (riskId: string, control: ControlItem, notes: string, howTo: string) => {
     const key = `${riskId}::${control.id}`;
-    if (!notes.trim()) return;
     setAiLoadingKey(key);
     try {
       const res = await fetch('/api/ai/control-notes', {
@@ -246,13 +245,40 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           controlName: control.name,
-          text: notes
+          text: notes,
+          howToEvaluate: howTo,
+          coverageNotes: control.coverageNotes || '',
+          controlDescription: control.description || ''
         })
       });
       if (!res.ok) return;
       const data = await res.json();
       if (data?.text) {
         updateEvaluation(riskId, control.id, { notes: data.text });
+      }
+    } finally {
+      setAiLoadingKey(null);
+    }
+  };
+
+  const handleAssistHowTo = async (riskId: string, control: ControlItem, text: string) => {
+    const key = `${riskId}::${control.id}`;
+    setAiLoadingKey(key);
+    try {
+      const res = await fetch('/api/ai/control-evaluation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          controlName: control.name,
+          controlDescription: control.description || '',
+          coverageNotes: control.coverageNotes || '',
+          text
+        })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.text) {
+        updateEvaluation(riskId, control.id, { howToEvaluate: data.text });
       }
     } finally {
       setAiLoadingKey(null);
@@ -414,7 +440,12 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
                           <button
                             type="button"
                             className={styles.aiButton}
-                            onClick={() => handleRefineNotes(activePair!.riskId, activeControl, evaluation?.notes || '')}
+                            onClick={() => handleRefineNotes(
+                              activePair!.riskId,
+                              activeControl,
+                              evaluation?.notes || '',
+                              activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''
+                            )}
                             disabled={aiLoadingKey === activeKey}
                           >
                             {aiLoadingKey === activeKey ? (
@@ -484,6 +515,23 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
                 <div className={styles.howToCard}>
                   <div className={styles.howToHeader}>
                     <div className={styles.howToTitle}>Como evaluar</div>
+                    <button
+                      type="button"
+                      className={styles.aiButton}
+                      onClick={() => handleAssistHowTo(
+                        activePair!.riskId,
+                        activeControl,
+                        activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''
+                      )}
+                      disabled={aiLoadingKey === activeKey}
+                    >
+                      {aiLoadingKey === activeKey ? (
+                        <span className={styles.aiSpinner} />
+                      ) : (
+                        <Sparkles className={styles.aiIcon} />
+                      )}
+                      IA
+                    </button>
                   </div>
                   <textarea
                     value={activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''}

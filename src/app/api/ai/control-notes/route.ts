@@ -5,20 +5,37 @@ export const runtime = 'nodejs';
 type Payload = {
   controlName?: string;
   text?: string;
+  howToEvaluate?: string;
+  coverageNotes?: string;
+  controlDescription?: string;
 };
 
-function buildPrompt(controlName: string, text: string) {
+function buildPrompt(controlName: string, text: string, howToEvaluate: string, coverageNotes: string, controlDescription: string) {
+  const detail = controlDescription ? `\nDescripcion del control: ${controlDescription}` : '';
+  const coverage = coverageNotes ? `\nNotas de cobertura: ${coverageNotes}` : '';
+  const howTo = howToEvaluate ? `\nComo evaluar: ${howToEvaluate}` : '';
+  if (text.trim()) {
+    return [
+      'Responde siempre en español.',
+      'Mejora la redaccion de estas observaciones de evaluacion de control en auditoria AML/CFT.',
+      'Mantén el significado original, no inventes datos, usa tono profesional y conciso.',
+      `Control: ${controlName}`,
+      `${detail}${coverage}${howTo}`,
+      `Texto: ${text}`
+    ].join('\n');
+  }
   return [
-    'Mejora la redaccion de estas observaciones de evaluacion de control en auditoria AML/CFT.',
-    'Mantén el significado original, no inventes datos, usa tono profesional y conciso.',
+    'Responde siempre en español.',
+    'Redacta observaciones y hallazgos iniciales para evaluar este control en auditoria AML/CFT.',
+    'No inventes datos que no esten en el contexto. Usa tono profesional y conciso.',
     `Control: ${controlName}`,
-    `Texto: ${text}`
+    `${detail}${coverage}${howTo}`
   ].join('\n');
 }
 
 export async function POST(req: Request) {
-  const { controlName = '', text = '' } = (await req.json()) as Payload;
-  if (!controlName.trim() || !text.trim()) {
+  const { controlName = '', text = '', howToEvaluate = '', coverageNotes = '', controlDescription = '' } = (await req.json()) as Payload;
+  if (!controlName.trim()) {
     return NextResponse.json({ text: '' }, { status: 400 });
   }
 
@@ -28,7 +45,16 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [{ role: 'user', content: buildPrompt(controlName.trim(), text.trim()) }],
+        messages: [{
+          role: 'user',
+          content: buildPrompt(
+            controlName.trim(),
+            text.trim(),
+            howToEvaluate.trim(),
+            coverageNotes.trim(),
+            controlDescription.trim()
+          )
+        }],
       }),
     });
 
