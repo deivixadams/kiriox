@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Sparkles } from 'lucide-react';
 import styles from './ExtensionsStep.module.css';
 
-type ExtensionItem = { title: string; notes: string };
+type ExtensionItem = { title: string; notes: string; evidence?: string[] };
 
 type ExtensionsStepProps = {
   extensions: ExtensionItem[];
@@ -15,8 +15,10 @@ type ExtensionsStepProps = {
 };
 
 export default function ExtensionsStep({ extensions, onChange, onBack, onFinish, onSave }: ExtensionsStepProps) {
+  const [aiLoading, setAiLoading] = useState<Record<number, boolean>>({});
+
   const addExtension = () => {
-    onChange([...extensions, { title: '', notes: '' }]);
+    onChange([...extensions, { title: '', notes: '', evidence: [] }]);
   };
 
   const updateExtension = (index: number, field: keyof ExtensionItem, value: string) => {
@@ -29,11 +31,44 @@ export default function ExtensionsStep({ extensions, onChange, onBack, onFinish,
     onChange(extensions.filter((_, i) => i !== index));
   };
 
+  const handleUploadEvidence = (index: number, file: File) => {
+    const next = [...extensions];
+    const current = next[index];
+    const evidence = current.evidence ? [...current.evidence, file.name] : [file.name];
+    next[index] = { ...current, evidence };
+    onChange(next);
+  };
+
+  const handleAI = async (index: number) => {
+    const item = extensions[index];
+    if (!item) return;
+    if (!item.notes.trim() && !item.title.trim()) {
+      alert('Completa al menos el campo de aspecto manual antes de usar IA.');
+      return;
+    }
+    setAiLoading((prev) => ({ ...prev, [index]: true }));
+    try {
+      const res = await fetch('/api/ai/extension-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title,
+          text: item.notes
+        })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.text) {
+        updateExtension(index, 'notes', data.text);
+      }
+    } finally {
+      setAiLoading((prev) => ({ ...prev, [index]: false }));
+    }
+  };
+
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Extensiones manuales</h2>
-        <p className={styles.subtitle}>Agrega aspectos manuales sin contaminar el corpus.</p>
       </div>
 
       <div className={styles.list}>
@@ -51,6 +86,39 @@ export default function ExtensionsStep({ extensions, onChange, onBack, onFinish,
               className={styles.textarea}
               placeholder="Notas"
             />
+            <div className={styles.notesFooter}>
+              <button
+                type="button"
+                className={styles.aiButton}
+                onClick={() => handleAI(idx)}
+                disabled={!!aiLoading[idx]}
+              >
+                {aiLoading[idx] ? (
+                  '...'
+                ) : (
+                  <>
+                    <Sparkles className={styles.aiIcon} /> IA
+                  </>
+                )}
+              </button>
+            </div>
+            <div className={styles.uploadRow}>
+              {[0, 1, 2].map((slot) => (
+                <label key={slot} className={styles.uploadButton}>
+                  <input
+                    type="file"
+                    className={styles.uploadInput}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      e.currentTarget.value = '';
+                      handleUploadEvidence(idx, file);
+                    }}
+                  />
+                  Subir evidencia {slot + 1}
+                </label>
+              ))}
+            </div>
             <button className={styles.removeButton} onClick={() => removeExtension(idx)}>Eliminar</button>
           </div>
         ))}
@@ -64,7 +132,7 @@ export default function ExtensionsStep({ extensions, onChange, onBack, onFinish,
         <div className={styles.footerActions}>
           <button className={styles.backButton} onClick={onBack}>Volver</button>
           <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
-          <button className={styles.primaryButton} onClick={onFinish}>Crear Auditoria</button>
+          <button className={styles.primaryButton} onClick={onFinish}>Generar Informe</button>
         </div>
       </div>
     </div>

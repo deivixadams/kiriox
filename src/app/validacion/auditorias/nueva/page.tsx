@@ -78,7 +78,7 @@ type ControlEvaluation = {
   evidence?: string[];
 };
 
-type ExtensionItem = { title: string; notes: string };
+type ExtensionItem = { title: string; notes: string; evidence?: string[] };
 
 const defaultCounts: DerivedCounts = { obligationCount: 0, riskCount: 0, controlCount: 0, testCount: 0 };
 
@@ -493,7 +493,7 @@ export default function AuditoriaWizardPage() {
     if (step === 2) return 'Equipo';
     if (step === 3) return 'Seleccion de auditoria';
     if (step === 4) return 'Evaluacion de riesgos';
-    if (step === 5) return 'Extensiones manuales';
+    if (step === 5) return 'Registra observaciones y evidencia adicional';
     return 'Wizard';
   }, [step]);
 

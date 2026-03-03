@@ -59,6 +59,78 @@
   resize: vertical;
 }
 
+.notesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.notesLabel {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #86efac;
+}
+
+.notesFooter {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.aiButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  color: #bfdbfe;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.aiIcon {
+  width: 12px;
+  height: 12px;
+}
+
+.aiButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.uploadRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.uploadButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #bfdbfe;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+}
+
+.uploadInput {
+  display: none;
+}
+
 .removeButton {
   background: transparent;
   border: none;

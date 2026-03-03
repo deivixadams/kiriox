@@ -403,12 +403,41 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
                   return (
                     <div className={styles.controlCard}>
                       <div className={styles.controlHeader}>
-                        <div>
+                        <div className={styles.controlHeaderMain}>
                           <div className={styles.controlLabel}>Control {controlPosition} de {controlSequence.length}</div>
                           <div className={styles.controlTitle}>{activeControl.name}</div>
                           <div className={styles.controlDescription}>
                             {activeControl.description || 'Sin descripcion registrada.'}
                           </div>
+                        </div>
+                        <div className={styles.howToInline}>
+                          <div className={styles.howToInlineHeader}>
+                            <div className={styles.howToInlineTitle}>Como evaluar</div>
+                            <button
+                              type="button"
+                              className={styles.aiButton}
+                              onClick={() => handleAssistHowTo(
+                                activePair!.riskId,
+                                activeControl,
+                                activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''
+                              )}
+                              disabled={aiLoadingKey === activeKey}
+                            >
+                              {aiLoadingKey === activeKey ? (
+                                <span className={styles.aiSpinner} />
+                              ) : (
+                                <Sparkles className={styles.aiIcon} />
+                              )}
+                              IA
+                            </button>
+                          </div>
+                          <textarea
+                            value={activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''}
+                            onChange={(e) => updateEvaluation(activePair!.riskId, activeControl.id, { howToEvaluate: e.target.value })}
+                            placeholder="Describe como evaluar este control..."
+                            className={styles.howToInlineTextarea}
+                            rows={4}
+                          />
                         </div>
                       </div>
                       <div className={styles.statusGroup}>
@@ -510,38 +539,6 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
                   );
                 })()}
               </div>
-
-              {activeControl && (
-                <div className={styles.howToCard}>
-                  <div className={styles.howToHeader}>
-                    <div className={styles.howToTitle}>Como evaluar</div>
-                    <button
-                      type="button"
-                      className={styles.aiButton}
-                      onClick={() => handleAssistHowTo(
-                        activePair!.riskId,
-                        activeControl,
-                        activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''
-                      )}
-                      disabled={aiLoadingKey === activeKey}
-                    >
-                      {aiLoadingKey === activeKey ? (
-                        <span className={styles.aiSpinner} />
-                      ) : (
-                        <Sparkles className={styles.aiIcon} />
-                      )}
-                      IA
-                    </button>
-                  </div>
-                  <textarea
-                    value={activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''}
-                    onChange={(e) => updateEvaluation(activePair!.riskId, activeControl.id, { howToEvaluate: e.target.value })}
-                    placeholder="Describe como evaluar este control..."
-                    className={styles.howToTextarea}
-                    rows={3}
-                  />
-                </div>
-              )}
 
             </div>
           )}
