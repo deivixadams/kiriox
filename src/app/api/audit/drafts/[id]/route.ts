@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAuthContext } from '@/lib/auth-server';
 import { getDraft, updateDraft } from '../store';
 
 export async function GET(
@@ -6,8 +7,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthContext();
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { id } = await params;
-    const draft = getDraft(id);
+    const draft = await getDraft(auth, id);
     if (!draft) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -23,9 +28,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthContext();
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { id } = await params;
     const patch = await request.json();
-    const draft = updateDraft(id, patch);
+    const draft = await updateDraft(auth, id, patch);
     if (!draft) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }

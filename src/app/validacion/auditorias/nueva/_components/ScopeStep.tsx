@@ -376,7 +376,7 @@ export default function ScopeStep({ domainIds, obligationIds, riskIds, derivedCo
         <div className={styles.footerActions}>
           <button className={styles.backButton} onClick={onBack}>Volver</button>
           <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
-          <button className={styles.questionnaireButton} onClick={onNext}>Cuestionario</button>
+          <button className={styles.questionnaireButton} onClick={onNext} disabled>Cuestionario</button>
           <button className={styles.primaryButton} onClick={onNext}>Continuar</button>
         </div>
       </div>

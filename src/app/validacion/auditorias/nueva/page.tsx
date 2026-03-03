@@ -477,11 +477,19 @@ export default function AuditoriaWizardPage() {
 
   const handleFinish = async () => {
     if (!draftId) return;
+    await saveDraft();
     await fetch('/api/auth/csrf');
-    const res = await fetch(`/api/audit/drafts/${draftId}/materialize`, { method: 'POST' });
-    if (res.ok) {
-      router.push('/validacion/auditorias');
-    }
+    const res = await fetch(`/api/audit/drafts/${draftId}/report`, { method: 'POST' });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `Informe_Auditoria_${draftId}.docx`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
   };
 
   const handleClose = () => {
