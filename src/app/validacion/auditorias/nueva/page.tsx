@@ -7,10 +7,9 @@ import ActaStep from './_components/ActaStep';
 import ScopeStep from './_components/ScopeStep';
 import TeamStep from './_components/TeamStep';
 import QuestionnaireStep from './_components/QuestionnaireStep';
-import GuideStep from './_components/GuideStep';
 import ExtensionsStep from './_components/ExtensionsStep';
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
 
 type Option = { id: string; name: string; code?: string; frameworkId?: string; jurisdictionId?: string; version?: string };
 type UserOption = { id: string; label: string; email?: string };
@@ -42,7 +41,6 @@ type DraftRecord = {
   objectives?: any;
   team?: any;
   questionnaire?: any;
-  guide?: any;
   manualExtensions?: any;
   windowStart?: string | null;
   windowEnd?: string | null;
@@ -78,16 +76,6 @@ type ControlEvaluation = {
   notes: string;
   howToEvaluate?: string;
   evidence?: string[];
-};
-
-type GuideItem = {
-  title: string;
-  code?: string;
-  riesgos: string[];
-  controles: string[];
-  pruebas: string[];
-  prioridad?: string;
-  notas?: string;
 };
 
 type ExtensionItem = { title: string; notes: string };
@@ -147,12 +135,10 @@ export default function AuditoriaWizardPage() {
   const [objectivesText, setObjectivesText] = useState('');
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [questionnaire, setQuestionnaire] = useState<ControlEvaluation[]>([]);
-  const [guide, setGuide] = useState<GuideItem[]>([]);
   const [extensions, setExtensions] = useState<ExtensionItem[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [aiLoadingFields, setAiLoadingFields] = useState<Record<string, boolean>>({});
-  const [generatingGuide, setGeneratingGuide] = useState(false);
 
   const [autoEntidad, setAutoEntidad] = useState('');
   const [autoMarco, setAutoMarco] = useState('');
@@ -263,9 +249,6 @@ export default function AuditoriaWizardPage() {
     if (Array.isArray(draft.questionnaire)) {
       setQuestionnaire(draft.questionnaire);
     }
-    if (Array.isArray(draft.guide)) {
-      setGuide(draft.guide);
-    }
     if (Array.isArray(draft.manualExtensions)) {
       setExtensions(draft.manualExtensions);
     }
@@ -308,13 +291,12 @@ export default function AuditoriaWizardPage() {
         objectives: { narrative: objectivesText },
         team,
         questionnaire,
-        guide,
         manualExtensions: extensions,
         step,
         ...payload
       })
     });
-  }, [draftId, acta, context, scopeState, windowStart, windowEnd, objectivesText, team, questionnaire, guide, extensions, step]);
+  }, [draftId, acta, context, scopeState, windowStart, windowEnd, objectivesText, team, questionnaire, extensions, step]);
 
   useEffect(() => {
     const boot = async () => {
@@ -340,7 +322,7 @@ export default function AuditoriaWizardPage() {
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
     };
-  }, [acta, context, scopeState, windowStart, windowEnd, objectivesText, team, questionnaire, guide, extensions, step, saveDraft]);
+  }, [acta, context, scopeState, windowStart, windowEnd, objectivesText, team, questionnaire, extensions, step, saveDraft]);
 
   useEffect(() => {
     if (step !== 2) return;
@@ -477,23 +459,6 @@ export default function AuditoriaWizardPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleGenerateGuide = async () => {
-    setGeneratingGuide(true);
-    try {
-      const res = await fetch('/api/ai/audit-guide', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ obligations: scopeState.obligationIds })
-      });
-      const data = await res.json();
-      if (Array.isArray(data.guide)) {
-        setGuide(data.guide);
-      }
-    } finally {
-      setGeneratingGuide(false);
-    }
-  };
-
   const handleNext = () => {
     const nextStep = Math.min(step + 1, TOTAL_STEPS);
     setStep(nextStep);
@@ -528,8 +493,7 @@ export default function AuditoriaWizardPage() {
     if (step === 2) return 'Equipo';
     if (step === 3) return 'Seleccion de auditoria';
     if (step === 4) return 'Evaluacion de riesgos';
-    if (step === 5) return 'Guia automatica';
-    if (step === 6) return 'Extensiones manuales';
+    if (step === 5) return 'Extensiones manuales';
     return 'Wizard';
   }, [step]);
 
@@ -555,7 +519,6 @@ export default function AuditoriaWizardPage() {
           acta={acta}
           context={{ companyId: context.companyId }}
           companies={options.companies}
-          teamUsers={companyUsers}
           onChangeActa={setActa}
           onChangeContext={(next) => setContext((prev) => ({ ...prev, ...next }))}
           onAI={handleAI}
@@ -602,18 +565,6 @@ export default function AuditoriaWizardPage() {
       )}
 
       {step === 5 && (
-        <GuideStep
-          guide={guide}
-          onChange={setGuide}
-          onGenerate={handleGenerateGuide}
-          generating={generatingGuide}
-          onBack={handleBack}
-          onNext={handleNext}
-          onSave={handleSave}
-        />
-      )}
-
-      {step === 6 && (
         <ExtensionsStep
           extensions={extensions}
           onChange={setExtensions}

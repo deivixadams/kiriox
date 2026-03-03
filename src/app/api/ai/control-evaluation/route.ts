@@ -16,7 +16,7 @@ function buildPrompt(controlName: string, controlDescription: string, coverageNo
     return [
       'Responde siempre en español.',
       'Mejora la redaccion del siguiente texto sobre como evaluar el control en auditoria AML/CFT.',
-      'Mantén el significado original, no inventes datos y usa menos de 80 palabras.',
+      'Mantén el significado original, no inventes datos y usa menos de 85 palabras.',
       `Control: ${controlName}`,
       `${detail}${coverage}`,
       `Texto: ${text}`
@@ -25,7 +25,7 @@ function buildPrompt(controlName: string, controlDescription: string, coverageNo
   return (
     'Responde siempre en español. ' +
     'Actua como un experto en Auditoria de Prevencion de lavado de Activos y describe en como evaluar el control. ' +
-    'Usa menos de 80 palabras. No agregues explicaciones.' +
+    'Usa menos de 85 palabras. No agregues explicaciones.' +
     `\nControl: ${controlName}${detail}${coverage}`
   );
 }

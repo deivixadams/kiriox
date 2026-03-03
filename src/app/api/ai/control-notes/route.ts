@@ -18,7 +18,7 @@ function buildPrompt(controlName: string, text: string, howToEvaluate: string, c
     return [
       'Responde siempre en español.',
       'Mejora la redaccion de estas observaciones de evaluacion de control en auditoria AML/CFT.',
-      'Mantén el significado original, no inventes datos, usa tono profesional y conciso.',
+      'Mantén el significado original, no inventes datos, usa tono profesional y conciso. No excedas 85 palabras.',
       `Control: ${controlName}`,
       `${detail}${coverage}${howTo}`,
       `Texto: ${text}`
@@ -27,7 +27,7 @@ function buildPrompt(controlName: string, text: string, howToEvaluate: string, c
   return [
     'Responde siempre en español.',
     'Redacta observaciones y hallazgos iniciales para evaluar este control en auditoria AML/CFT.',
-    'No inventes datos que no esten en el contexto. Usa tono profesional y conciso.',
+    'No inventes datos que no esten en el contexto. Usa tono profesional y conciso. No excedas 85 palabras.',
     `Control: ${controlName}`,
     `${detail}${coverage}${howTo}`
   ].join('\n');
