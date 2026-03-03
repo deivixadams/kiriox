@@ -318,33 +318,6 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
               })}
             </div>
           </aside>
-          {activeControl && (
-            <div className={styles.howToCard}>
-              <div className={styles.howToHeader}>
-                <div className={styles.howToTitle}>Como evaluar</div>
-                <button
-                  type="button"
-                  className={styles.aiButton}
-                  onClick={() => handleGenerateHowTo(activePair!.riskId, activeControl)}
-                  disabled={aiLoadingKey === activeKey}
-                >
-                  {aiLoadingKey === activeKey ? (
-                    <span className={styles.aiSpinner} />
-                  ) : (
-                    <Sparkles className={styles.aiIcon} />
-                  )}
-                  IA
-                </button>
-              </div>
-              <textarea
-                value={activeEvaluation?.howToEvaluate || ''}
-                onChange={(e) => updateEvaluation(activePair!.riskId, activeControl.id, { howToEvaluate: e.target.value })}
-                placeholder="Describe como evaluar este control..."
-                className={styles.howToTextarea}
-                rows={3}
-              />
-            </div>
-          )}
         </div>
 
         <section className={styles.content}>
@@ -492,6 +465,34 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
                   );
                 })()}
               </div>
+
+              {activeControl && (
+                <div className={styles.howToCard}>
+                  <div className={styles.howToHeader}>
+                    <div className={styles.howToTitle}>Como evaluar</div>
+                    <button
+                      type="button"
+                      className={styles.aiButton}
+                      onClick={() => handleGenerateHowTo(activePair!.riskId, activeControl)}
+                      disabled={aiLoadingKey === activeKey}
+                    >
+                      {aiLoadingKey === activeKey ? (
+                        <span className={styles.aiSpinner} />
+                      ) : (
+                        <Sparkles className={styles.aiIcon} />
+                      )}
+                      IA
+                    </button>
+                  </div>
+                  <textarea
+                    value={activeEvaluation?.howToEvaluate || ''}
+                    onChange={(e) => updateEvaluation(activePair!.riskId, activeControl.id, { howToEvaluate: e.target.value })}
+                    placeholder="Describe como evaluar este control..."
+                    className={styles.howToTextarea}
+                    rows={3}
+                  />
+                </div>
+              )}
 
             </div>
           )}
