@@ -217,6 +217,98 @@ export async function buildReportData(auth: AuthContext, draftId: string) {
   };
 }
 
+async function resolveStatusId(preferredCodes: string[]) {
+  const preferred = await prisma.corpus_catalog_status.findFirst({
+    where: { code: { in: preferredCodes, mode: 'insensitive' }, is_active: true },
+    orderBy: { sort_order: 'asc' }
+  });
+  if (preferred) return preferred.id;
+
+  const fallback = await prisma.corpus_catalog_status.findFirst({
+    where: { is_active: true },
+    orderBy: { sort_order: 'asc' }
+  });
+  return fallback?.id ?? 1;
+}
+
+export async function materializeDraft(auth: AuthContext, draftId: string) {
+  const draft = await prisma.corpus_assessment_draft.findFirst({
+    where: { id: draftId, tenant_id: auth.tenantId }
+  });
+  if (!draft) return null;
+
+  const companyId = draft.company_id;
+  const frameworkVersionId = draft.framework_version_id;
+  if (!companyId || !frameworkVersionId) {
+    throw new Error('Draft missing company/framework');
+  }
+
+  const marker = `CRE_DRAFT_ID:${draftId}`;
+  const acta = draft.acta ?? {};
+  const periodStartRaw = acta.periodo_inicio || draft.window_start || new Date().toISOString().slice(0, 10);
+  const periodEndRaw = acta.periodo_fin || draft.window_end || new Date().toISOString().slice(0, 10);
+  const periodStart = new Date(periodStartRaw);
+  const periodEnd = new Date(periodEndRaw);
+  const year = Number.isNaN(periodStart.getTime()) ? new Date().getFullYear() : periodStart.getFullYear();
+
+  const assessmentName = acta.entidad_nombre
+    ? `Auditoría AML - ${acta.entidad_nombre}`
+    : `Auditoría AML ${year}`;
+
+  let assessment = await prisma.corpusAssessment.findFirst({
+    where: {
+      companyId,
+      frameworkVersionId,
+      scope_notes: { contains: marker }
+    }
+  });
+
+  const statusId = await resolveStatusId(['completed', 'final', 'completado', 'cerrado', 'done']);
+
+  if (!assessment) {
+    assessment = await prisma.corpusAssessment.create({
+      data: {
+        companyId,
+        frameworkVersionId,
+        name: assessmentName,
+        scope_notes: marker,
+        statusId,
+        created_by: auth.userId
+      }
+    });
+  }
+
+  const existingEvaluation = await prisma.corpusEvaluation.findFirst({
+    where: {
+      assessmentId: assessment.id,
+      notes: { contains: marker }
+    }
+  });
+
+  if (!existingEvaluation) {
+    await prisma.corpusEvaluation.create({
+      data: {
+        assessmentId: assessment.id,
+        periodStart: Number.isNaN(periodStart.getTime()) ? new Date() : periodStart,
+        periodEnd: Number.isNaN(periodEnd.getTime()) ? new Date() : periodEnd,
+        statusId,
+        notes: marker,
+        created_by: auth.userId
+      }
+    });
+  }
+
+  await prisma.corpus_assessment_draft.update({
+    where: { id: draftId },
+    data: {
+      status: 'materialized',
+      updated_at: new Date()
+    }
+  });
+
+  return assessment.id;
+}
+
 export async function renderReportDocx(data: Record<string, any>) {
   const templatePath = path.resolve('C:\\_CRE\\PLANTILLA_INFORME_AML.docx');
   const content = await fs.readFile(templatePath, 'binary');

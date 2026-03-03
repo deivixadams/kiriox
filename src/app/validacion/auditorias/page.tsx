@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     ClipboardList,
     Plus,
@@ -9,8 +9,6 @@ import {
     LayoutGrid,
     ChevronRight,
     PlayCircle,
-    Calendar,
-    ArrowRight,
     ShieldCheck
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -18,30 +16,24 @@ import Link from 'next/link';
 
 export default function AuditDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
-
-    // Mock Assessments for UI development (replace with real Query later)
-    const assessments = [
-        {
-            id: 'assess-001',
-            name: 'Auditoría Anual AML 2024',
-            company: 'Banco Central Operativo',
-            framework: 'Ley 155-17',
-            status: 'En Proceso',
-            findings: 12,
-            readiness: 78,
-            lastUpdate: 'Hace 2 horas'
-        },
-        {
-            id: 'assess-002',
-            name: 'Revisión Especial ROS',
-            company: 'Seguros Universal',
-            framework: 'Norma 01-19',
-            status: 'Completado',
-            findings: 5,
-            readiness: 94,
-            lastUpdate: 'Ayer'
+    const { data: assessments = [] } = useQuery({
+        queryKey: ['audit-assessments'],
+        queryFn: async () => {
+            const res = await fetch('/api/audit/assessments');
+            if (!res.ok) return [];
+            return res.json();
         }
-    ];
+    });
+
+    const filteredAssessments = useMemo(() => {
+        const term = searchQuery.trim().toLowerCase();
+        if (!term) return assessments;
+        return assessments.filter((audit: any) => {
+            const name = String(audit.name || '').toLowerCase();
+            const company = String(audit.company || '').toLowerCase();
+            return name.includes(term) || company.includes(term);
+        });
+    }, [assessments, searchQuery]);
 
     return (
         <div style={{ padding: '2rem' }} className="animate-in fade-in duration-500">
@@ -120,7 +112,7 @@ export default function AuditDashboard() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {assessments.map((audit) => (
+                    {filteredAssessments.map((audit: any) => (
                         <Link
                             href={`/validacion/auditorias/${audit.id}`}
                             key={audit.id}
@@ -147,12 +139,12 @@ export default function AuditDashboard() {
                                 <div style={{ textAlign: 'center' }}>
                                     <div style={{ fontSize: '0.8rem', color: '#a1a1aa', marginBottom: '0.25rem' }}>Hallazgos</div>
                                     <div style={{ display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: '0.5rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 800, fontSize: '0.85rem' }}>
-                                        {audit.findings} Open
+                                        {audit.findings ?? 0} Open
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
                                     <div style={{ fontSize: '0.8rem', color: '#a1a1aa', marginBottom: '0.25rem' }}>Readiness</div>
-                                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#10b981' }}>{audit.readiness}%</div>
+                                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#10b981' }}>{typeof audit.readiness === 'number' ? `${audit.readiness}%` : '--'}</div>
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
                                     <span className={`badge ${audit.status === 'En Proceso' ? 'badge-primary' : 'badge-success'}`}>
@@ -167,7 +159,7 @@ export default function AuditDashboard() {
                     ))}
                 </div>
 
-                {assessments.length === 0 && (
+                {filteredAssessments.length === 0 && (
                     <div style={{ padding: '6rem 0', textAlign: 'center', opacity: 0.5 }}>
                         <ClipboardList size={64} style={{ margin: '0 auto 1.5rem auto', display: 'block' }} />
                         <p style={{ fontSize: '1.1rem' }}>No se encontraron auditorías registradas.</p>
@@ -195,7 +187,6 @@ export default function AuditDashboard() {
         </div>
     );
 }
-
 
 
 

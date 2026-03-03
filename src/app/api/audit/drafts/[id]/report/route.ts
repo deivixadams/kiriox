@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-server';
-import { buildReportData, renderReportDocx } from '@/lib/audit-report';
+import { buildReportData, materializeDraft, renderReportDocx } from '@/lib/audit-report';
 
 export const runtime = 'nodejs';
 
@@ -17,6 +17,11 @@ export async function POST(
     const data = await buildReportData(auth, id);
     if (!data) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    try {
+      await materializeDraft(auth, id);
+    } catch (error: any) {
+      return NextResponse.json({ error: error?.message || 'Failed to materialize draft' }, { status: 400 });
     }
     const buffer = await renderReportDocx(data);
     return new Response(new Uint8Array(buffer), {
