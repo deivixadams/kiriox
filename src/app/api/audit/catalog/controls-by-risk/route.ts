@@ -6,6 +6,7 @@ type ControlRow = {
   control_id: string;
   name: string;
   description: string | null;
+  coverage_notes: string | null;
 };
 
 type Payload = {
@@ -25,14 +26,15 @@ export async function POST(request: Request) {
         crm.risk_id,
         c.id AS control_id,
         c.name,
-        c.description
+        c.description,
+        crm.coverage_notes
       FROM corpus.corpus_control_risk_map crm
       JOIN corpus.corpus_control c ON c.id = crm.control_id
       WHERE crm.risk_id = ANY(${riskIds}::uuid[])
       ORDER BY crm.risk_id, c.name ASC
     `);
 
-    const byRisk: Record<string, { id: string; name: string; description?: string | null }[]> = {};
+    const byRisk: Record<string, { id: string; name: string; description?: string | null; coverageNotes?: string | null }[]> = {};
     (rows || []).forEach((row) => {
       if (!byRisk[row.risk_id]) {
         byRisk[row.risk_id] = [];
@@ -40,7 +42,8 @@ export async function POST(request: Request) {
       byRisk[row.risk_id].push({
         id: row.control_id,
         name: row.name,
-        description: row.description
+        description: row.description,
+        coverageNotes: row.coverage_notes
       });
     });
 

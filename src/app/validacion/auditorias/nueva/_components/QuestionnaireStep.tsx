@@ -17,6 +17,7 @@ type ControlItem = {
   id: string;
   name: string;
   description?: string | null;
+  coverageNotes?: string | null;
 };
 
 type ControlEvaluation = {
@@ -152,10 +153,7 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
     };
   }, [controlSequence, evalMap]);
 
-  const maxScore = scoreSnapshot.totalControls;
-  const currentScore = scoreSnapshot.weightedSum;
   const maxPercent = scoreSnapshot.totalControls > 0 ? 100 : 0;
-  const formatScore = (value: number) => (Number.isInteger(value) ? value.toString() : value.toFixed(1));
 
   const updateEvaluation = (riskId: string, controlId: string, patch: Partial<ControlEvaluation>) => {
     const key = `${riskId}::${controlId}`;
@@ -238,22 +236,23 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
     }
   };
 
-  const handleGenerateHowTo = async (riskId: string, control: ControlItem) => {
+  const handleRefineNotes = async (riskId: string, control: ControlItem, notes: string) => {
     const key = `${riskId}::${control.id}`;
+    if (!notes.trim()) return;
     setAiLoadingKey(key);
     try {
-      const res = await fetch('/api/ai/control-evaluation', {
+      const res = await fetch('/api/ai/control-notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           controlName: control.name,
-          controlDescription: control.description || ''
+          text: notes
         })
       });
       if (!res.ok) return;
       const data = await res.json();
       if (data?.text) {
-        updateEvaluation(riskId, control.id, { howToEvaluate: data.text });
+        updateEvaluation(riskId, control.id, { notes: data.text });
       }
     } finally {
       setAiLoadingKey(null);
@@ -410,7 +409,22 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
                         </button>
                       </div>
                       <div className={styles.textBlock}>
-                        <label className={styles.textLabel}>Observaciones y hallazgos</label>
+                        <div className={styles.textHeaderRow}>
+                          <label className={styles.textLabel}>Observaciones y hallazgos</label>
+                          <button
+                            type="button"
+                            className={styles.aiButton}
+                            onClick={() => handleRefineNotes(activePair!.riskId, activeControl, evaluation?.notes || '')}
+                            disabled={aiLoadingKey === activeKey}
+                          >
+                            {aiLoadingKey === activeKey ? (
+                              <span className={styles.aiSpinner} />
+                            ) : (
+                              <Sparkles className={styles.aiIcon} />
+                            )}
+                            IA
+                          </button>
+                        </div>
                         <textarea
                           value={evaluation?.notes || ''}
                           onChange={(e) => updateEvaluation(activePair!.riskId, activeControl.id, { notes: e.target.value })}
@@ -470,22 +484,9 @@ export default function QuestionnaireStep({ riskIds, evaluations, onChange, onBa
                 <div className={styles.howToCard}>
                   <div className={styles.howToHeader}>
                     <div className={styles.howToTitle}>Como evaluar</div>
-                    <button
-                      type="button"
-                      className={styles.aiButton}
-                      onClick={() => handleGenerateHowTo(activePair!.riskId, activeControl)}
-                      disabled={aiLoadingKey === activeKey}
-                    >
-                      {aiLoadingKey === activeKey ? (
-                        <span className={styles.aiSpinner} />
-                      ) : (
-                        <Sparkles className={styles.aiIcon} />
-                      )}
-                      IA
-                    </button>
                   </div>
                   <textarea
-                    value={activeEvaluation?.howToEvaluate || ''}
+                    value={activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''}
                     onChange={(e) => updateEvaluation(activePair!.riskId, activeControl.id, { howToEvaluate: e.target.value })}
                     placeholder="Describe como evaluar este control..."
                     className={styles.howToTextarea}
