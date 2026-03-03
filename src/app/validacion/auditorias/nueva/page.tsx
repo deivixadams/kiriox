@@ -493,7 +493,7 @@ export default function AuditoriaWizardPage() {
     if (step === 2) return 'Equipo';
     if (step === 3) return 'Seleccion de auditoria';
     if (step === 4) return 'Evaluacion de riesgos';
-    if (step === 5) return 'Registra observaciones y evidencia adicional';
+    if (step === 5) return '';
     return 'Wizard';
   }, [step]);
 
