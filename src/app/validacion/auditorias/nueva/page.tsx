@@ -71,7 +71,14 @@ type ScopeState = {
 
 type TeamMember = { name: string; role: string; userId?: string; sourceType?: 'leader' | 'auditor' | 'manual' };
 
-type QuestionnaireItem = { area: string; entrevistar: string[] };
+type ControlEvaluation = {
+  riskId: string;
+  controlId: string;
+  status: 'cumple' | 'parcial' | 'no_cumple' | '';
+  notes: string;
+  howToEvaluate?: string;
+  evidence?: string[];
+};
 
 type GuideItem = {
   title: string;
@@ -139,13 +146,12 @@ export default function AuditoriaWizardPage() {
   const [windowEnd, setWindowEnd] = useState('');
   const [objectivesText, setObjectivesText] = useState('');
   const [team, setTeam] = useState<TeamMember[]>([]);
-  const [questionnaire, setQuestionnaire] = useState<QuestionnaireItem[]>([]);
+  const [questionnaire, setQuestionnaire] = useState<ControlEvaluation[]>([]);
   const [guide, setGuide] = useState<GuideItem[]>([]);
   const [extensions, setExtensions] = useState<ExtensionItem[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [aiLoadingFields, setAiLoadingFields] = useState<Record<string, boolean>>({});
-  const [generatingQuestionnaire, setGeneratingQuestionnaire] = useState(false);
   const [generatingGuide, setGeneratingGuide] = useState(false);
 
   const [autoEntidad, setAutoEntidad] = useState('');
@@ -471,24 +477,6 @@ export default function AuditoriaWizardPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleGenerateQuestionnaire = async () => {
-    setGeneratingQuestionnaire(true);
-    try {
-      const domains = domainCatalog.filter((d) => scopeState.domainIds.includes(d.id));
-      const res = await fetch('/api/ai/questionnaire', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domains })
-      });
-      const data = await res.json();
-      if (Array.isArray(data.questionnaire)) {
-        setQuestionnaire(data.questionnaire);
-      }
-    } finally {
-      setGeneratingQuestionnaire(false);
-    }
-  };
-
   const handleGenerateGuide = async () => {
     setGeneratingGuide(true);
     try {
@@ -539,7 +527,7 @@ export default function AuditoriaWizardPage() {
     if (step === 1) return 'Configuracion: Acta de Inicio';
     if (step === 2) return 'Equipo';
     if (step === 3) return 'Seleccion de auditoria';
-    if (step === 4) return 'Cuestionarios';
+    if (step === 4) return 'Evaluacion de riesgos';
     if (step === 5) return 'Guia automatica';
     if (step === 6) return 'Extensiones manuales';
     return 'Wizard';
@@ -604,11 +592,9 @@ export default function AuditoriaWizardPage() {
 
       {step === 4 && (
         <QuestionnaireStep
-          questionnaire={questionnaire}
-          domains={domainCatalog}
+          riskIds={scopeState.riskIds}
+          evaluations={questionnaire}
           onChange={setQuestionnaire}
-          onGenerate={handleGenerateQuestionnaire}
-          generating={generatingQuestionnaire}
           onBack={handleBack}
           onNext={handleNext}
           onSave={handleSave}

@@ -16,17 +16,19 @@ type RiskRow = {
 type Payload = {
   domainIds?: string[];
   obligationIds?: string[];
+  riskIds?: string[];
 };
 
-async function fetchRisks(domainIds: string[], obligationIds: string[]) {
+async function fetchRisks(domainIds: string[], obligationIds: string[], riskIds: string[]) {
   const prisma = (await import('@/lib/prisma')).default;
   const filters: Prisma.Sql[] = [];
 
-  if (domainIds.length > 0 && obligationIds.length === 0) {
-    filters.push(Prisma.sql`o.domain_id = ANY(${domainIds}::uuid[])`);
-  }
-  if (obligationIds.length > 0) {
+  if (riskIds.length > 0) {
+    filters.push(Prisma.sql`r.id = ANY(${riskIds}::uuid[])`);
+  } else if (obligationIds.length > 0) {
     filters.push(Prisma.sql`orr.obligation_id = ANY(${obligationIds}::uuid[])`);
+  } else if (domainIds.length > 0) {
+    filters.push(Prisma.sql`o.domain_id = ANY(${domainIds}::uuid[])`);
   }
 
   const whereSql = filters.length
@@ -74,8 +76,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const domainIds = searchParams.getAll('domain_id');
     const obligationIds = searchParams.getAll('obligation_id');
+    const riskIds = searchParams.getAll('risk_id');
 
-    const normalized = await fetchRisks(domainIds, obligationIds);
+    const normalized = await fetchRisks(domainIds, obligationIds, riskIds);
     return NextResponse.json(normalized);
   } catch (error: any) {
     console.error('Error fetching risks:', error);
@@ -85,8 +88,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { domainIds = [], obligationIds = [] } = (await request.json()) as Payload;
-    const normalized = await fetchRisks(domainIds, obligationIds);
+    const { domainIds = [], obligationIds = [], riskIds = [] } = (await request.json()) as Payload;
+    const normalized = await fetchRisks(domainIds, obligationIds, riskIds);
     return NextResponse.json(normalized);
   } catch (error: any) {
     console.error('Error fetching risks:', error);

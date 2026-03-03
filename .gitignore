@@ -13,3 +13,5 @@ yarn-error.log*
 .worktrees/
 corpus/
 .worktrees/
+schema_corpus_columns_types.txt
+evidencias/
