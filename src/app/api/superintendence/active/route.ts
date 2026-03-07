@@ -26,10 +26,10 @@ export async function GET(request: Request) {
           f.name as framework_name,
           s.framework_version_id,
           v.version as framework_version
-        FROM corpus.corpus_superintendence s
-        JOIN corpus.corpus_jurisdiction j ON j.id = s.jurisdiction_id
-        JOIN corpus.corpus_framework f ON f.id = s.framework_id
-        JOIN corpus.corpus_framework_version v ON v.id = s.framework_version_id
+        FROM corpus.corpus.superintendence s
+        JOIN corpus.jurisdiction j ON j.id = s.jurisdiction_id
+        JOIN pendiente.corpus_framework f ON f.id = s.framework_id
+        JOIN corpus.framework_version v ON v.id = s.framework_version_id
         WHERE s.company_id = ${companyId}
           AND s.is_active = true
         LIMIT 1

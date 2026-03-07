@@ -9,7 +9,7 @@ export async function GET(request: Request) {
       { id: string; name: string; code: string }[]
     >`
       SELECT id, name, code
-      FROM corpus.corpus_jurisdiction
+      FROM corpus.jurisdiction
       WHERE code = 'DO' OR name ILIKE '%dominicana%'
       ORDER BY name ASC
       LIMIT 1
@@ -25,8 +25,8 @@ export async function GET(request: Request) {
         { id: string; framework_id: string }[]
       >`
         SELECT fv.id, fv.framework_id
-        FROM corpus.corpus_framework_version fv
-        JOIN corpus.corpus_framework f ON f.id = fv.framework_id
+        FROM corpus.framework_version fv
+        JOIN pendiente.corpus_framework f ON f.id = fv.framework_id
         WHERE f.jurisdiction_id = ${rd.id}
         ORDER BY fv.created_at DESC NULLS LAST, fv.version DESC NULLS LAST
         LIMIT 1
@@ -46,20 +46,20 @@ export async function GET(request: Request) {
 
     const companies = await prisma.$queryRaw`
       SELECT id, name, code
-      FROM corpus.corpus_company
+      FROM corpus.company
       WHERE status_id = 1
         AND jurisdiction_id = ${rd.id}
     `;
     const jurisdictions = [rd];
     const frameworks = await prisma.$queryRaw`
       SELECT id, name, code
-      FROM corpus.corpus_framework
+      FROM pendiente.corpus_framework
       WHERE jurisdiction_id = ${rd.id}
     `;
     const frameworkVersionsRaw = await prisma.$queryRaw`
       SELECT fv.id, fv.version, fv.framework_id
-      FROM corpus.corpus_framework_version fv
-      JOIN corpus.corpus_framework f ON f.id = fv.framework_id
+      FROM corpus.framework_version fv
+      JOIN pendiente.corpus_framework f ON f.id = fv.framework_id
       WHERE f.jurisdiction_id = ${rd.id}
       ORDER BY fv.created_at DESC NULLS LAST, fv.version DESC NULLS LAST
     `;

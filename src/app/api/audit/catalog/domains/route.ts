@@ -6,7 +6,7 @@ export async function GET() {
       { id: string; name: string; code: string | null }[]
     >`
       SELECT id, name, code
-      FROM corpus.corpus_domain
+      FROM corpus.domain
       ORDER BY name ASC
     `;
     return NextResponse.json(rows || []);

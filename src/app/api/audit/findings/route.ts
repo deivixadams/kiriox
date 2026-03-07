@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 // GET /api/audit/findings?evaluationId=...
 export async function GET(req: Request) {
@@ -42,7 +40,7 @@ export async function POST(req: Request) {
         }
 
         // 2. Fetch finding type for defaults
-        const findingType = await prisma.corpusAuditFindingType.findUnique({
+        const findingType = await prisma.corpusCatalogAuditFindingType.findUnique({
             where: { id: eventTypeId }
         });
 
@@ -82,7 +80,7 @@ export async function POST(req: Request) {
         await prisma.corpusAuditLog.create({
             data: {
                 tenantId,
-                entityName: 'corpus_audit_finding',
+                entityName: 'corpus.audit_finding',
                 entityId: finding.id,
                 action: 'MANUAL_CREATE',
                 newData: finding as any,

@@ -13,31 +13,30 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const where = isAdmin(auth.roleCode) ? {} : { companyId: auth.tenantId };
+    const where = isAdmin(auth.roleCode) ? {} : { company_id: auth.tenantId };
 
     const rows = await prisma.corpusAssessment.findMany({
       where,
       include: {
         company: { select: { name: true } },
-        frameworkVersion: { select: { version: true, framework: { select: { name: true } } } },
-        corpus_catalog_status: { select: { name: true } }
+        framework_version: { select: { version: true, corpus_framework: { select: { name: true } } } }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
-    const data = rows.map((row) => {
-      const frameworkLabel = row.frameworkVersion
-        ? `${row.frameworkVersion.framework?.name ?? 'Marco'} v${row.frameworkVersion.version ?? ''}`.trim()
+    const data = rows.map((row: any) => {
+      const frameworkLabel = row.framework_version
+        ? `${row.framework_version.corpus_framework?.name ?? 'Marco'} v${row.framework_version.version ?? ''}`.trim()
         : 'Sin marco';
       return {
         id: row.id,
         name: row.name,
         company: row.company?.name ?? 'Sin empresa',
         framework: frameworkLabel,
-        status: row.corpus_catalog_status?.name ?? 'Registrado',
+        status: 'Registrado',
         findings: 0,
         readiness: null,
-        createdAt: row.createdAt?.toISOString()
+        createdAt: row.created_at?.toISOString()
       };
     });
 

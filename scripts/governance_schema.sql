@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS security_rbac (
     created_at TIMESTAMP DEFAULT now()
 );
 
--- 2.3 Tabla: corpus_params
-CREATE TABLE IF NOT EXISTS corpus_params (
+-- 2.3 Tabla: pendiente.corpus_params
+CREATE TABLE IF NOT EXISTS pendiente.corpus_params (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
     param_code VARCHAR(100) UNIQUE NOT NULL,
@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS corpus_params (
     updated_by UUID
 );
 
--- 2.4 Tabla: corpus_param_profiles
-CREATE TABLE IF NOT EXISTS corpus_param_profiles (
+-- 2.4 Tabla: pendiente.corpus_param_profiles
+CREATE TABLE IF NOT EXISTS pendiente.corpus_param_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
     profile_name VARCHAR(255) NOT NULL,
@@ -65,19 +65,19 @@ CREATE TABLE IF NOT EXISTS corpus_param_profiles (
     is_active BOOLEAN DEFAULT false
 );
 
--- 2.5 Tabla: corpus_param_profile_values
-CREATE TABLE IF NOT EXISTS corpus_param_profile_values (
+-- 2.5 Tabla: pendiente.corpus_param_profile_values
+CREATE TABLE IF NOT EXISTS pendiente.corpus_param_profile_values (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    profile_id UUID REFERENCES corpus_param_profiles(id),
-    param_id UUID REFERENCES corpus_params(id),
+    profile_id UUID REFERENCES pendiente.corpus_param_profiles(id),
+    param_id UUID REFERENCES pendiente.corpus_params(id),
     value NUMERIC NOT NULL,
     created_at TIMESTAMP DEFAULT now()
 );
 
--- 2.6 Tabla: corpus_param_change_log
-CREATE TABLE IF NOT EXISTS corpus_param_change_log (
+-- 2.6 Tabla: pendiente.corpus_param_change_log
+CREATE TABLE IF NOT EXISTS pendiente.corpus_param_change_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    param_id UUID REFERENCES corpus_params(id),
+    param_id UUID REFERENCES pendiente.corpus_params(id),
     old_value NUMERIC,
     new_value NUMERIC,
     changed_by UUID,
@@ -100,8 +100,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS tr_prevent_active_profile_update ON corpus_param_profiles;
+DROP TRIGGER IF EXISTS tr_prevent_active_profile_update ON pendiente.corpus_param_profiles;
 CREATE TRIGGER tr_prevent_active_profile_update
-BEFORE UPDATE ON corpus_param_profiles
+BEFORE UPDATE ON pendiente.corpus_param_profiles
 FOR EACH ROW
 EXECUTE FUNCTION prevent_active_profile_update();

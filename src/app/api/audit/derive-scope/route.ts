@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       const prisma = (await import('@/lib/prisma')).default;
       const obligations = await prisma.$queryRaw<{ id: string }[]>`
         SELECT id
-        FROM corpus.corpus_obligation
+        FROM corpus.obligation
         WHERE domain_id = ANY(${domainIds}::uuid[])
       `;
       resolvedObligationIds = (obligations || []).map((o) => o.id);
@@ -26,15 +26,16 @@ export async function POST(request: Request) {
     if (resolvedObligationIds.length > 0) {
       const prisma = (await import('@/lib/prisma')).default;
       const risks = await prisma.$queryRaw<{ risk_id: string }[]>`
-        SELECT DISTINCT risk_id
-        FROM corpus.corpus_obligation_risk
-        WHERE obligation_id = ANY(${resolvedObligationIds}::uuid[])
+        SELECT DISTINCT mrc.risk_id
+        FROM corpus.map_obligation_control moc
+        JOIN corpus.map_risk_control mrc ON mrc.control_id = moc.control_id
+        WHERE moc.obligation_id = ANY(${resolvedObligationIds}::uuid[])
       `;
       riskCount = (risks || []).length;
 
       const controls = await prisma.$queryRaw<{ control_id: string }[]>`
         SELECT control_id
-        FROM corpus.corpus_control_obligation
+        FROM pendiente.corpus_control_obligation
         WHERE obligation_id = ANY(${resolvedObligationIds}::uuid[])
       `;
       controlCount = new Set((controls || []).map((c) => c.control_id)).size;

@@ -21,21 +21,21 @@ export async function POST(request: Request) {
     }
 
     const prisma = (await import('@/lib/prisma')).default;
-    const rows = await prisma.$queryRaw<ControlRow[]>(Prisma.sql`
+    const rows = await prisma.$queryRaw(Prisma.sql`
       SELECT
-        crm.risk_id,
+        mrc.risk_id,
         c.id AS control_id,
         c.name,
         c.description,
-        crm.coverage_notes
-      FROM corpus.corpus_control_risk_map crm
-      JOIN corpus.corpus_control c ON c.id = crm.control_id
-      WHERE crm.risk_id = ANY(${riskIds}::uuid[])
-      ORDER BY crm.risk_id, c.name ASC
+        mrc.coverage_notes
+      FROM corpus.map_risk_control mrc
+      JOIN corpus.control c ON c.id = mrc.control_id
+      WHERE mrc.risk_id = ANY(${riskIds}::uuid[])
+      ORDER BY mrc.risk_id, c.name ASC
     `);
 
     const byRisk: Record<string, { id: string; name: string; description?: string | null; coverageNotes?: string | null }[]> = {};
-    (rows || []).forEach((row) => {
+    (rows || []).forEach((row: any) => {
       if (!byRisk[row.risk_id]) {
         byRisk[row.risk_id] = [];
       }

@@ -44,9 +44,9 @@ export async function GET() {
         });
 
         // Flatten roles for the frontend
-        const formattedUsers = users.map(u => ({
+        const formattedUsers = users.map((u: any) => ({
             ...u,
-            roles: u.user_x_rbac.map(ux => ux.role)
+            roles: u.user_x_rbac.map((ux: any) => ux.role)
         }));
 
         return NextResponse.json(formattedUsers);

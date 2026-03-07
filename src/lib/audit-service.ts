@@ -15,11 +15,11 @@ export async function generateFindingFromTestRun(
     userId: string
 ) {
     // 1. Fetch the test run and related control/obligation
-    const testRun = await (prisma as any).corpus_test_control_run.findUnique({
+    const testRun = await (prisma as any).pendiente.test_control_run.findUnique({
         where: { id: testRunId },
         include: {
-            corpus_control: true,
-            corpus_test: true
+            control: true,
+            test: true
         }
     });
 
@@ -69,8 +69,8 @@ export async function generateFindingFromTestRun(
         create: {
             tenantId,
             code: `AUDIT-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
-            title: `Falla en Control: ${(testRun as any).corpus_control?.name || 'Desconocido'}`,
-            description: `Hallazgo detectado automáticamente tras ejecución de prueba ${(testRun as any).corpus_test?.code || 'N/A'}. Resultado: ${testRun.result}.`,
+            title: `Falla en Control: ${(testRun as any).control?.name || 'Desconocido'}`,
+            description: `Hallazgo detectado automáticamente tras ejecución de prueba ${(testRun as any).test?.code || 'N/A'}. Resultado: ${testRun.result}.`,
             eventTypeId: findingType?.id || '1',
             severity,
             status: 'open',
@@ -92,7 +92,7 @@ export async function generateFindingFromTestRun(
     await (prisma as any).corpusAuditLog.create({
         data: {
             tenantId,
-            entityName: 'corpus_audit_finding',
+            entityName: 'corpus.audit_finding',
             entityId: finding.id,
             action: 'AUTO_GENERATE',
             newData: finding as any,

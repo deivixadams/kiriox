@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { ArrowLeft, UserPlus } from 'lucide-react';
 import UserWizard from '../_components/UserWizard';
+
+export const dynamic = 'force-dynamic';
 
 export default function NewUserPage() {
     return (
@@ -22,7 +25,9 @@ export default function NewUserPage() {
                 </Link>
             </div>
 
-            <UserWizard mode="create" />
+            <Suspense fallback={null}>
+                <UserWizard mode="create" />
+            </Suspense>
         </div>
     );
 }

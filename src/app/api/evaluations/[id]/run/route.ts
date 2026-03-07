@@ -26,7 +26,7 @@ export async function POST(
             include: {
                 assessment: true,
                 controlStates: {
-                    include: { corpus_control: true }
+                    include: { control: true }
                 },
                 testRuns: {
                     include: { test_control_run: true }
@@ -102,7 +102,7 @@ export async function POST(
                     applicable: state.applicability === 'applicable'
                 }) || 0;
 
-                const sj = C * parseFloat(state.corpus_control?.inherentMitigationStrength?.toString() || '0');
+                const sj = C * parseFloat(state.corpus.control?.inherentMitigationStrength?.toString() || '0');
                 if (sj > maxMitigation) maxMitigation = sj;
 
                 runResults.controls.push({ controlId: state.controlId, score: C });

@@ -1,0 +1,1272 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes", "multiSchema"]
+}
+
+datasource db {
+  schemas  = ["corpus", "security"]
+  provider = "postgresql"
+}
+
+model SecurityUser {
+  @@schema("security")
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String              @map("tenant_id") @db.Uuid
+  email               String              @unique(map: "idx_security_users_email_unique") @db.VarChar(255)
+  passwordHash        String              @map("password_hash")
+  name                String?             @map("name") @db.VarChar(255)
+  lastName            String?             @map("last_name")
+  isActive            Boolean?            @default(true) @map("is_active")
+  createdAt           DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime?           @default(now()) @map("updated_at") @db.Timestamp(6)
+  mustChangePassword  Boolean             @default(true) @map("must_change_password")
+  lastLoginAt         DateTime?           @map("last_login_at") @db.Timestamptz(6)
+  passwordUpdatedAt   DateTime?           @map("password_updated_at") @db.Timestamptz(6)
+  activationStatus    String              @default("pending") @map("activation_status")
+  whatsapp            String?             @map("whatsapp")
+  roleId              String?             @map("role_id") @db.Uuid
+  
+  role                SecurityRbac?       @relation("UserPrimaryRole", fields: [roleId], references: [id])
+  security_user_scope SecurityUserScope[]
+  security_user_token SecurityUserToken[]
+  user_x_rbac         UserXRbac[]
+
+  @@map("security_users")
+}
+
+model SecurityUserScope {
+  @@schema("security")
+  id                       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                   String                  @map("user_id") @db.Uuid
+  jurisdictionId           String?                 @map("jurisdiction_id") @db.Uuid
+  frameworkVersionId       String?                 @map("framework_version_id") @db.Uuid
+  domainId                 String?                 @map("domain_id") @db.Uuid
+  isAllowed                Boolean                 @default(true) @map("is_allowed")
+  createdAt                DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy                String?                 @map("created_by") @db.Uuid
+  corpus.domain            CorpusDomain?           @relation(fields: [domainId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.framework_version CorpusFrameworkVersion? @relation(fields: [frameworkVersionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.jurisdiction      CorpusJurisdiction?     @relation(fields: [jurisdictionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  security_users           SecurityUser            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, jurisdictionId, frameworkVersionId, domainId], map: "idx_security_user_scope_unique")
+  @@map("security_user_scope")
+}
+
+model SecurityUserToken {
+  @@schema("security")
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  tokenHash      String       @map("token_hash")
+  tokenType      String       @map("token_type")
+  expiresAt      DateTime     @map("expires_at") @db.Timestamptz(6)
+  usedAt         DateTime?    @map("used_at") @db.Timestamptz(6)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy      String?      @map("created_by") @db.Uuid
+  security_users SecurityUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId], map: "idx_security_user_token_user")
+  @@index([expiresAt], map: "idx_security_user_token_exp")
+  @@map("security_user_token")
+}
+
+model SecurityRbac {
+  @@schema("security")
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleCode        String         @unique @map("role_code") @db.VarChar(50)
+  permission_code String?        @db.VarChar(100)
+  createdAt       DateTime?      @default(now()) @map("created_at") @db.Timestamp(6)
+  roleName        String?        @map("role_name") @db.VarChar(100)
+  description     String?
+  isActive        Boolean?       @default(true) @map("is_active")
+  updatedAt       DateTime?      @default(now()) @map("updated_at") @db.Timestamp(6)
+  security_users  SecurityUser[] @relation("UserPrimaryRole")
+  user_x_rbac     UserXRbac[]
+
+  @@map("security_rbac")
+}
+
+model UserXRbac {
+  @@schema("security")
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  roleId    String       @map("role_id") @db.Uuid
+  isActive  Boolean      @default(true) @map("is_active")
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+  role      SecurityRbac @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_x_rbac_roleid_fkey")
+  user      SecurityUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_x_rbac_userid_fkey")
+
+  @@unique([userId, roleId], map: "user_x_rbac_user_role_unique")
+  @@map("user_x_rbac")
+}
+
+model CorpusParam {
+  @@schema("corpus")
+  id                   String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String                    @map("tenant_id") @db.Uuid
+  paramCode            String                    @unique @map("param_code") @db.VarChar(100)
+  paramName            String                    @map("param_name") @db.VarChar(255)
+  category             String                    @db.VarChar(50)
+  description          String
+  technicalDescription String                    @map("technical_description")
+  defaultValue         Decimal                   @map("default_value") @db.Decimal
+  configurableValue    Decimal                   @map("configurable_value") @db.Decimal
+  minAllowedValue      Decimal                   @map("min_allowed_value") @db.Decimal
+  maxAllowedValue      Decimal                   @map("max_allowed_value") @db.Decimal
+  requiresApproval     Boolean?                  @default(true) @map("requires_approval")
+  isActive             Boolean?                  @default(true) @map("is_active")
+  isLocked             Boolean?                  @default(false) @map("is_locked")
+  versionNumber        Int?                      @default(1) @map("version_number")
+  effectiveFrom        DateTime?                 @default(now()) @map("effective_from") @db.Timestamp(6)
+  effectiveTo          DateTime?                 @map("effective_to") @db.Timestamp(6)
+  createdAt            DateTime?                 @default(now()) @map("created_at") @db.Timestamp(6)
+  createdBy            String?                   @map("created_by") @db.Uuid
+  updatedAt            DateTime?                 @default(now()) @map("updated_at") @db.Timestamp(6)
+  updatedBy            String?                   @map("updated_by") @db.Uuid
+  changeLogs           CorpusParamChangeLog[]
+  profileValues        CorpusParamProfileValue[]
+
+  @@map("pendiente.corpus_params")
+}
+
+model CorpusParamProfile {
+  @@schema("corpus")
+  id             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String                    @map("tenant_id") @db.Uuid
+  profileName    String                    @map("profile_name") @db.VarChar(255)
+  jurisdictionId String?                   @map("jurisdiction_id") @db.Uuid
+  versionNumber  Int?                      @default(1) @map("version_number")
+  hashSnapshot   String?                   @map("hash_snapshot")
+  status         String?                   @default("draft") @db.VarChar(50)
+  createdAt      DateTime?                 @default(now()) @map("created_at") @db.Timestamp(6)
+  approvedAt     DateTime?                 @map("approved_at") @db.Timestamp(6)
+  approvedBy     String?                   @map("approved_by") @db.Uuid
+  activatedAt    DateTime?                 @map("activated_at") @db.Timestamp(6)
+  isActive       Boolean?                  @default(false) @map("is_active")
+  values         CorpusParamProfileValue[]
+
+  @@map("pendiente.corpus_param_profiles")
+}
+
+model CorpusParamProfileValue {
+  @@schema("corpus")
+  id        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId String?             @map("profile_id") @db.Uuid
+  paramId   String?             @map("param_id") @db.Uuid
+  value     Decimal             @db.Decimal
+  createdAt DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
+  param     CorpusParam?        @relation(fields: [paramId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profile   CorpusParamProfile? @relation(fields: [profileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("pendiente.corpus_param_profile_values")
+}
+
+model CorpusParamChangeLog {
+  @@schema("corpus")
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paramId      String?      @map("param_id") @db.Uuid
+  oldValue     Decimal?     @map("old_value") @db.Decimal
+  newValue     Decimal?     @map("new_value") @db.Decimal
+  changedBy    String?      @map("changed_by") @db.Uuid
+  changeReason String?      @map("change_reason")
+  changeType   String?      @map("change_type") @db.VarChar(50)
+  createdAt    DateTime?    @default(now()) @map("created_at") @db.Timestamp(6)
+  param        CorpusParam? @relation(fields: [paramId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("pendiente.corpus_param_change_log")
+}
+
+model CorpusJurisdiction {
+  @@schema("corpus")
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                  String                 @unique
+  name                  String
+  iso2                  String?
+  iso3                  String?
+  status                Boolean                @default(false)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  status_id             Int?                   @db.SmallInt
+  companies             CorpusCompany[]
+  frameworks            CorpusFramework[]
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.jurisdiction_status_id")
+  security_user_scope   SecurityUserScope[]
+  superintendenceProfiles CorpusSuperintendence[]
+
+  @@map("corpus.jurisdiction")
+}
+
+model CorpusFramework {
+  @@schema("corpus")
+  id                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jurisdictionId        String                   @map("jurisdiction_id") @db.Uuid
+  code                  String                   @unique
+  name                  String
+  description           String?
+  status                String                   @default("active")
+  createdAt             DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at            DateTime                 @default(now()) @db.Timestamptz(6)
+  status_id             Int?                     @db.SmallInt
+  jurisdiction          CorpusJurisdiction       @relation(fields: [jurisdictionId], references: [id], onUpdate: NoAction)
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status?   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pendiente.corpus_framework_status_id")
+  versions              CorpusFrameworkVersion[]
+  superintendenceProfiles CorpusSuperintendence[]
+
+  @@index([jurisdictionId], map: "idx_pendiente.corpus_framework_jurisdiction_id")
+  @@map("pendiente.corpus_framework")
+}
+
+model CorpusFrameworkVersion {
+  @@schema("corpus")
+  id                            String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  frameworkId                   String                          @map("framework_id") @db.Uuid
+  version                       String
+  effectiveDate                 DateTime?                       @map("effective_date") @db.Date
+  changelog                     String?
+  status                        String                          @default("active")
+  createdAt                     DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                     DateTime                        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  statusId                      Int?                            @map("status_id") @db.SmallInt
+  assessments                   CorpusAssessment[]
+  corpus.control_risk_map       corpus.control_risk_map[]
+  corpus.domain                 CorpusDomain[]
+  framework                     CorpusFramework                 @relation(fields: [frameworkId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  catalogos.corpus_catalog_status         catalogos.corpus_catalog_status?          @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.framework_version_status_id")
+  pendiente.corpus_parameter_set          CorpusParameterSet[]
+  corpus.source                 corpus.source[]
+  corpus.test_control_procedure corpus.test_control_procedure[]
+  security_user_scope           SecurityUserScope[]
+  superintendenceProfiles       CorpusSuperintendence[]
+
+  @@unique([frameworkId, version])
+  @@index([frameworkId], map: "idx_corpus.framework_version_framework_id")
+  @@map("corpus.framework_version")
+}
+
+model CorpusCompany {
+  @@schema("corpus")
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                  String                @unique
+  name                  String
+  legalName             String?               @map("legal_name")
+  jurisdictionId        String?               @map("jurisdiction_id") @db.Uuid
+  statusId              Int                   @map("status_id") @db.SmallInt
+  createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime              @default(now()) @map("updated_at") @db.Timestamptz(6)
+  assessments           CorpusAssessment[]
+  jurisdiction          CorpusJurisdiction?   @relation(fields: [jurisdictionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  superintendenceProfiles CorpusSuperintendence[]
+
+  @@map("corpus.company")
+}
+
+model CorpusDomain {
+  @@schema("corpus")
+  id                       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  framework_version_id     String                 @db.Uuid
+  code                     String
+  name                     String
+  description              String?
+  status                   String                 @default("active")
+  createdAt                DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at               DateTime               @default(now()) @db.Timestamptz(6)
+  status_id                Int?                   @db.SmallInt
+  corpus.framework_version CorpusFrameworkVersion @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  catalogos.corpus_catalog_status    catalogos.corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.domain_status_id")
+  obligations           CorpusObligation[]
+  security_user_scope   SecurityUserScope[]
+  scopes                CorpusEvaluationScope[]
+
+  @@unique([framework_version_id, code])
+  @@index([framework_version_id], map: "idx_corpus.domain_framework_version_id")
+  @@map("corpus.domain")
+}
+
+model CorpusObligation {
+  @@schema("corpus")
+  id                               String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  domainId                         String                            @map("domain_id") @db.Uuid
+  code                             String
+  title                            String
+  statement                        String
+  source_ref                       String?
+  rationale                        String?
+  status                           String                            @default("active")
+  createdAt                        DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at                       DateTime                          @default(now()) @db.Timestamptz(6)
+  status_id                        Int?                              @db.SmallInt
+  obligation_type_id               Int?                              @db.SmallInt
+  is_hard_gate                     Boolean                           @default(false)
+  criticality                      Int                               @default(3) @db.SmallInt
+  evidenceStrength                 Int                               @default(3) @map("evidence_strength") @db.SmallInt
+  criticalityId                    Int                               @map("criticality_id") @db.SmallInt
+  evidence_strength_id             Int                               @db.SmallInt
+  controls                         CorpusControlObligation[]
+  pendiente.corpus_material_event            pendiente.corpus_material_event[]
+  modelRunObligations              CorpusModelRunObligation[]
+  domain                           CorpusDomain                      @relation(fields: [domainId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  catalogos.corpus_catalog_criticality       catalogos.corpus_catalog_criticality        @relation(fields: [criticalityId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.obligation_criticality_id")
+  catalogos.corpus_catalog_evidence_strength catalogos.corpus_catalog_evidence_strength  @relation(fields: [evidence_strength_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.obligation_evidence_strength_id")
+  catalogos.corpus_catalog_obligation_type   catalogos.corpus_catalog_obligation_type?   @relation(fields: [obligation_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.obligation_obligation_type_id")
+  catalogos.corpus_catalog_status            catalogos.corpus_catalog_status?            @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.obligation_status_id")
+  corpus.obligation_risk           corpus.obligation_risk[]
+  pendiente.corpus.obligation_source         pendiente.corpus.obligation_source[]
+  weights                          CorpusParameterObligationWeight[]
+  findings                         CorpusAuditFinding[]
+  scopes                           CorpusEvaluationScope[]
+
+  @@unique([domainId, code])
+  @@index([criticalityId], map: "idx_corpus.obligation_criticality_id")
+  @@index([domainId, criticality], map: "idx_corpus.obligation_domain_criticality")
+  @@index([domainId], map: "idx_corpus.obligation_domain_id")
+  @@index([domainId, obligation_type_id], map: "idx_corpus.obligation_domain_type")
+  @@index([evidence_strength_id], map: "idx_corpus.obligation_evidence_strength_id")
+  @@index([obligation_type_id], map: "idx_corpus.obligation_type_id")
+  @@map("corpus.obligation")
+}
+
+model CorpusControl {
+  @@schema("corpus")
+  id                                String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                              String                            @unique
+  name                              String
+  controlTypeId                     Int                               @map("control_type_id") @db.SmallInt
+  automationId                      Int                               @map("automation_id") @db.SmallInt
+  frequencyId                       Int                               @map("frequency_id") @db.SmallInt
+  description                       String
+  ownerRole                         String?                           @map("owner_role")
+  evidenceRequired                  Boolean                           @default(true) @map("evidence_required")
+  status                            String                            @default("active")
+  statusId                          Int                               @default(2) @map("status_id") @db.SmallInt
+  createdAt                         DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                         DateTime                          @default(now()) @map("updated_at") @db.Timestamptz(6)
+  control_objective                 String?
+  control_scope                     String?
+  is_hard_gate                      Boolean                           @default(false)
+  rationale                         String?
+  primary_cf_risk_id                String?                           @db.Uuid
+  designDescription                 String                            @default("") @map("design_description")
+  criticalityLevel                  Int                               @default(3) @map("criticality_level") @db.SmallInt
+  inherentMitigationStrength       Decimal                           @default(1.000) @map("inherent_mitigation_strength") @db.Decimal(4, 3)
+  catalogos.corpus_catalog_control_automation catalogos.corpus_catalog_control_automation @relation(fields: [automationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_control_type       catalogos.corpus_catalog_control_type       @relation(fields: [controlTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_control_frequency  catalogos.corpus_catalog_control_frequency  @relation(fields: [frequencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.risk                       corpus.risk?                      @relation(fields: [primary_cf_risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_control_primary_cf")
+  pendiente.corpus.control_artifact           pendiente.corpus.control_artifact[]
+  obligations                       CorpusControlObligation[]
+  corpus.control_risk_map           corpus.control_risk_map[]
+  evaluationStates                  CorpusEvaluationControlState[]
+  pendiente.corpus_material_event             pendiente.corpus_material_event[]
+  modelRunControls                  CorpusModelRunControl[]
+  corpus.test_control               corpus.test_control[]
+  corpus.test_control_procedure     corpus.test_control_procedure[]
+  pendiente.corpus.test_control_run           pendiente.corpus.test_control_run[]
+  findings                          CorpusAuditFinding[]
+
+  @@index([primary_cf_risk_id], map: "idx_control_primary_cf")
+  @@map("corpus.control")
+}
+
+model CorpusControlObligation {
+  @@schema("corpus")
+  controlId           String           @map("control_id") @db.Uuid
+  obligationId        String           @map("obligation_id") @db.Uuid
+  compliance_strength Int              @db.SmallInt
+  control             CorpusControl    @relation(fields: [controlId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  obligation          CorpusObligation @relation(fields: [obligationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([controlId, obligationId])
+  @@index([obligationId], map: "idx_control_obligation_obl")
+  @@map("pendiente.corpus.control_obligation")
+}
+
+model CorpusAssessment {
+  @@schema("corpus")
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId             String                 @map("company_id") @db.Uuid
+  frameworkVersionId    String                 @map("framework_version_id") @db.Uuid
+  name                  String
+  scope_notes           String?
+  statusId              Int                    @map("status_id") @db.SmallInt
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  created_by            String?
+  company               CorpusCompany          @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  frameworkVersion      CorpusFrameworkVersion @relation(fields: [frameworkVersionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status  @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  evaluations           CorpusEvaluation[]
+  modelRuns             CorpusModelRun[]
+
+  @@map("corpus.assessment")
+}
+
+model CorpusEvaluation {
+  @@schema("corpus")
+  id                    String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessmentId          String                         @map("assessment_id") @db.Uuid
+  periodStart           DateTime                       @map("period_start") @db.Date
+  periodEnd             DateTime                       @map("period_end") @db.Date
+  statusId              Int                            @map("status_id") @db.SmallInt
+  notes                 String?
+  createdAt             DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  created_by            String?
+  updatedAt             DateTime                       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  assessment            CorpusAssessment               @relation(fields: [assessmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status          @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  artifacts             CorpusEvaluationArtifact[]
+  controlStates         CorpusEvaluationControlState[]
+  testRuns              CorpusEvaluationTestRun[]
+  pendiente.corpus_material_event pendiente.corpus_material_event[]
+  modelRuns             CorpusModelRun[]
+  findings              CorpusAuditFinding[]
+  scopes                CorpusEvaluationScope[]
+
+  @@map("corpus.evaluation")
+}
+
+model CorpusEvaluationControlState {
+  @@schema("corpus")
+  evaluationId            String           @map("evaluation_id") @db.Uuid
+  controlId               String           @map("control_id") @db.Uuid
+  implementation_status   String
+  design_effectiveness    Decimal?         @db.Decimal(6, 4)
+  operating_effectiveness Decimal?         @db.Decimal(6, 4)
+  notes                   String?
+  formalizationEffectiveness Decimal?      @map("formalization_effectiveness") @db.Decimal(6, 4)
+  coverageEffectiveness      Decimal?      @map("coverage_effectiveness") @db.Decimal(6, 4)
+  recencyEffectiveness       Decimal?      @map("recency_effectiveness") @db.Decimal(6, 4)
+  evidenceValidated          Boolean       @default(false) @map("evidence_validated")
+  applicability              String        @default("applicable") @map("applicability")
+  notApplicableReason        String?       @map("not_applicable_reason")
+  finalEffectiveness         Decimal?      @map("final_effectiveness") @db.Decimal(6, 4)
+  computedAt                 DateTime?     @map("computed_at") @db.Timestamptz(6)
+  updated_at              DateTime         @default(now()) @db.Timestamptz(6)
+  updated_by              String?
+  control                 CorpusControl    @relation(fields: [controlId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  evaluation              CorpusEvaluation @relation(fields: [evaluationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([evaluationId, controlId])
+  @@map("pendiente.corpus.evaluation_control_state")
+}
+
+model CorpusEvaluationTestRun {
+  @@schema("corpus")
+  evaluationId            String                  @map("evaluation_id") @db.Uuid
+  testControlRunId        String                  @map("test_control_run_id") @db.Uuid
+  included                Boolean                 @default(true)
+  inclusion_reason        String?
+  selected_by             String?
+  selected_at             DateTime                @default(now()) @db.Timestamptz(6)
+  evaluation              CorpusEvaluation        @relation(fields: [evaluationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus.test_control_run pendiente.corpus.test_control_run @relation(fields: [testControlRunId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([evaluationId, testControlRunId])
+  @@map("pendiente.corpus.evaluation_test_run")
+}
+
+model CorpusEvaluationArtifact {
+  @@schema("corpus")
+  evaluationId            String                  @map("evaluation_id") @db.Uuid
+  artifactId              String                  @map("artifact_id") @db.Uuid
+  status                  String
+  review_notes            String?
+  reviewed_by             String?
+  reviewed_at             DateTime?               @db.Timestamptz(6)
+  pendiente.corpus.control_artifact pendiente.corpus.control_artifact @relation(fields: [artifactId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  evaluation              CorpusEvaluation        @relation(fields: [evaluationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([evaluationId, artifactId])
+  @@map("pendiente.corpus.evaluation_artifact")
+}
+
+model CorpusModelRun {
+  @@schema("corpus")
+  id                          String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessmentId                String                     @map("assessment_id") @db.Uuid
+  evaluationId                String                     @map("evaluation_id") @db.Uuid
+  parameterSetId              String                     @map("parameter_set_id") @db.Uuid
+  engineVersion               String                     @map("engine_version")
+  started_at                  DateTime                   @default(now()) @db.Timestamptz(6)
+  endedAt                     DateTime?                  @map("ended_at") @db.Timestamptz(6)
+  runStatus                   String                     @map("run_status")
+  executed_by                 String?
+  inputHash                   String                     @map("input_hash")
+  outputHash                  String                     @map("output_hash")
+  assessment                  CorpusAssessment           @relation(fields: [assessmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  evaluation                  CorpusEvaluation           @relation(fields: [evaluationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parameterSet                CorpusParameterSet         @relation(fields: [parameterSetId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus_model_run_control    CorpusModelRunControl[]
+  pendiente.corpus_model_run_obligation CorpusModelRunObligation[]
+  pendiente.corpus_model_run_score      CorpusModelRunScore?
+  pendiente.corpus_model_run_trigger    CorpusModelRunTrigger[]
+
+  @@map("pendiente.corpus_model_run")
+}
+
+model CorpusModelRunScore {
+  @@schema("corpus")
+  run_id           String         @id @db.Uuid
+  score_total      Decimal?       @db.Decimal(10, 4)
+  e_base           Decimal?       @db.Decimal(14, 6)
+  e_conc           Decimal?       @db.Decimal(14, 6)
+  e_sys            Decimal?       @db.Decimal(14, 6)
+  e_final          Decimal?       @db.Decimal(14, 6)
+  gatillo_max      Decimal?       @db.Decimal(14, 6)
+  pendiente.corpus_model_run CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("pendiente.corpus_model_run_score")
+}
+
+model CorpusModelRunControl {
+  @@schema("corpus")
+  run_id                     String         @db.Uuid
+  controlId                  String         @map("control_id") @db.Uuid
+  implementation_status_used String?
+  design_eff_used            Decimal?       @db.Decimal(6, 4)
+  oper_eff_used              Decimal?       @db.Decimal(6, 4)
+  evidence_status_used       String?
+  control_effectiveness_used Decimal?       @db.Decimal(6, 4)
+  control                    CorpusControl  @relation(fields: [controlId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus_model_run           CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, controlId])
+  @@map("pendiente.corpus_model_run_control")
+}
+
+model CorpusModelRunObligation {
+  @@schema("corpus")
+  run_id             String           @db.Uuid
+  obligationId       String           @map("obligation_id") @db.Uuid
+  weight_used        Decimal?         @db.Decimal(10, 6)
+  effectiveness_used Decimal?         @db.Decimal(6, 4)
+  exposure_ei        Decimal?         @db.Decimal(14, 6)
+  obligation         CorpusObligation @relation(fields: [obligationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus_model_run   CorpusModelRun   @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, obligationId])
+  @@map("pendiente.corpus_model_run_obligation")
+}
+
+model CorpusModelRunTrigger {
+  @@schema("corpus")
+  run_id           String         @db.Uuid
+  triggerCode      String         @map("trigger_code")
+  triggerFired     Boolean        @map("trigger_fired")
+  triggerValue     Json?          @map("trigger_value")
+  justification    String?
+  pendiente.corpus_model_run CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, triggerCode])
+  @@map("pendiente.corpus_model_run_trigger")
+}
+
+model CorpusParameterSet {
+  @@schema("corpus")
+  id                       String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  framework_version_id     String                            @db.Uuid
+  version                  String
+  statusId                 Int                               @map("status_id") @db.SmallInt
+  hash                     String
+  approved_by              String?
+  approved_at              DateTime?                         @db.Timestamptz(6)
+  createdAt                DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  modelRuns                CorpusModelRun[]
+  weights                  CorpusParameterObligationWeight[]
+  corpus.framework_version CorpusFrameworkVersion            @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status    catalogos.corpus_catalog_status             @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  values                   CorpusParameterValue[]
+
+  @@map("pendiente.corpus_parameter_set")
+}
+
+model CorpusParameterValue {
+  @@schema("corpus")
+  parameterSetId String             @map("parameter_set_id") @db.Uuid
+  key            String
+  value          Json
+  notes          String?
+  parameterSet   CorpusParameterSet @relation(fields: [parameterSetId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([parameterSetId, key])
+  @@map("pendiente.corpus_parameter_value")
+}
+
+model CorpusParameterObligationWeight {
+  @@schema("corpus")
+  parameterSetId String             @map("parameter_set_id") @db.Uuid
+  obligationId   String             @map("obligation_id") @db.Uuid
+  weight         Decimal            @db.Decimal(10, 6)
+  obligation     CorpusObligation   @relation(fields: [obligationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parameterSet   CorpusParameterSet @relation(fields: [parameterSetId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([parameterSetId, obligationId])
+  @@map("pendiente.corpus_parameter_obligation_weight")
+}
+
+
+
+model corpus.assessment_draft {
+  @@schema("corpus")
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id            String    @db.Uuid
+  created_by           String?   @db.Uuid
+  status               String    @default("draft")
+  step                 Int       @default(1)
+  jurisdiction_id      String?   @db.Uuid
+  framework_id         String?   @db.Uuid
+  framework_version_id String?   @db.Uuid
+  company_id           String?   @db.Uuid
+  acta                 Json?
+  scope_config         Json?
+  objectives           Json?
+  team                 Json?
+  questionnaire        Json?
+  guide                Json?
+  manual_extensions    Json?
+  window_start         DateTime? @db.Date
+  window_end           DateTime? @db.Date
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime  @default(now()) @db.Timestamptz(6)
+  expires_at           DateTime? @db.Timestamptz(6)
+
+  @@index([created_by], map: "idx_corpus.assessment_draft_created_by")
+  @@index([status], map: "idx_corpus.assessment_draft_status")
+  @@index([tenant_id], map: "idx_corpus.assessment_draft_tenant")
+}
+
+model catalogos.corpus_catalog_control_automation {
+  @@schema("corpus")
+  id             Int             @id @default(autoincrement()) @db.SmallInt
+  code           String          @unique
+  corpus.control CorpusControl[]
+}
+
+model catalogos.corpus_catalog_control_frequency {
+  @@schema("corpus")
+  id             Int             @id @default(autoincrement()) @db.SmallInt
+  code           String          @unique
+  corpus.control CorpusControl[]
+}
+
+model catalogos.corpus_catalog_control_type {
+  @@schema("corpus")
+  id             Int             @id @default(autoincrement()) @db.SmallInt
+  code           String          @unique
+  corpus.control CorpusControl[]
+}
+
+model catalogos.corpus_catalog_criticality {
+  @@schema("corpus")
+  id                    Int                     @id @db.SmallInt
+  code                  String                  @unique
+  name                  String
+  description           String?
+  sort_order            Int                     @default(0)
+  is_active             Boolean                 @default(true)
+  pendiente.corpus_material_event pendiente.corpus_material_event[]
+  corpus.obligation     CorpusObligation[]
+}
+
+model catalogos.corpus_catalog_evidence_strength {
+  @@schema("corpus")
+  id                Int                @id @db.SmallInt
+  code              String             @unique
+  name              String
+  description       String?
+  sort_order        Int                @default(0)
+  is_active         Boolean            @default(true)
+  corpus.obligation CorpusObligation[]
+}
+
+model catalogos.corpus_catalog_obligation_type {
+  @@schema("corpus")
+  id                Int                @id @default(autoincrement()) @db.SmallInt
+  code              String             @unique
+  name              String
+  description       String?
+  sort_order        Int                @default(0)
+  is_active         Boolean            @default(true)
+  corpus.obligation CorpusObligation[]
+}
+
+model catalogos.corpus_catalog_risk_layer {
+  @@schema("corpus")
+  id          Int           @id @default(autoincrement()) @db.SmallInt
+  code        String        @unique
+  name        String
+  description String?
+  sort_order  Int           @default(0)
+  is_active   Boolean       @default(true)
+  corpus.risk corpus.risk[]
+}
+
+model catalogos.corpus_catalog_risk_type {
+  @@schema("corpus")
+  id          Int           @id @default(autoincrement()) @db.SmallInt
+  code        String        @unique
+  name        String
+  sort_order  Int           @default(0)
+  is_active   Boolean       @default(true)
+  corpus.risk corpus.risk[]
+}
+
+model catalogos.corpus_catalog_source_type {
+  @@schema("corpus")
+  id            Int             @id @default(autoincrement()) @db.SmallInt
+  code          String          @unique
+  name          String
+  sort_order    Int             @default(0)
+  is_active     Boolean         @default(true)
+  corpus.source corpus.source[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model catalogos.corpus_catalog_status {
+  @@schema("corpus")
+  id                            Int                             @id @default(autoincrement()) @db.SmallInt
+  code                          String                          @unique
+  name                          String
+  sort_order                    Int                             @default(0)
+  is_active                     Boolean                         @default(true)
+  corpus.assessment             CorpusAssessment[]
+  corpus.company                CorpusCompany[]
+  corpus.domain                 CorpusDomain[]
+  corpus.evaluation             CorpusEvaluation[]
+  pendiente.corpus_framework              CorpusFramework[]
+  corpus.framework_version      CorpusFrameworkVersion[]
+  corpus.jurisdiction           CorpusJurisdiction[]
+  pendiente.corpus_material_event         pendiente.corpus_material_event[]
+  corpus.obligation             CorpusObligation[]
+  pendiente.corpus_parameter_set          CorpusParameterSet[]
+  corpus.risk                   corpus.risk[]
+  corpus.source                 corpus.source[]
+  corpus.test                   corpus.test[]
+  corpus.test_control_procedure corpus.test_control_procedure[]
+}
+
+model catalogos.corpus_catalog_test_method {
+  @@schema("corpus")
+  id          Int           @id @default(autoincrement()) @db.SmallInt
+  code        String        @unique
+  name        String
+  sort_order  Int           @default(0)
+  is_active   Boolean       @default(true)
+  corpus.test corpus.test[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pendiente.corpus.control_artifact {
+  @@schema("corpus")
+  id                           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  control_id                   String                         @db.Uuid
+  code                         String                         @unique
+  name                         String
+  artifact_type                String
+  version                      String
+  description                  String?
+  status                       String                         @default("active")
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  corpus.control               CorpusControl                  @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pendiente.corpus.control_artifact_risk pendiente.corpus.control_artifact_risk[]
+  pendiente.corpus.evaluation_artifact   CorpusEvaluationArtifact[]
+
+  @@index([control_id], map: "idx_control_artifact_control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pendiente.corpus.control_artifact_risk {
+  @@schema("corpus")
+  artifact_id             String                  @db.Uuid
+  risk_id                 String                  @db.Uuid
+  mitigation_strength     Int                     @db.SmallInt
+  pendiente.corpus.control_artifact pendiente.corpus.control_artifact @relation(fields: [artifact_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.risk             corpus.risk             @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([artifact_id, risk_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model corpus.control_risk_map {
+  @@schema("corpus")
+  control_id               String                 @db.Uuid
+  risk_id                  String                 @db.Uuid
+  mitigation_strength      Int                    @db.SmallInt
+  framework_version_id     String                 @db.Uuid
+  effect_type              String
+  rationale                String?
+  coverage_notes           String?
+  corpus.control           CorpusControl          @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_risk_control_id_fkey")
+  corpus.framework_version CorpusFrameworkVersion @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus.control_risk_framework_fk")
+  corpus.risk              corpus.risk            @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_risk_risk_id_fkey")
+
+  @@id([control_id, risk_id, framework_version_id, effect_type], map: "corpus.control_risk_pkey")
+  @@index([risk_id], map: "idx_control_risk_risk")
+  @@index([control_id, framework_version_id], map: "idx_crm_control_fv")
+  @@index([risk_id, effect_type], map: "idx_crm_risk_effect")
+  @@index([risk_id, framework_version_id], map: "idx_crm_risk_fv")
+}
+
+model pendiente.corpus.control_source {
+  @@schema("corpus")
+  control_id    String        @db.Uuid
+  source_id     String        @db.Uuid
+  corpus.source corpus.source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
+
+  @@id([control_id, source_id])
+}
+
+model pendiente.corpus_material_event {
+  @@schema("corpus")
+  id                         String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id                  String                     @db.Uuid
+  code                       String
+  title                      String
+  description                String?
+  severity_id                Int
+  status_id                  Int
+  evaluation_id              String?                    @db.Uuid
+  control_id                 String?                    @db.Uuid
+  obligation_id              String?                    @db.Uuid
+  risk_id                    String?                    @db.Uuid
+  test_control_run_id        String?                    @db.Uuid
+  created_at                 DateTime?                  @default(now()) @db.Timestamptz(6)
+  created_by                 String?                    @db.Uuid
+  closed_at                  DateTime?                  @db.Timestamptz(6)
+  closed_by                  String?                    @db.Uuid
+  metadata                   Json?                      @default("{}")
+  corpus.control             CorpusControl?             @relation(fields: [control_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.evaluation          CorpusEvaluation?          @relation(fields: [evaluation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.obligation          CorpusObligation?          @relation(fields: [obligation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.risk                corpus.risk?               @relation(fields: [risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_criticality catalogos.corpus_catalog_criticality @relation(fields: [severity_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status      catalogos.corpus_catalog_status      @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus.test_control_run    pendiente.corpus.test_control_run?   @relation(fields: [test_control_run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model corpus.obligation_risk {
+  @@schema("corpus")
+  obligation_id     String           @db.Uuid
+  risk_id           String           @db.Uuid
+  link_strength     Int              @default(3) @db.SmallInt
+  corpus.obligation CorpusObligation @relation(fields: [obligation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.risk       corpus.risk      @relation(fields: [risk_id], references: [id], onUpdate: NoAction)
+
+  @@id([obligation_id, risk_id])
+  @@unique([obligation_id, risk_id], map: "uq_obligation_risk_pair")
+  @@index([risk_id], map: "idx_corpus.obligation_risk_risk_id")
+  @@index([obligation_id], map: "idx_obligation_risk_obligation")
+  @@index([risk_id], map: "idx_obligation_risk_risk")
+}
+
+model pendiente.corpus.obligation_source {
+  @@schema("corpus")
+  obligation_id     String           @db.Uuid
+  source_id         String           @db.Uuid
+  corpus.obligation CorpusObligation @relation(fields: [obligation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.source     corpus.source    @relation(fields: [source_id], references: [id], onUpdate: NoAction)
+
+  @@id([obligation_id, source_id])
+}
+
+model corpus.risk {
+  @@schema("corpus")
+  id                           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                         String                         @unique
+  name                         String
+  risk_type                    String
+  description                  String?
+  status                       String                         @default("active")
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  status_id                    Int?                           @db.SmallInt
+  risk_type_id                 Int?                           @db.SmallInt
+  risk_layer_id                Int                            @default(2) @db.SmallInt
+  parent_risk_id               String?                        @db.Uuid
+  corpus.control               CorpusControl[]
+  pendiente.corpus.control_artifact_risk pendiente.corpus.control_artifact_risk[]
+  corpus.control_risk_map      corpus.control_risk_map[]
+  pendiente.corpus_material_event        pendiente.corpus_material_event[]
+  corpus.obligation_risk       corpus.obligation_risk[]
+  corpus.risk                  corpus.risk?                   @relation("corpus.riskTocorpus.risk", fields: [parent_risk_id], references: [id], onUpdate: NoAction, map: "fk_corpus.risk_parent_risk_id")
+  other_corpus.risk            corpus.risk[]                  @relation("corpus.riskTocorpus.risk")
+  catalogos.corpus_catalog_risk_layer    catalogos.corpus_catalog_risk_layer      @relation(fields: [risk_layer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.risk_risk_layer_id")
+  catalogos.corpus_catalog_risk_type     catalogos.corpus_catalog_risk_type?      @relation(fields: [risk_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.risk_risk_type_id")
+  catalogos.corpus_catalog_status        catalogos.corpus_catalog_status?         @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.risk_status_id")
+  pendiente.corpus.risk_source           pendiente.corpus.risk_source[]
+  findings                     CorpusAuditFinding[]
+
+  @@index([parent_risk_id], map: "idx_corpus.risk_parent_risk_id")
+  @@index([risk_layer_id], map: "idx_corpus.risk_risk_layer_id")
+}
+
+model pendiente.corpus.risk_source {
+  @@schema("corpus")
+  risk_id       String        @db.Uuid
+  source_id     String        @db.Uuid
+  corpus.risk   corpus.risk   @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.source corpus.source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
+
+  @@id([risk_id, source_id])
+}
+
+model corpus.source {
+  @@schema("corpus")
+  id                         String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  framework_version_id       String?                     @db.Uuid
+  source_type                String
+  citation                   String
+  url                        String?
+  published_date             DateTime?                   @db.Date
+  notes                      String?
+  status                     String                      @default("active")
+  created_at                 DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                    @default(now()) @db.Timestamptz(6)
+  status_id                  Int?                        @db.SmallInt
+  source_type_id             Int?                        @db.SmallInt
+  pendiente.corpus.control_source      pendiente.corpus.control_source[]
+  pendiente.corpus.obligation_source   pendiente.corpus.obligation_source[]
+  pendiente.corpus.risk_source         pendiente.corpus.risk_source[]
+  corpus.framework_version   CorpusFrameworkVersion?     @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  catalogos.corpus_catalog_source_type catalogos.corpus_catalog_source_type? @relation(fields: [source_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.source_source_type_id")
+  catalogos.corpus_catalog_status      catalogos.corpus_catalog_status?      @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.source_status_id")
+  pendiente.corpus.test_source         pendiente.corpus.test_source[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model corpus.test {
+  @@schema("corpus")
+  id                            String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                          String                          @unique
+  name                          String
+  method                        String
+  expected_result               String?
+  evidence_type                 String?
+  description                   String?
+  status                        String                          @default("active")
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(6)
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(6)
+  status_id                     Int?                            @db.SmallInt
+  method_id                     Int?                            @db.SmallInt
+  expected_artifacts            String?
+  severity_if_fail              Int?                            @default(3) @db.SmallInt
+  automation_compatibility      String?
+  catalogos.corpus_catalog_test_method    catalogos.corpus_catalog_test_method?     @relation(fields: [method_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.test_method_id")
+  catalogos.corpus_catalog_status         catalogos.corpus_catalog_status?          @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.test_status_id")
+  corpus.test_control           corpus.test_control[]
+  corpus.test_control_procedure corpus.test_control_procedure[]
+  pendiente.corpus.test_control_run       pendiente.corpus.test_control_run[]
+
+  pendiente.corpus.test_script            pendiente.corpus.test_script[]
+  pendiente.corpus.test_source            pendiente.corpus.test_source[]
+
+  @@index([automation_compatibility], map: "idx_corpus.test_automation_compat")
+  @@index([method_id], map: "idx_corpus.test_method_id")
+  @@index([status_id], map: "idx_corpus.test_status_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model corpus.test_control {
+  @@schema("corpus")
+  control_id           String        @db.Uuid
+  test_id              String        @db.Uuid
+  applicability        String?       @default("always")
+  default_frequency_id Int?          @db.SmallInt
+  pass_threshold       Decimal?      @default(0.8000) @db.Decimal(6, 4)
+  rationale            String?
+  created_at           DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?     @default(now()) @db.Timestamptz(6)
+  corpus.control       CorpusControl @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_control_fk")
+  corpus.test          corpus.test   @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_test_fk")
+
+  @@id([control_id, test_id])
+  @@index([test_id], map: "idx_corpus.control_test_test_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model corpus.test_control_procedure {
+  @@schema("corpus")
+  id                       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  control_id               String                  @db.Uuid
+  test_id                  String                  @db.Uuid
+  framework_version_id     String?                 @db.Uuid
+  version                  String
+  title                    String
+  objective                String?
+  steps                    Json?
+  procedure_text           String?
+  expected_artifacts       String?
+  parameters_schema        Json?
+  owner_role               String?
+  status_id                Int                     @db.SmallInt
+  approved_by              String?
+  approved_at              DateTime?               @db.Timestamptz(6)
+  effective_from           DateTime                @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to             DateTime?               @db.Date
+  created_at               DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                @default(now()) @db.Timestamptz(6)
+  corpus.control           CorpusControl           @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_procedure_control_id_fkey")
+  corpus.framework_version CorpusFrameworkVersion? @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_procedure_framework_version_id_fkey")
+  catalogos.corpus_catalog_status    catalogos.corpus_catalog_status   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus.control_test_procedure_status_id_fkey")
+  corpus.test              corpus.test             @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_procedure_test_id_fkey")
+
+  @@unique([control_id, test_id, version], map: "ux_ctl_test_proc_no_fv", where: raw("(framework_version_id IS NULL)"))
+  @@unique([control_id, test_id, framework_version_id, version], map: "ux_ctl_test_proc_with_fv", where: raw("(framework_version_id IS NOT NULL)"))
+  @@index([control_id, test_id], map: "idx_ctl_test_proc_control_test")
+  @@index([effective_from], map: "idx_ctl_test_proc_effective_from")
+  @@index([framework_version_id], map: "idx_ctl_test_proc_fv")
+  @@index([status_id], map: "idx_ctl_test_proc_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pendiente.corpus.test_control_run {
+  @@schema("corpus")
+  id                         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  control_id                 String                    @db.Uuid
+  test_id                    String                    @db.Uuid
+  executed_at                DateTime                  @default(now()) @db.Timestamptz(6)
+  executed_by                String?
+  run_type                   String
+  result                     String
+  score                      Decimal                   @db.Decimal(6, 4)
+  sample_size                Int?
+  population_size            Int?
+  parameters                 Json?
+  query_hash                 String?
+  script_version             String?
+  output_summary             Json?
+  evidence_ref               String?
+  notes                      String?
+  created_at                 DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                  @default(now()) @db.Timestamptz(6)
+  script_id                  String?                   @db.Uuid
+  pendiente.corpus.evaluation_test_run CorpusEvaluationTestRun[]
+  pendiente.corpus_material_event      pendiente.corpus_material_event[]
+  findings                   CorpusAuditFinding[]
+  corpus.control             CorpusControl             @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_run_control_id_fkey")
+  corpus.test                corpus.test               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_run_test_id_fkey")
+  pendiente.corpus.test_script         pendiente.corpus.test_script?       @relation(fields: [script_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus.test_control_run_script_fk")
+
+  @@index([control_id, test_id, executed_at(sort: Desc)], map: "idx_ctl_test_run_ctl_test_exec")
+  @@index([result], map: "idx_ctl_test_run_result")
+  @@index([run_type], map: "idx_ctl_test_run_run_type")
+  @@index([test_id, executed_at(sort: Desc)], map: "idx_ctl_test_run_test_exec")
+  @@index([script_id], map: "idx_test_control_run_script_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pendiente.corpus.test_script {
+  @@schema("corpus")
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  test_id                 String                    @db.Uuid
+  code                    String
+  name                    String
+  engine                  String
+  body                    String?
+  path                    String?
+  version                 String
+  hash                    String
+  is_active               Boolean                   @default(true)
+  created_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  pendiente.corpus.test_control_run pendiente.corpus.test_control_run[]
+  corpus.test             corpus.test               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([test_id, code, version])
+  @@index([test_id, is_active], map: "idx_test_script_active")
+}
+
+model pendiente.corpus.test_source {
+  @@schema("corpus")
+  test_id       String        @db.Uuid
+  source_id     String        @db.Uuid
+  corpus.source corpus.source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
+  corpus.test   corpus.test   @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([test_id, source_id])
+}
+
+model llm_master_prompts {
+  @@schema("corpus")
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  name        String
+  module_name String
+  text_area   String?
+  prompt      String
+  is_active   Boolean  @default(true)
+  version     Int      @default(1)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_by  String?
+
+  @@index([code, is_active], map: "idx_master_prompts_active_code")
+  @@index([module_name, text_area, is_active], map: "idx_master_prompts_lookup")
+}
+model CorpusSuperintendence {
+  @@schema("corpus")
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId          String              @map("company_id") @db.Uuid
+  jurisdictionId     String              @map("jurisdiction_id") @db.Uuid
+  frameworkId        String              @map("framework_id") @db.Uuid
+  frameworkVersionId String              @map("framework_version_id") @db.Uuid
+  status             String              @default("draft")
+  alpha              Decimal?            @db.Decimal
+  beta               Decimal?            @db.Decimal
+  gamma              Decimal?            @db.Decimal
+  materialMultiplier Decimal?            @map("material_multiplier") @db.Decimal
+  isActive           Boolean             @default(false) @map("is_active")
+  hashSnapshot       String?             @map("hash_snapshot")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @default(now()) @map("updated_at")
+  
+  company            CorpusCompany       @relation(fields: [companyId], references: [id])
+  jurisdiction       CorpusJurisdiction  @relation(fields: [jurisdictionId], references: [id])
+  framework          CorpusFramework     @relation(fields: [frameworkId], references: [id])
+  frameworkVersion   CorpusFrameworkVersion @relation(fields: [frameworkVersionId], references: [id])
+  
+  eventWeights       CorpusSuperintendenceEventWeight[]
+  triggerThresholds  CorpusSuperintendenceTriggerThreshold[]
+
+  @@map("corpus.superintendence")
+}
+
+model CorpusSuperintendenceEventWeight {
+  @@schema("corpus")
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  superintendenceId     String                @map("superintendence_id") @db.Uuid
+  eventTypeCode         String                @map("event_type_code")
+  sensitivityWeight     Decimal               @map("sensitivity_weight") @db.Decimal
+  severityMultiplier    Decimal               @map("severity_multiplier") @db.Decimal
+  readinessPenalty      Decimal               @map("readiness_penalty") @db.Decimal
+  exposureFloor         Decimal               @map("exposure_floor") @db.Decimal
+  isHardTrigger         Boolean               @default(false) @map("is_hard_trigger")
+  
+  superintendence       CorpusSuperintendence @relation(fields: [superintendenceId], references: [id], onDelete: Cascade)
+
+  @@unique([superintendenceId, eventTypeCode])
+  @@map("corpus.superintendence_event_weight")
+}
+
+model CorpusSuperintendenceTriggerThreshold {
+  @@schema("corpus")
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  superintendenceId     String                @map("superintendence_id") @db.Uuid
+  triggerCode           String                @map("trigger_code")
+  thresholdValue        Decimal               @map("threshold_value") @db.Decimal
+  exposureFloor         Decimal               @map("exposure_floor") @db.Decimal
+  enabled               Boolean               @default(true)
+  
+  superintendence       CorpusSuperintendence @relation(fields: [superintendenceId], references: [id], onDelete: Cascade)
+
+  @@unique([superintendenceId, triggerCode])
+  @@map("corpus.superintendence_trigger_threshold")
+}
+
+model CorpusCatalogAuditFindingType {
+  @@schema("corpus")
+  id                    Int      @id @db.SmallInt
+  code                  String   @unique
+  name                  String
+  description           String?
+  defaultSeverity       Int      @default(3) @map("default_severity") @db.SmallInt
+  defaultExposureFloor  Decimal  @default(0.0000) @map("default_exposure_floor") @db.Decimal(6, 4)
+  defaultReadinessPenalty Int    @default(0) @map("default_readiness_penalty")
+  defaultOwnerRole      String?  @map("default_owner_role")
+  defaultDueDays        Int?     @map("default_due_days")
+  isActive              Boolean  @default(true) @map("is_active")
+  sortOrder             Int      @default(0) @map("sort_order")
+  
+  findings              CorpusAuditFinding[]
+
+  @@map("catalogos.corpus_catalog_audit_finding_type")
+}
+
+model CorpusAuditFinding {
+  @@schema("corpus")
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String   @map("tenant_id") @db.Uuid
+  code                  String
+  title                 String
+  description           String?
+  
+  eventTypeId           Int      @map("event_type_id") @db.SmallInt
+  severity              Int      @db.SmallInt
+  status                String
+  
+  exposureFloor         Decimal  @default(0.0000) @map("exposure_floor") @db.Decimal(6, 4)
+  readinessPenalty      Int      @default(0) @map("readiness_penalty")
+  ownerRole             String?  @map("owner_role")
+  dueDate               DateTime? @map("due_date") @db.Date
+  
+  rootCause             String?  @map("root_cause")
+  evidenceLinks         Json     @default("[]") @map("evidence_links")
+  dedupeKey             String?  @unique @map("dedupe_key")
+  
+  severityId            Int?     @map("severity_id")
+  statusId              Int?     @map("status_id")
+  
+  evaluationId          String?  @map("evaluation_id") @db.Uuid
+  controlId             String?  @map("control_id") @db.Uuid
+  obligationId          String?  @map("obligation_id") @db.Uuid
+  riskId                String?  @map("risk_id") @db.Uuid
+  testControlRunId      String?  @map("test_control_run_id") @db.Uuid
+  
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy             String?  @map("created_by") @db.Uuid
+  updatedAt             DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  updatedBy             String?  @map("updated_by") @db.Uuid
+  closedAt              DateTime? @map("closed_at") @db.Timestamptz(6)
+  closedBy              String?  @map("closed_by") @db.Uuid
+  
+  metadata              Json?    @default("{}")
+  
+  eventType             CorpusCatalogAuditFindingType @relation(fields: [eventTypeId], references: [id])
+  evaluation            CorpusEvaluation?           @relation(fields: [evaluationId], references: [id])
+  control               CorpusControl?              @relation(fields: [controlId], references: [id])
+  obligation            CorpusObligation?           @relation(fields: [obligationId], references: [id])
+  risk                  corpus.risk?                @relation(fields: [riskId], references: [id])
+  testControlRun        pendiente.corpus.test_control_run?    @relation(fields: [testControlRunId], references: [id])
+
+  @@index([evaluationId, status], map: "idx_finding_eval_status")
+  @@index([evaluationId, severity], map: "idx_finding_eval_severity")
+  @@map("corpus.audit_finding")
+}
+
+model CorpusAuditLog {
+  @@schema("corpus")
+  id           BigInt   @id @default(autoincrement())
+  tenantId     String?  @map("tenant_id") @db.Uuid
+  entityName   String   @map("entity_name")
+  entityId     String   @map("entity_id") @db.Uuid
+  action       String
+  oldData      Json?    @map("old_data")
+  newData      Json?    @map("new_data")
+  changedBy    String?  @map("changed_by") @db.Uuid
+  changedAt    DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+
+  @@map("corpus.audit_log")
+}
+
+model CorpusEvaluationScope {
+  @@schema("corpus")
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  evaluationId  String   @map("evaluation_id") @db.Uuid
+  scopeType     String   @map("scope_type")
+  domainId      String?  @map("domain_id") @db.Uuid
+  obligationId  String?  @map("obligation_id") @db.Uuid
+  isInScope     Boolean  @default(true) @map("is_in_scope")
+  rationale     String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  evaluation    CorpusEvaluation @relation(fields: [evaluationId], references: [id])
+  domain        CorpusDomain?    @relation(fields: [domainId], references: [id])
+  obligation    CorpusObligation? @relation(fields: [obligationId], references: [id])
+
+  @@unique([evaluationId, scopeType, domainId, obligationId])
+  @@index([evaluationId], map: "idx_eval_scope_evaluation")
+  @@map("corpus.evaluation_scope")
+}

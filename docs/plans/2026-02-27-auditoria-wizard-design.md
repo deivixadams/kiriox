@@ -6,13 +6,13 @@ Fecha: 2026-02-27
 Construir un wizard de auditoria que funcione como "proyecto guiado" y no como formulario. El flujo debe ser E2E con persistencia incremental, IA asistiendo redaccion y generacion de cuestionarios, y materializacion final en el corpus cuando el usuario finaliza.
 
 ## Decisiones clave
-- Persistencia **draft-first**: se crea una nueva tabla `corpus_assessment_draft` y no se escriben registros definitivos hasta el paso final.
+- Persistencia **draft-first**: se crea una nueva tabla `corpus.assessment_draft` y no se escriben registros definitivos hasta el paso final.
 - Paso 1 es **Acta de Inicio** (layout basado en `ActaInicioView.tsx` de AMLAudit).
 - Jurisdiccion/Marco/Version/Empresa se seleccionan **dentro del Acta** con prefill desde el usuario, pero editables.
 - Campo "Marco normativo" se **prellena** automaticamente a partir de Marco + Version y es editable.
 
 ## Tabla nueva (aprobada)
-**`corpus_assessment_draft`**
+**`corpus.assessment_draft`**
 
 Campos sugeridos:
 - id (uuid, PK)
@@ -93,9 +93,9 @@ Campos sugeridos:
 
 ## Materializacion final
 Al finalizar:
-- Crear `corpus_assessment` (company_id, framework_version_id, name, scope_notes)
-- Crear `corpus_evaluation` (period_start, period_end, status_id, notes)
-- Crear `corpus_evaluation_scope` (dominios/obligaciones)
+- Crear `corpus.assessment` (company_id, framework_version_id, name, scope_notes)
+- Crear `corpus.evaluation` (period_start, period_end, status_id, notes)
+- Crear `corpus.evaluation_scope` (dominios/obligaciones)
 - Marcar draft como `materialized`
 
 ## Endpoints (alto nivel)

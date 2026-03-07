@@ -20,7 +20,7 @@ export async function GET(request: Request) {
             select: { id: true, version: true, status: true, statusId: true, createdAt: true },
             orderBy: { createdAt: 'desc' }
         });
-        const response = versions.map((v) => ({
+        const response = versions.map((v: any) => ({
             ...v,
             isActive: v.statusId === 1 || v.status === 'active'
         }));

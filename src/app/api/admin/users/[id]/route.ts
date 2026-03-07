@@ -55,7 +55,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         // Flatten roles
         const formattedUser = {
             ...user,
-            roles: user.user_x_rbac.map(ux => ux.role)
+            roles: user.user_x_rbac.map((ux: any) => ux.role)
         };
 
         const scopes = await prisma.securityUserScope.findMany({
@@ -109,7 +109,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
 
         // Use transaction for user and role updates
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             // Update base user info
             await tx.securityUser.update({
                 where: { id: id },
@@ -125,7 +125,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             // Update roles if provided
             if (Array.isArray(roleCodes)) {
                 // Delete existing mappings
-                await tx.user_x_rbac.deleteMany({
+                await tx.userXRbac.deleteMany({
                     where: { userId: id }
                 });
 
@@ -135,8 +135,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 });
 
                 if (rawRoles.length > 0) {
-                    await tx.user_x_rbac.createMany({
-                        data: rawRoles.map(r => ({
+                    await tx.userXRbac.createMany({
+                        data: rawRoles.map((r: any) => ({
                             userId: id,
                             roleId: r.id,
                             isActive: true
@@ -154,7 +154,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 if (scopes.length > 0) {
                     await tx.securityUserScope.createMany({
                         data: scopes.map((scope: any) => ({
-                            userId: params.id,
+                            userId: id,
                             jurisdictionId: scope.jurisdictionId || null,
                             frameworkVersionId: scope.frameworkVersionId || null,
                             domainId: scope.domainId || null,

@@ -24,22 +24,30 @@ export async function GET(request: Request) {
 
   try {
     const users = await prisma.securityUser.findMany({
-      where: { tenantId: companyId, isActive: true },
+      where: { tenant_id: companyId, is_active: true },
       select: {
         id: true,
         email: true,
         name: true,
-        lastName: true,
-        role: {
+        last_name: true,
+        user_x_rbac: {
           select: {
-            roleCode: true
+            security_rbac: { select: { role_code: true } }
           }
-        },
+        }
       },
       orderBy: { name: 'asc' },
     });
 
-    return NextResponse.json(users);
+    const shaped = users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      lastName: u.last_name,
+      role: u.user_x_rbac?.[0]?.security_rbac?.role_code ? { roleCode: u.user_x_rbac[0].security_rbac.role_code } : null
+    }));
+
+    return NextResponse.json(shaped);
   } catch (error: any) {
     console.error('Error fetching team users:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export async function GET() {
     try {
-        const types = await prisma.corpusAuditFindingType.findMany({
+        const types = await prisma.corpusCatalogAuditFindingType.findMany({
             where: { isActive: true },
             orderBy: { sortOrder: 'asc' }
         });
@@ -28,7 +26,7 @@ export async function POST() {
 
     try {
         for (const type of defaultTypes) {
-            await prisma.corpusAuditFindingType.upsert({
+            await prisma.corpusCatalogAuditFindingType.upsert({
                 where: { id: type.id },
                 update: type,
                 create: type

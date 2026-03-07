@@ -4,47 +4,47 @@
 
 SET search_path TO corpus;
 
--- 1) Paso 1: corpus_company
-CREATE TABLE IF NOT EXISTS corpus_company (
+-- 1) Paso 1: corpus.company
+CREATE TABLE IF NOT EXISTS corpus.company (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     code text UNIQUE NOT NULL,
     name text NOT NULL,
     legal_name text,
-    jurisdiction_id uuid REFERENCES corpus_jurisdiction(id),
-    status_id smallint NOT NULL REFERENCES corpus_catalog_status(id),
+    jurisdiction_id uuid REFERENCES corpus.jurisdiction(id),
+    status_id smallint NOT NULL REFERENCES catalogos.corpus_catalog_status(id),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 2) Paso 2: corpus_assessment
-CREATE TABLE IF NOT EXISTS corpus_assessment (
+-- 2) Paso 2: corpus.assessment
+CREATE TABLE IF NOT EXISTS corpus.assessment (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id uuid NOT NULL REFERENCES corpus_company(id),
-    framework_version_id uuid NOT NULL REFERENCES corpus_framework_version(id),
+    company_id uuid NOT NULL REFERENCES corpus.company(id),
+    framework_version_id uuid NOT NULL REFERENCES corpus.framework_version(id),
     name text NOT NULL,
     scope_notes text,
-    status_id smallint NOT NULL REFERENCES corpus_catalog_status(id),
+    status_id smallint NOT NULL REFERENCES catalogos.corpus_catalog_status(id),
     created_at timestamptz NOT NULL DEFAULT now(),
     created_by text
 );
 
--- 3) Paso 3: corpus_evaluation
-CREATE TABLE IF NOT EXISTS corpus_evaluation (
+-- 3) Paso 3: corpus.evaluation
+CREATE TABLE IF NOT EXISTS corpus.evaluation (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    assessment_id uuid NOT NULL REFERENCES corpus_assessment(id),
+    assessment_id uuid NOT NULL REFERENCES corpus.assessment(id),
     period_start date NOT NULL,
     period_end date NOT NULL,
-    status_id smallint NOT NULL REFERENCES corpus_catalog_status(id),
+    status_id smallint NOT NULL REFERENCES catalogos.corpus_catalog_status(id),
     notes text,
     created_at timestamptz NOT NULL DEFAULT now(),
     created_by text,
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 4) Paso 4: corpus_evaluation_control_state
-CREATE TABLE IF NOT EXISTS corpus_evaluation_control_state (
-    evaluation_id uuid NOT NULL REFERENCES corpus_evaluation(id),
-    control_id uuid NOT NULL REFERENCES corpus_control(id),
+-- 4) Paso 4: pendiente.corpus.evaluation_control_state
+CREATE TABLE IF NOT EXISTS pendiente.corpus.evaluation_control_state (
+    evaluation_id uuid NOT NULL REFERENCES corpus.evaluation(id),
+    control_id uuid NOT NULL REFERENCES corpus.control(id),
     implementation_status text NOT NULL, -- implemented, partial, not_implemented, unknown
     design_effectiveness numeric(6,4), -- 0-1
     operating_effectiveness numeric(6,4), -- 0-1
@@ -54,10 +54,10 @@ CREATE TABLE IF NOT EXISTS corpus_evaluation_control_state (
     PRIMARY KEY (evaluation_id, control_id)
 );
 
--- 5) Paso 5: corpus_evaluation_artifact
-CREATE TABLE IF NOT EXISTS corpus_evaluation_artifact (
-    evaluation_id uuid NOT NULL REFERENCES corpus_evaluation(id),
-    artifact_id uuid NOT NULL REFERENCES corpus_control_artifact(id),
+-- 5) Paso 5: pendiente.corpus.evaluation_artifact
+CREATE TABLE IF NOT EXISTS pendiente.corpus.evaluation_artifact (
+    evaluation_id uuid NOT NULL REFERENCES corpus.evaluation(id),
+    artifact_id uuid NOT NULL REFERENCES pendiente.corpus.control_artifact(id),
     status text NOT NULL, -- accepted, rejected, pending
     review_notes text,
     reviewed_by text,
@@ -65,10 +65,10 @@ CREATE TABLE IF NOT EXISTS corpus_evaluation_artifact (
     PRIMARY KEY (evaluation_id, artifact_id)
 );
 
--- 6) Paso 6: corpus_evaluation_test_run
-CREATE TABLE IF NOT EXISTS corpus_evaluation_test_run (
-    evaluation_id uuid NOT NULL REFERENCES corpus_evaluation(id),
-    test_control_run_id uuid NOT NULL REFERENCES corpus_test_control_run(id),
+-- 6) Paso 6: pendiente.corpus.evaluation_test_run
+CREATE TABLE IF NOT EXISTS pendiente.corpus.evaluation_test_run (
+    evaluation_id uuid NOT NULL REFERENCES corpus.evaluation(id),
+    test_control_run_id uuid NOT NULL REFERENCES pendiente.corpus.test_control_run(id),
     included boolean NOT NULL DEFAULT true,
     inclusion_reason text,
     selected_by text,
@@ -76,39 +76,39 @@ CREATE TABLE IF NOT EXISTS corpus_evaluation_test_run (
     PRIMARY KEY (evaluation_id, test_control_run_id)
 );
 
--- 7) Paso 7: corpus_parameter_set layer
-CREATE TABLE IF NOT EXISTS corpus_parameter_set (
+-- 7) Paso 7: pendiente.corpus_parameter_set layer
+CREATE TABLE IF NOT EXISTS pendiente.corpus_parameter_set (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    framework_version_id uuid NOT NULL REFERENCES corpus_framework_version(id),
+    framework_version_id uuid NOT NULL REFERENCES corpus.framework_version(id),
     version text NOT NULL,
-    status_id smallint NOT NULL REFERENCES corpus_catalog_status(id),
+    status_id smallint NOT NULL REFERENCES catalogos.corpus_catalog_status(id),
     hash text NOT NULL,
     approved_by text,
     approved_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS corpus_parameter_value (
-    parameter_set_id uuid NOT NULL REFERENCES corpus_parameter_set(id),
+CREATE TABLE IF NOT EXISTS pendiente.corpus_parameter_value (
+    parameter_set_id uuid NOT NULL REFERENCES pendiente.corpus_parameter_set(id),
     key text NOT NULL,
     value jsonb NOT NULL,
     notes text,
     PRIMARY KEY (parameter_set_id, key)
 );
 
-CREATE TABLE IF NOT EXISTS corpus_parameter_obligation_weight (
-    parameter_set_id uuid NOT NULL REFERENCES corpus_parameter_set(id),
-    obligation_id uuid NOT NULL REFERENCES corpus_obligation(id),
+CREATE TABLE IF NOT EXISTS pendiente.corpus_parameter_obligation_weight (
+    parameter_set_id uuid NOT NULL REFERENCES pendiente.corpus_parameter_set(id),
+    obligation_id uuid NOT NULL REFERENCES corpus.obligation(id),
     weight numeric(10,6) NOT NULL,
     PRIMARY KEY (parameter_set_id, obligation_id)
 );
 
--- 8) Paso 8: corpus_model_run
-CREATE TABLE IF NOT EXISTS corpus_model_run (
+-- 8) Paso 8: pendiente.corpus_model_run
+CREATE TABLE IF NOT EXISTS pendiente.corpus_model_run (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    assessment_id uuid NOT NULL REFERENCES corpus_assessment(id),
-    evaluation_id uuid NOT NULL REFERENCES corpus_evaluation(id),
-    parameter_set_id uuid NOT NULL REFERENCES corpus_parameter_set(id),
+    assessment_id uuid NOT NULL REFERENCES corpus.assessment(id),
+    evaluation_id uuid NOT NULL REFERENCES corpus.evaluation(id),
+    parameter_set_id uuid NOT NULL REFERENCES pendiente.corpus_parameter_set(id),
     engine_version text NOT NULL,
     started_at timestamptz NOT NULL DEFAULT now(),
     ended_at timestamptz,
@@ -119,8 +119,8 @@ CREATE TABLE IF NOT EXISTS corpus_model_run (
 );
 
 -- 9) Paso 9: Snapshots for Reproducibility
-CREATE TABLE IF NOT EXISTS corpus_model_run_score (
-    run_id uuid PRIMARY KEY REFERENCES corpus_model_run(id),
+CREATE TABLE IF NOT EXISTS pendiente.pendiente.corpus_model_run_score (
+    run_id uuid PRIMARY KEY REFERENCES pendiente.corpus_model_run(id),
     score_total numeric(10,4),
     readiness_score numeric(5,2),
     e_base numeric(14,6),
@@ -130,18 +130,18 @@ CREATE TABLE IF NOT EXISTS corpus_model_run_score (
     gatillo_max numeric(14,6)
 );
 
-CREATE TABLE IF NOT EXISTS corpus_model_run_obligation (
-    run_id uuid NOT NULL REFERENCES corpus_model_run(id),
-    obligation_id uuid NOT NULL REFERENCES corpus_obligation(id),
+CREATE TABLE IF NOT EXISTS pendiente.pendiente.corpus_model_run_obligation (
+    run_id uuid NOT NULL REFERENCES pendiente.corpus_model_run(id),
+    obligation_id uuid NOT NULL REFERENCES corpus.obligation(id),
     weight_used numeric(10,6),
     effectiveness_used numeric(6,4),
     exposure_ei numeric(14,6),
     PRIMARY KEY (run_id, obligation_id)
 );
 
-CREATE TABLE IF NOT EXISTS corpus_model_run_control (
-    run_id uuid NOT NULL REFERENCES corpus_model_run(id),
-    control_id uuid NOT NULL REFERENCES corpus_control(id),
+CREATE TABLE IF NOT EXISTS pendiente.pendiente.corpus_model_run_control (
+    run_id uuid NOT NULL REFERENCES pendiente.corpus_model_run(id),
+    control_id uuid NOT NULL REFERENCES corpus.control(id),
     implementation_status_used text,
     design_eff_used numeric(6,4),
     oper_eff_used numeric(6,4),
@@ -150,8 +150,8 @@ CREATE TABLE IF NOT EXISTS corpus_model_run_control (
     PRIMARY KEY (run_id, control_id)
 );
 
-CREATE TABLE IF NOT EXISTS corpus_model_run_trigger (
-    run_id uuid NOT NULL REFERENCES corpus_model_run(id),
+CREATE TABLE IF NOT EXISTS pendiente.pendiente.corpus_model_run_trigger (
+    run_id uuid NOT NULL REFERENCES pendiente.corpus_model_run(id),
     trigger_code text NOT NULL,
     trigger_fired boolean NOT NULL,
     trigger_value jsonb,
@@ -168,6 +168,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_corpus_company_updated_at BEFORE UPDATE ON corpus_company FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_corpus_evaluation_updated_at BEFORE UPDATE ON corpus_evaluation FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_corpus_evaluation_control_state_updated_at BEFORE UPDATE ON corpus_evaluation_control_state FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_corpus.company_updated_at BEFORE UPDATE ON corpus.company FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_corpus.evaluation_updated_at BEFORE UPDATE ON corpus.evaluation FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_pendiente.corpus.evaluation_control_state_updated_at BEFORE UPDATE ON pendiente.corpus.evaluation_control_state FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();

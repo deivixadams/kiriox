@@ -12,9 +12,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_security_users_email_unique
 CREATE TABLE IF NOT EXISTS corpus.security_user_scope (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES corpus.security_users(id) ON DELETE CASCADE,
-  jurisdiction_id uuid NULL REFERENCES corpus.corpus_jurisdiction(id),
-  framework_version_id uuid NULL REFERENCES corpus.corpus_framework_version(id),
-  domain_id uuid NULL REFERENCES corpus.corpus_domain(id),
+  jurisdiction_id uuid NULL REFERENCES corpus.jurisdiction(id),
+  framework_version_id uuid NULL REFERENCES corpus.framework_version(id),
+  domain_id uuid NULL REFERENCES corpus.domain(id),
   is_allowed boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   created_by uuid NULL

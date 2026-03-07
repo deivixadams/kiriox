@@ -73,7 +73,7 @@ const conclude = (counts: { hallazgos: number; positivos: number }) => {
 };
 
 export async function buildReportData(auth: AuthContext, draftId: string) {
-  const draft = await prisma.corpus_assessment_draft.findFirst({
+  const draft = await prisma.corpus.assessment_draft.findFirst({
     where: { id: draftId, tenant_id: auth.tenantId }
   });
   if (!draft) return null;
@@ -94,7 +94,7 @@ export async function buildReportData(auth: AuthContext, draftId: string) {
   const controlIds = Array.from(new Set(evaluations.map((ev) => ev.controlId).filter(Boolean)));
 
   const rows = riskIds.length && controlIds.length
-    ? await prisma.$queryRaw<RiskControlRow[]>(Prisma.sql`
+    ? await prisma.$queryRaw(Prisma.sql`
         SELECT
           r.id AS risk_id,
           r.name AS risk_name,
@@ -104,14 +104,14 @@ export async function buildReportData(auth: AuthContext, draftId: string) {
           c.id AS control_id,
           c.name AS control_name,
           c.description AS control_description,
-          crm.coverage_notes AS coverage_notes
-        FROM corpus.corpus_control_risk_map crm
-        JOIN corpus.corpus_control c ON c.id = crm.control_id
-        JOIN corpus.corpus_risk r ON r.id = crm.risk_id
-        LEFT JOIN corpus.corpus_catalog_risk_type rt ON rt.id = r.risk_type_id
-        LEFT JOIN corpus.corpus_catalog_risk_layer rl ON rl.id = r.risk_layer_id
-        WHERE crm.risk_id = ANY(${riskIds}::uuid[])
-          AND crm.control_id = ANY(${controlIds}::uuid[])
+          mrc.coverage_notes AS coverage_notes
+        FROM corpus.map_risk_control mrc
+        JOIN corpus.control c ON c.id = mrc.control_id
+        JOIN corpus.risk r ON r.id = mrc.risk_id
+        LEFT JOIN catalogos.corpus_catalog_risk_type rt ON rt.id = r.risk_type_id
+        LEFT JOIN catalogos.corpus_catalog_risk_layer rl ON rl.id = r.risk_layer_id
+        WHERE mrc.risk_id = ANY(${riskIds}::uuid[])
+          AND mrc.control_id = ANY(${controlIds}::uuid[])
         ORDER BY r.name ASC, c.name ASC
       `)
     : [];
@@ -232,7 +232,7 @@ async function resolveStatusId(preferredCodes: string[]) {
 }
 
 export async function materializeDraft(auth: AuthContext, draftId: string) {
-  const draft = await prisma.corpus_assessment_draft.findFirst({
+  const draft = await prisma.corpus.assessment_draft.findFirst({
     where: { id: draftId, tenant_id: auth.tenantId }
   });
   if (!draft) return null;
@@ -257,8 +257,8 @@ export async function materializeDraft(auth: AuthContext, draftId: string) {
 
   let assessment = await prisma.corpusAssessment.findFirst({
     where: {
-      companyId,
-      frameworkVersionId,
+      company_id: companyId,
+      framework_version_id: frameworkVersionId,
       scope_notes: { contains: marker }
     }
   });
@@ -268,11 +268,11 @@ export async function materializeDraft(auth: AuthContext, draftId: string) {
   if (!assessment) {
     assessment = await prisma.corpusAssessment.create({
       data: {
-        companyId,
-        frameworkVersionId,
+        company_id: companyId,
+        framework_version_id: frameworkVersionId,
         name: assessmentName,
         scope_notes: marker,
-        statusId,
+        status_id: statusId,
         created_by: auth.userId
       }
     });
@@ -280,7 +280,7 @@ export async function materializeDraft(auth: AuthContext, draftId: string) {
 
   const existingEvaluation = await prisma.corpusEvaluation.findFirst({
     where: {
-      assessmentId: assessment.id,
+      assessment_id: assessment.id,
       notes: { contains: marker }
     }
   });
@@ -288,17 +288,17 @@ export async function materializeDraft(auth: AuthContext, draftId: string) {
   if (!existingEvaluation) {
     await prisma.corpusEvaluation.create({
       data: {
-        assessmentId: assessment.id,
-        periodStart: Number.isNaN(periodStart.getTime()) ? new Date() : periodStart,
-        periodEnd: Number.isNaN(periodEnd.getTime()) ? new Date() : periodEnd,
-        statusId,
+        assessment_id: assessment.id,
+        period_start: Number.isNaN(periodStart.getTime()) ? new Date() : periodStart,
+        period_end: Number.isNaN(periodEnd.getTime()) ? new Date() : periodEnd,
+        status_id: statusId,
         notes: marker,
         created_by: auth.userId
       }
     });
   }
 
-  await prisma.corpus_assessment_draft.update({
+  await prisma.corpus.assessment_draft.update({
     where: { id: draftId },
     data: {
       status: 'materialized',

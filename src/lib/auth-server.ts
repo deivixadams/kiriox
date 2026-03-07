@@ -50,20 +50,24 @@ export async function getAuthContext(): Promise<AuthContext | null> {
         if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
             try {
                 const adminUser = await prisma.securityUser.findFirst({
-                    where: { isActive: true, role: { roleCode: 'ADMIN' } },
-                    include: { role: true },
-                    orderBy: { createdAt: 'asc' }
+                    where: {
+                        is_active: true,
+                        user_x_rbac: { some: { security_rbac: { role_code: 'ADMIN', is_active: true } } }
+                    },
+                    include: { user_x_rbac: { include: { security_rbac: true } } },
+                    orderBy: { created_at: 'asc' }
                 });
                 const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
-                    where: { isActive: true },
-                    include: { role: true },
-                    orderBy: { createdAt: 'asc' }
+                    where: { is_active: true },
+                    include: { user_x_rbac: { include: { security_rbac: true } } },
+                    orderBy: { created_at: 'asc' }
                 });
                 if (fallbackUser) {
+                    const rbac = fallbackUser.user_x_rbac?.find((r: any) => r.security_rbac?.role_code)?.security_rbac;
                     return {
                         userId: fallbackUser.id,
-                        tenantId: fallbackUser.tenantId,
-                        roleCode: fallbackUser.role?.roleCode || 'ADMIN',
+                        tenantId: fallbackUser.tenant_id,
+                        roleCode: rbac?.role_code || 'ADMIN',
                         email: fallbackUser.email
                     };
                 }
@@ -94,20 +98,24 @@ export async function getAuthContext(): Promise<AuthContext | null> {
         if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
             try {
                 const adminUser = await prisma.securityUser.findFirst({
-                    where: { isActive: true, role: { roleCode: 'ADMIN' } },
-                    include: { role: true },
-                    orderBy: { createdAt: 'asc' }
+                    where: {
+                        is_active: true,
+                        user_x_rbac: { some: { security_rbac: { role_code: 'ADMIN', is_active: true } } }
+                    },
+                    include: { user_x_rbac: { include: { security_rbac: true } } },
+                    orderBy: { created_at: 'asc' }
                 });
                 const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
-                    where: { isActive: true },
-                    include: { role: true },
-                    orderBy: { createdAt: 'asc' }
+                    where: { is_active: true },
+                    include: { user_x_rbac: { include: { security_rbac: true } } },
+                    orderBy: { created_at: 'asc' }
                 });
                 if (fallbackUser) {
+                    const rbac = fallbackUser.user_x_rbac?.find((r: any) => r.security_rbac?.role_code)?.security_rbac;
                     return {
                         userId: fallbackUser.id,
-                        tenantId: fallbackUser.tenantId,
-                        roleCode: fallbackUser.role?.roleCode || 'ADMIN',
+                        tenantId: fallbackUser.tenant_id,
+                        roleCode: rbac?.role_code || 'ADMIN',
                         email: fallbackUser.email
                     };
                 }

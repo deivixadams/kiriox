@@ -40,7 +40,7 @@ export async function PATCH(
         await (prisma as any).corpusAuditLog.create({
             data: {
                 tenantId: finding.tenantId,
-                entityName: 'corpus_audit_finding',
+                entityName: 'corpus.audit_finding',
                 entityId: finding.id,
                 action: `SET_STATUS_${status.toUpperCase()}`,
                 newData: finding as any,

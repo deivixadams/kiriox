@@ -16,7 +16,7 @@ import {
 import Link from 'next/link';
 
 export default function AssessmentDetailPage({ params }: { params: { id: string } }) {
-    // En producción esto vendría de una consulta a corpus_assessment uniendo con corpus_company
+    // En producción esto vendría de una consulta a corpus.assessment uniendo con corpus.company
     const assessment = {
         id: params.id,
         company: "Banco Alpha",

@@ -17,7 +17,7 @@ export async function GET(
         if (!evaluation) return NextResponse.json({ error: 'Evaluation not found' }, { status: 404 });
 
         // 2. Fetch Obligations and their Controls for this framework/evaluation
-        // Note: We use corpus_obligation -> corpus_control_obligation -> corpus_control
+        // Note: We use corpus.obligation -> pendiente.corpus.control_obligation -> corpus.control
         const obligations = await prisma.corpusObligation.findMany({
             where: {
                 // We could filter by domain if scope is by domain, but for now fetch all

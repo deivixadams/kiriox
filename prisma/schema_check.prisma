@@ -43,9 +43,9 @@ model SecurityUserScope {
   isAllowed                Boolean                 @default(true) @map("is_allowed")
   createdAt                DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy                String?                 @map("created_by") @db.Uuid
-  corpus_domain            CorpusDomain?           @relation(fields: [domainId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_framework_version CorpusFrameworkVersion? @relation(fields: [frameworkVersionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_jurisdiction      CorpusJurisdiction?     @relation(fields: [jurisdictionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.domain            CorpusDomain?           @relation(fields: [domainId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.framework_version CorpusFrameworkVersion? @relation(fields: [frameworkVersionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.jurisdiction      CorpusJurisdiction?     @relation(fields: [jurisdictionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   security_users           SecurityUser            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([userId, jurisdictionId, frameworkVersionId, domainId], map: "idx_security_user_scope_unique")
@@ -126,7 +126,7 @@ model CorpusParam {
   changeLogs           CorpusParamChangeLog[]
   profileValues        CorpusParamProfileValue[]
 
-  @@map("corpus_params")
+  @@map("pendiente.corpus_params")
 }
 
 model CorpusParamProfile {
@@ -145,7 +145,7 @@ model CorpusParamProfile {
   isActive       Boolean?                  @default(false) @map("is_active")
   values         CorpusParamProfileValue[]
 
-  @@map("corpus_param_profiles")
+  @@map("pendiente.corpus_param_profiles")
 }
 
 model CorpusParamProfileValue {
@@ -158,7 +158,7 @@ model CorpusParamProfileValue {
   param     CorpusParam?        @relation(fields: [paramId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   profile   CorpusParamProfile? @relation(fields: [profileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("corpus_param_profile_values")
+  @@map("pendiente.corpus_param_profile_values")
 }
 
 model CorpusParamChangeLog {
@@ -173,7 +173,7 @@ model CorpusParamChangeLog {
   createdAt    DateTime?    @default(now()) @map("created_at") @db.Timestamp(6)
   param        CorpusParam? @relation(fields: [paramId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("corpus_param_change_log")
+  @@map("pendiente.corpus_param_change_log")
 }
 
 model CorpusJurisdiction {
@@ -189,10 +189,10 @@ model CorpusJurisdiction {
   status_id             Int?                   @db.SmallInt
   companies             CorpusCompany[]
   frameworks            CorpusFramework[]
-  corpus_catalog_status corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_jurisdiction_status_id")
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.jurisdiction_status_id")
   security_user_scope   SecurityUserScope[]
 
-  @@map("corpus_jurisdiction")
+  @@map("corpus.jurisdiction")
 }
 
 model CorpusFramework {
@@ -207,11 +207,11 @@ model CorpusFramework {
   updated_at            DateTime                 @default(now()) @db.Timestamptz(6)
   status_id             Int?                     @db.SmallInt
   jurisdiction          CorpusJurisdiction       @relation(fields: [jurisdictionId], references: [id], onUpdate: NoAction)
-  corpus_catalog_status corpus_catalog_status?   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_framework_status_id")
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status?   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pendiente.corpus_framework_status_id")
   versions              CorpusFrameworkVersion[]
 
-  @@index([jurisdictionId], map: "idx_corpus_framework_jurisdiction_id")
-  @@map("corpus_framework")
+  @@index([jurisdictionId], map: "idx_pendiente.corpus_framework_jurisdiction_id")
+  @@map("pendiente.corpus_framework")
 }
 
 model CorpusFrameworkVersion {
@@ -226,18 +226,18 @@ model CorpusFrameworkVersion {
   updatedAt                     DateTime                        @default(now()) @map("updated_at") @db.Timestamptz(6)
   statusId                      Int?                            @map("status_id") @db.SmallInt
   assessments                   CorpusAssessment[]
-  corpus_control_risk_map       corpus_control_risk_map[]
-  corpus_domain                 CorpusDomain[]
+  corpus.control_risk_map       corpus.control_risk_map[]
+  corpus.domain                 CorpusDomain[]
   framework                     CorpusFramework                 @relation(fields: [frameworkId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_catalog_status         corpus_catalog_status?          @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_framework_version_status_id")
-  corpus_parameter_set          CorpusParameterSet[]
-  corpus_source                 corpus_source[]
-  corpus_test_control_procedure corpus_test_control_procedure[]
+  catalogos.corpus_catalog_status         catalogos.corpus_catalog_status?          @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.framework_version_status_id")
+  pendiente.corpus_parameter_set          CorpusParameterSet[]
+  corpus.source                 corpus.source[]
+  corpus.test_control_procedure corpus.test_control_procedure[]
   security_user_scope           SecurityUserScope[]
 
   @@unique([frameworkId, version])
-  @@index([frameworkId], map: "idx_corpus_framework_version_framework_id")
-  @@map("corpus_framework_version")
+  @@index([frameworkId], map: "idx_corpus.framework_version_framework_id")
+  @@map("corpus.framework_version")
 }
 
 model CorpusCompany {
@@ -252,9 +252,9 @@ model CorpusCompany {
   updatedAt             DateTime              @default(now()) @map("updated_at") @db.Timestamptz(6)
   assessments           CorpusAssessment[]
   jurisdiction          CorpusJurisdiction?   @relation(fields: [jurisdictionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_status corpus_catalog_status @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("corpus_company")
+  @@map("corpus.company")
 }
 
 model CorpusDomain {
@@ -268,14 +268,14 @@ model CorpusDomain {
   createdAt                DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   updated_at               DateTime               @default(now()) @db.Timestamptz(6)
   status_id                Int?                   @db.SmallInt
-  corpus_framework_version CorpusFrameworkVersion @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_catalog_status    corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_domain_status_id")
+  corpus.framework_version CorpusFrameworkVersion @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  catalogos.corpus_catalog_status    catalogos.corpus_catalog_status? @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.domain_status_id")
   obligations              CorpusObligation[]
   security_user_scope      SecurityUserScope[]
 
   @@unique([framework_version_id, code])
-  @@index([framework_version_id], map: "idx_corpus_domain_framework_version_id")
-  @@map("corpus_domain")
+  @@index([framework_version_id], map: "idx_corpus.domain_framework_version_id")
+  @@map("corpus.domain")
 }
 
 model CorpusObligation {
@@ -298,25 +298,25 @@ model CorpusObligation {
   criticalityId                    Int                               @map("criticality_id") @db.SmallInt
   evidence_strength_id             Int                               @db.SmallInt
   controls                         CorpusControlObligation[]
-  corpus_material_event            corpus_material_event[]
+  pendiente.corpus_material_event            pendiente.corpus_material_event[]
   modelRunObligations              CorpusModelRunObligation[]
   domain                           CorpusDomain                      @relation(fields: [domainId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_catalog_criticality       corpus_catalog_criticality        @relation(fields: [criticalityId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_obligation_criticality_id")
-  corpus_catalog_evidence_strength corpus_catalog_evidence_strength  @relation(fields: [evidence_strength_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_obligation_evidence_strength_id")
-  corpus_catalog_obligation_type   corpus_catalog_obligation_type?   @relation(fields: [obligation_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_obligation_obligation_type_id")
-  corpus_catalog_status            corpus_catalog_status?            @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_obligation_status_id")
-  corpus_obligation_risk           corpus_obligation_risk[]
-  corpus_obligation_source         corpus_obligation_source[]
+  catalogos.corpus_catalog_criticality       catalogos.corpus_catalog_criticality        @relation(fields: [criticalityId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.obligation_criticality_id")
+  catalogos.corpus_catalog_evidence_strength catalogos.corpus_catalog_evidence_strength  @relation(fields: [evidence_strength_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.obligation_evidence_strength_id")
+  catalogos.corpus_catalog_obligation_type   catalogos.corpus_catalog_obligation_type?   @relation(fields: [obligation_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.obligation_obligation_type_id")
+  catalogos.corpus_catalog_status            catalogos.corpus_catalog_status?            @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.obligation_status_id")
+  corpus.obligation_risk           corpus.obligation_risk[]
+  pendiente.corpus.obligation_source         pendiente.corpus.obligation_source[]
   weights                          CorpusParameterObligationWeight[]
 
   @@unique([domainId, code])
-  @@index([criticalityId], map: "idx_corpus_obligation_criticality_id")
-  @@index([domainId, criticality], map: "idx_corpus_obligation_domain_criticality")
-  @@index([domainId], map: "idx_corpus_obligation_domain_id")
-  @@index([domainId, obligation_type_id], map: "idx_corpus_obligation_domain_type")
-  @@index([evidence_strength_id], map: "idx_corpus_obligation_evidence_strength_id")
-  @@index([obligation_type_id], map: "idx_corpus_obligation_type_id")
-  @@map("corpus_obligation")
+  @@index([criticalityId], map: "idx_corpus.obligation_criticality_id")
+  @@index([domainId, criticality], map: "idx_corpus.obligation_domain_criticality")
+  @@index([domainId], map: "idx_corpus.obligation_domain_id")
+  @@index([domainId, obligation_type_id], map: "idx_corpus.obligation_domain_type")
+  @@index([evidence_strength_id], map: "idx_corpus.obligation_evidence_strength_id")
+  @@index([obligation_type_id], map: "idx_corpus.obligation_type_id")
+  @@map("corpus.obligation")
 }
 
 model CorpusControl {
@@ -339,22 +339,22 @@ model CorpusControl {
   is_hard_gate                      Boolean                           @default(false)
   rationale                         String?
   primary_cf_risk_id                String?                           @db.Uuid
-  corpus_catalog_control_automation corpus_catalog_control_automation @relation(fields: [automationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_control_type       corpus_catalog_control_type       @relation(fields: [controlTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_control_frequency  corpus_catalog_control_frequency  @relation(fields: [frequencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_risk                       corpus_risk?                      @relation(fields: [primary_cf_risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_control_primary_cf")
-  corpus_control_artifact           corpus_control_artifact[]
+  catalogos.corpus_catalog_control_automation catalogos.corpus_catalog_control_automation @relation(fields: [automationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_control_type       catalogos.corpus_catalog_control_type       @relation(fields: [controlTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_control_frequency  catalogos.corpus_catalog_control_frequency  @relation(fields: [frequencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.risk                       corpus.risk?                      @relation(fields: [primary_cf_risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_control_primary_cf")
+  pendiente.corpus.control_artifact           pendiente.corpus.control_artifact[]
   obligations                       CorpusControlObligation[]
-  corpus_control_risk_map           corpus_control_risk_map[]
+  corpus.control_risk_map           corpus.control_risk_map[]
   evaluationStates                  CorpusEvaluationControlState[]
-  corpus_material_event             corpus_material_event[]
+  pendiente.corpus_material_event             pendiente.corpus_material_event[]
   modelRunControls                  CorpusModelRunControl[]
-  corpus_test_control               corpus_test_control[]
-  corpus_test_control_procedure     corpus_test_control_procedure[]
-  corpus_test_control_run           corpus_test_control_run[]
+  corpus.test_control               corpus.test_control[]
+  corpus.test_control_procedure     corpus.test_control_procedure[]
+  pendiente.corpus.test_control_run           pendiente.corpus.test_control_run[]
 
   @@index([primary_cf_risk_id], map: "idx_control_primary_cf")
-  @@map("corpus_control")
+  @@map("corpus.control")
 }
 
 model CorpusControlObligation {
@@ -367,7 +367,7 @@ model CorpusControlObligation {
 
   @@id([controlId, obligationId])
   @@index([obligationId], map: "idx_control_obligation_obl")
-  @@map("corpus_control_obligation")
+  @@map("pendiente.corpus.control_obligation")
 }
 
 model CorpusAssessment {
@@ -382,11 +382,11 @@ model CorpusAssessment {
   created_by            String?
   company               CorpusCompany          @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   frameworkVersion      CorpusFrameworkVersion @relation(fields: [frameworkVersionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_status corpus_catalog_status  @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status  @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   evaluations           CorpusEvaluation[]
   modelRuns             CorpusModelRun[]
 
-  @@map("corpus_assessment")
+  @@map("corpus.assessment")
 }
 
 model CorpusEvaluation {
@@ -401,14 +401,14 @@ model CorpusEvaluation {
   created_by            String?
   updatedAt             DateTime                       @default(now()) @map("updated_at") @db.Timestamptz(6)
   assessment            CorpusAssessment               @relation(fields: [assessmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_status corpus_catalog_status          @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status catalogos.corpus_catalog_status          @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   artifacts             CorpusEvaluationArtifact[]
   controlStates         CorpusEvaluationControlState[]
   testRuns              CorpusEvaluationTestRun[]
-  corpus_material_event corpus_material_event[]
+  pendiente.corpus_material_event pendiente.corpus_material_event[]
   modelRuns             CorpusModelRun[]
 
-  @@map("corpus_evaluation")
+  @@map("corpus.evaluation")
 }
 
 model CorpusEvaluationControlState {
@@ -425,7 +425,7 @@ model CorpusEvaluationControlState {
   evaluation              CorpusEvaluation @relation(fields: [evaluationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([evaluationId, controlId])
-  @@map("corpus_evaluation_control_state")
+  @@map("pendiente.corpus.evaluation_control_state")
 }
 
 model CorpusEvaluationTestRun {
@@ -437,10 +437,10 @@ model CorpusEvaluationTestRun {
   selected_by             String?
   selected_at             DateTime                @default(now()) @db.Timestamptz(6)
   evaluation              CorpusEvaluation        @relation(fields: [evaluationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_test_control_run corpus_test_control_run @relation(fields: [testControlRunId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus.test_control_run pendiente.corpus.test_control_run @relation(fields: [testControlRunId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([evaluationId, testControlRunId])
-  @@map("corpus_evaluation_test_run")
+  @@map("pendiente.corpus.evaluation_test_run")
 }
 
 model CorpusEvaluationArtifact {
@@ -451,11 +451,11 @@ model CorpusEvaluationArtifact {
   review_notes            String?
   reviewed_by             String?
   reviewed_at             DateTime?               @db.Timestamptz(6)
-  corpus_control_artifact corpus_control_artifact @relation(fields: [artifactId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus.control_artifact pendiente.corpus.control_artifact @relation(fields: [artifactId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   evaluation              CorpusEvaluation        @relation(fields: [evaluationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([evaluationId, artifactId])
-  @@map("corpus_evaluation_artifact")
+  @@map("pendiente.corpus.evaluation_artifact")
 }
 
 model CorpusModelRun {
@@ -474,12 +474,12 @@ model CorpusModelRun {
   assessment                  CorpusAssessment           @relation(fields: [assessmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   evaluation                  CorpusEvaluation           @relation(fields: [evaluationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   parameterSet                CorpusParameterSet         @relation(fields: [parameterSetId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_model_run_control    CorpusModelRunControl[]
-  corpus_model_run_obligation CorpusModelRunObligation[]
-  corpus_model_run_score      CorpusModelRunScore?
-  corpus_model_run_trigger    CorpusModelRunTrigger[]
+  pendiente.pendiente.corpus_model_run_control    CorpusModelRunControl[]
+  pendiente.pendiente.corpus_model_run_obligation CorpusModelRunObligation[]
+  pendiente.pendiente.corpus_model_run_score      CorpusModelRunScore?
+  pendiente.pendiente.corpus_model_run_trigger    CorpusModelRunTrigger[]
 
-  @@map("corpus_model_run")
+  @@map("pendiente.corpus_model_run")
 }
 
 model CorpusModelRunScore {
@@ -491,9 +491,9 @@ model CorpusModelRunScore {
   e_sys            Decimal?       @db.Decimal(14, 6)
   e_final          Decimal?       @db.Decimal(14, 6)
   gatillo_max      Decimal?       @db.Decimal(14, 6)
-  corpus_model_run CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus_model_run CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("corpus_model_run_score")
+  @@map("pendiente.pendiente.corpus_model_run_score")
 }
 
 model CorpusModelRunControl {
@@ -506,10 +506,10 @@ model CorpusModelRunControl {
   evidence_status_used       String?
   control_effectiveness_used Decimal?       @db.Decimal(6, 4)
   control                    CorpusControl  @relation(fields: [controlId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_model_run           CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus_model_run           CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([run_id, controlId])
-  @@map("corpus_model_run_control")
+  @@map("pendiente.pendiente.corpus_model_run_control")
 }
 
 model CorpusModelRunObligation {
@@ -520,10 +520,10 @@ model CorpusModelRunObligation {
   effectiveness_used Decimal?         @db.Decimal(6, 4)
   exposure_ei        Decimal?         @db.Decimal(14, 6)
   obligation         CorpusObligation @relation(fields: [obligationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_model_run   CorpusModelRun   @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus_model_run   CorpusModelRun   @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([run_id, obligationId])
-  @@map("corpus_model_run_obligation")
+  @@map("pendiente.pendiente.corpus_model_run_obligation")
 }
 
 model CorpusModelRunTrigger {
@@ -533,10 +533,10 @@ model CorpusModelRunTrigger {
   triggerFired     Boolean        @map("trigger_fired")
   triggerValue     Json?          @map("trigger_value")
   justification    String?
-  corpus_model_run CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus_model_run CorpusModelRun @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([run_id, triggerCode])
-  @@map("corpus_model_run_trigger")
+  @@map("pendiente.pendiente.corpus_model_run_trigger")
 }
 
 model CorpusParameterSet {
@@ -551,11 +551,11 @@ model CorpusParameterSet {
   createdAt                DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
   modelRuns                CorpusModelRun[]
   weights                  CorpusParameterObligationWeight[]
-  corpus_framework_version CorpusFrameworkVersion            @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_status    corpus_catalog_status             @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.framework_version CorpusFrameworkVersion            @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status    catalogos.corpus_catalog_status             @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   values                   CorpusParameterValue[]
 
-  @@map("corpus_parameter_set")
+  @@map("pendiente.corpus_parameter_set")
 }
 
 model CorpusParameterValue {
@@ -567,7 +567,7 @@ model CorpusParameterValue {
   parameterSet   CorpusParameterSet @relation(fields: [parameterSetId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([parameterSetId, key])
-  @@map("corpus_parameter_value")
+  @@map("pendiente.corpus_parameter_value")
 }
 
 model CorpusParameterObligationWeight {
@@ -579,7 +579,7 @@ model CorpusParameterObligationWeight {
   parameterSet   CorpusParameterSet @relation(fields: [parameterSetId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([parameterSetId, obligationId])
-  @@map("corpus_parameter_obligation_weight")
+  @@map("pendiente.corpus_parameter_obligation_weight")
 }
 
 model CorpusAuditLog {
@@ -596,10 +596,10 @@ model CorpusAuditLog {
   ipAddress  String?   @map("ip_address")
   userAgent  String?   @map("user_agent")
 
-  @@map("corpus_audit_log")
+  @@map("corpus.audit_log")
 }
 
-model corpus_assessment_draft {
+model corpus.assessment_draft {
   @@schema("corpus")
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id            String    @db.Uuid
@@ -623,33 +623,33 @@ model corpus_assessment_draft {
   updated_at           DateTime  @default(now()) @db.Timestamptz(6)
   expires_at           DateTime? @db.Timestamptz(6)
 
-  @@index([created_by], map: "idx_corpus_assessment_draft_created_by")
-  @@index([status], map: "idx_corpus_assessment_draft_status")
-  @@index([tenant_id], map: "idx_corpus_assessment_draft_tenant")
+  @@index([created_by], map: "idx_corpus.assessment_draft_created_by")
+  @@index([status], map: "idx_corpus.assessment_draft_status")
+  @@index([tenant_id], map: "idx_corpus.assessment_draft_tenant")
 }
 
-model corpus_catalog_control_automation {
+model catalogos.corpus_catalog_control_automation {
   @@schema("corpus")
   id             Int             @id @default(autoincrement()) @db.SmallInt
   code           String          @unique
-  corpus_control CorpusControl[]
+  corpus.control CorpusControl[]
 }
 
-model corpus_catalog_control_frequency {
+model catalogos.corpus_catalog_control_frequency {
   @@schema("corpus")
   id             Int             @id @default(autoincrement()) @db.SmallInt
   code           String          @unique
-  corpus_control CorpusControl[]
+  corpus.control CorpusControl[]
 }
 
-model corpus_catalog_control_type {
+model catalogos.corpus_catalog_control_type {
   @@schema("corpus")
   id             Int             @id @default(autoincrement()) @db.SmallInt
   code           String          @unique
-  corpus_control CorpusControl[]
+  corpus.control CorpusControl[]
 }
 
-model corpus_catalog_criticality {
+model catalogos.corpus_catalog_criticality {
   @@schema("corpus")
   id                    Int                     @id @db.SmallInt
   code                  String                  @unique
@@ -657,11 +657,11 @@ model corpus_catalog_criticality {
   description           String?
   sort_order            Int                     @default(0)
   is_active             Boolean                 @default(true)
-  corpus_material_event corpus_material_event[]
-  corpus_obligation     CorpusObligation[]
+  pendiente.corpus_material_event pendiente.corpus_material_event[]
+  corpus.obligation     CorpusObligation[]
 }
 
-model corpus_catalog_evidence_strength {
+model catalogos.corpus_catalog_evidence_strength {
   @@schema("corpus")
   id                Int                @id @db.SmallInt
   code              String             @unique
@@ -669,10 +669,10 @@ model corpus_catalog_evidence_strength {
   description       String?
   sort_order        Int                @default(0)
   is_active         Boolean            @default(true)
-  corpus_obligation CorpusObligation[]
+  corpus.obligation CorpusObligation[]
 }
 
-model corpus_catalog_obligation_type {
+model catalogos.corpus_catalog_obligation_type {
   @@schema("corpus")
   id                Int                @id @default(autoincrement()) @db.SmallInt
   code              String             @unique
@@ -680,10 +680,10 @@ model corpus_catalog_obligation_type {
   description       String?
   sort_order        Int                @default(0)
   is_active         Boolean            @default(true)
-  corpus_obligation CorpusObligation[]
+  corpus.obligation CorpusObligation[]
 }
 
-model corpus_catalog_risk_layer {
+model catalogos.corpus_catalog_risk_layer {
   @@schema("corpus")
   id          Int           @id @default(autoincrement()) @db.SmallInt
   code        String        @unique
@@ -691,65 +691,65 @@ model corpus_catalog_risk_layer {
   description String?
   sort_order  Int           @default(0)
   is_active   Boolean       @default(true)
-  corpus_risk corpus_risk[]
+  corpus.risk corpus.risk[]
 }
 
-model corpus_catalog_risk_type {
+model catalogos.corpus_catalog_risk_type {
   @@schema("corpus")
   id          Int           @id @default(autoincrement()) @db.SmallInt
   code        String        @unique
   name        String
   sort_order  Int           @default(0)
   is_active   Boolean       @default(true)
-  corpus_risk corpus_risk[]
+  corpus.risk corpus.risk[]
 }
 
-model corpus_catalog_source_type {
+model catalogos.corpus_catalog_source_type {
   @@schema("corpus")
   id            Int             @id @default(autoincrement()) @db.SmallInt
   code          String          @unique
   name          String
   sort_order    Int             @default(0)
   is_active     Boolean         @default(true)
-  corpus_source corpus_source[]
+  corpus.source corpus.source[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_catalog_status {
+model catalogos.corpus_catalog_status {
   @@schema("corpus")
   id                            Int                             @id @default(autoincrement()) @db.SmallInt
   code                          String                          @unique
   name                          String
   sort_order                    Int                             @default(0)
   is_active                     Boolean                         @default(true)
-  corpus_assessment             CorpusAssessment[]
-  corpus_company                CorpusCompany[]
-  corpus_domain                 CorpusDomain[]
-  corpus_evaluation             CorpusEvaluation[]
-  corpus_framework              CorpusFramework[]
-  corpus_framework_version      CorpusFrameworkVersion[]
-  corpus_jurisdiction           CorpusJurisdiction[]
-  corpus_material_event         corpus_material_event[]
-  corpus_obligation             CorpusObligation[]
-  corpus_parameter_set          CorpusParameterSet[]
-  corpus_risk                   corpus_risk[]
-  corpus_source                 corpus_source[]
-  corpus_test                   corpus_test[]
-  corpus_test_control_procedure corpus_test_control_procedure[]
+  corpus.assessment             CorpusAssessment[]
+  corpus.company                CorpusCompany[]
+  corpus.domain                 CorpusDomain[]
+  corpus.evaluation             CorpusEvaluation[]
+  pendiente.corpus_framework              CorpusFramework[]
+  corpus.framework_version      CorpusFrameworkVersion[]
+  corpus.jurisdiction           CorpusJurisdiction[]
+  pendiente.corpus_material_event         pendiente.corpus_material_event[]
+  corpus.obligation             CorpusObligation[]
+  pendiente.corpus_parameter_set          CorpusParameterSet[]
+  corpus.risk                   corpus.risk[]
+  corpus.source                 corpus.source[]
+  corpus.test                   corpus.test[]
+  corpus.test_control_procedure corpus.test_control_procedure[]
 }
 
-model corpus_catalog_test_method {
+model catalogos.corpus_catalog_test_method {
   @@schema("corpus")
   id          Int           @id @default(autoincrement()) @db.SmallInt
   code        String        @unique
   name        String
   sort_order  Int           @default(0)
   is_active   Boolean       @default(true)
-  corpus_test corpus_test[]
+  corpus.test corpus.test[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_control_artifact {
+model pendiente.corpus.control_artifact {
   @@schema("corpus")
   id                           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   control_id                   String                         @db.Uuid
@@ -761,27 +761,27 @@ model corpus_control_artifact {
   status                       String                         @default("active")
   created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
   updated_at                   DateTime                       @default(now()) @db.Timestamptz(6)
-  corpus_control               CorpusControl                  @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_control_artifact_risk corpus_control_artifact_risk[]
-  corpus_evaluation_artifact   CorpusEvaluationArtifact[]
+  corpus.control               CorpusControl                  @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pendiente.pendiente.corpus.control_artifact_risk pendiente.pendiente.corpus.control_artifact_risk[]
+  pendiente.corpus.evaluation_artifact   CorpusEvaluationArtifact[]
 
   @@index([control_id], map: "idx_control_artifact_control")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_control_artifact_risk {
+model pendiente.pendiente.corpus.control_artifact_risk {
   @@schema("corpus")
   artifact_id             String                  @db.Uuid
   risk_id                 String                  @db.Uuid
   mitigation_strength     Int                     @db.SmallInt
-  corpus_control_artifact corpus_control_artifact @relation(fields: [artifact_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_risk             corpus_risk             @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pendiente.corpus.control_artifact pendiente.corpus.control_artifact @relation(fields: [artifact_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.risk             corpus.risk             @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([artifact_id, risk_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_control_risk_map {
+model corpus.control_risk_map {
   @@schema("corpus")
   control_id               String                 @db.Uuid
   risk_id                  String                 @db.Uuid
@@ -790,27 +790,27 @@ model corpus_control_risk_map {
   effect_type              String
   rationale                String?
   coverage_notes           String?
-  corpus_control           CorpusControl          @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_risk_control_id_fkey")
-  corpus_framework_version CorpusFrameworkVersion @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_control_risk_framework_fk")
-  corpus_risk              corpus_risk            @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_risk_risk_id_fkey")
+  corpus.control           CorpusControl          @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_risk_control_id_fkey")
+  corpus.framework_version CorpusFrameworkVersion @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus.control_risk_framework_fk")
+  corpus.risk              corpus.risk            @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_risk_risk_id_fkey")
 
-  @@id([control_id, risk_id, framework_version_id, effect_type], map: "corpus_control_risk_pkey")
+  @@id([control_id, risk_id, framework_version_id, effect_type], map: "corpus.control_risk_pkey")
   @@index([risk_id], map: "idx_control_risk_risk")
   @@index([control_id, framework_version_id], map: "idx_crm_control_fv")
   @@index([risk_id, effect_type], map: "idx_crm_risk_effect")
   @@index([risk_id, framework_version_id], map: "idx_crm_risk_fv")
 }
 
-model corpus_control_source {
+model pendiente.corpus.control_source {
   @@schema("corpus")
   control_id    String        @db.Uuid
   source_id     String        @db.Uuid
-  corpus_source corpus_source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
+  corpus.source corpus.source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
 
   @@id([control_id, source_id])
 }
 
-model corpus_material_event {
+model pendiente.corpus_material_event {
   @@schema("corpus")
   id                         String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id                  String                     @db.Uuid
@@ -829,42 +829,42 @@ model corpus_material_event {
   closed_at                  DateTime?                  @db.Timestamptz(6)
   closed_by                  String?                    @db.Uuid
   metadata                   Json?                      @default("{}")
-  corpus_control             CorpusControl?             @relation(fields: [control_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_evaluation          CorpusEvaluation?          @relation(fields: [evaluation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_obligation          CorpusObligation?          @relation(fields: [obligation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_risk                corpus_risk?               @relation(fields: [risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_criticality corpus_catalog_criticality @relation(fields: [severity_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_status      corpus_catalog_status      @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_test_control_run    corpus_test_control_run?   @relation(fields: [test_control_run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.control             CorpusControl?             @relation(fields: [control_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.evaluation          CorpusEvaluation?          @relation(fields: [evaluation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.obligation          CorpusObligation?          @relation(fields: [obligation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus.risk                corpus.risk?               @relation(fields: [risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_criticality catalogos.corpus_catalog_criticality @relation(fields: [severity_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  catalogos.corpus_catalog_status      catalogos.corpus_catalog_status      @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pendiente.corpus.test_control_run    pendiente.corpus.test_control_run?   @relation(fields: [test_control_run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_obligation_risk {
+model corpus.obligation_risk {
   @@schema("corpus")
   obligation_id     String           @db.Uuid
   risk_id           String           @db.Uuid
   link_strength     Int              @default(3) @db.SmallInt
-  corpus_obligation CorpusObligation @relation(fields: [obligation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_risk       corpus_risk      @relation(fields: [risk_id], references: [id], onUpdate: NoAction)
+  corpus.obligation CorpusObligation @relation(fields: [obligation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.risk       corpus.risk      @relation(fields: [risk_id], references: [id], onUpdate: NoAction)
 
   @@id([obligation_id, risk_id])
   @@unique([obligation_id, risk_id], map: "uq_obligation_risk_pair")
-  @@index([risk_id], map: "idx_corpus_obligation_risk_risk_id")
+  @@index([risk_id], map: "idx_corpus.obligation_risk_risk_id")
   @@index([obligation_id], map: "idx_obligation_risk_obligation")
   @@index([risk_id], map: "idx_obligation_risk_risk")
 }
 
-model corpus_obligation_source {
+model pendiente.corpus.obligation_source {
   @@schema("corpus")
   obligation_id     String           @db.Uuid
   source_id         String           @db.Uuid
-  corpus_obligation CorpusObligation @relation(fields: [obligation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_source     corpus_source    @relation(fields: [source_id], references: [id], onUpdate: NoAction)
+  corpus.obligation CorpusObligation @relation(fields: [obligation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.source     corpus.source    @relation(fields: [source_id], references: [id], onUpdate: NoAction)
 
   @@id([obligation_id, source_id])
 }
 
-model corpus_risk {
+model corpus.risk {
   @@schema("corpus")
   id                           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code                         String                         @unique
@@ -878,33 +878,33 @@ model corpus_risk {
   risk_type_id                 Int?                           @db.SmallInt
   risk_layer_id                Int                            @default(2) @db.SmallInt
   parent_risk_id               String?                        @db.Uuid
-  corpus_control               CorpusControl[]
-  corpus_control_artifact_risk corpus_control_artifact_risk[]
-  corpus_control_risk_map      corpus_control_risk_map[]
-  corpus_material_event        corpus_material_event[]
-  corpus_obligation_risk       corpus_obligation_risk[]
-  corpus_risk                  corpus_risk?                   @relation("corpus_riskTocorpus_risk", fields: [parent_risk_id], references: [id], onUpdate: NoAction, map: "fk_corpus_risk_parent_risk_id")
-  other_corpus_risk            corpus_risk[]                  @relation("corpus_riskTocorpus_risk")
-  corpus_catalog_risk_layer    corpus_catalog_risk_layer      @relation(fields: [risk_layer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_risk_layer_id")
-  corpus_catalog_risk_type     corpus_catalog_risk_type?      @relation(fields: [risk_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_risk_type_id")
-  corpus_catalog_status        corpus_catalog_status?         @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_status_id")
-  corpus_risk_source           corpus_risk_source[]
+  corpus.control               CorpusControl[]
+  pendiente.pendiente.corpus.control_artifact_risk pendiente.pendiente.corpus.control_artifact_risk[]
+  corpus.control_risk_map      corpus.control_risk_map[]
+  pendiente.corpus_material_event        pendiente.corpus_material_event[]
+  corpus.obligation_risk       corpus.obligation_risk[]
+  corpus.risk                  corpus.risk?                   @relation("corpus.riskTocorpus.risk", fields: [parent_risk_id], references: [id], onUpdate: NoAction, map: "fk_corpus.risk_parent_risk_id")
+  other_corpus.risk            corpus.risk[]                  @relation("corpus.riskTocorpus.risk")
+  catalogos.corpus_catalog_risk_layer    catalogos.corpus_catalog_risk_layer      @relation(fields: [risk_layer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.risk_risk_layer_id")
+  catalogos.corpus_catalog_risk_type     catalogos.corpus_catalog_risk_type?      @relation(fields: [risk_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.risk_risk_type_id")
+  catalogos.corpus_catalog_status        catalogos.corpus_catalog_status?         @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.risk_status_id")
+  pendiente.corpus.risk_source           pendiente.corpus.risk_source[]
 
-  @@index([parent_risk_id], map: "idx_corpus_risk_parent_risk_id")
-  @@index([risk_layer_id], map: "idx_corpus_risk_risk_layer_id")
+  @@index([parent_risk_id], map: "idx_corpus.risk_parent_risk_id")
+  @@index([risk_layer_id], map: "idx_corpus.risk_risk_layer_id")
 }
 
-model corpus_risk_source {
+model pendiente.corpus.risk_source {
   @@schema("corpus")
   risk_id       String        @db.Uuid
   source_id     String        @db.Uuid
-  corpus_risk   corpus_risk   @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_source corpus_source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
+  corpus.risk   corpus.risk   @relation(fields: [risk_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.source corpus.source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
 
   @@id([risk_id, source_id])
 }
 
-model corpus_source {
+model corpus.source {
   @@schema("corpus")
   id                         String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   framework_version_id       String?                     @db.Uuid
@@ -918,17 +918,17 @@ model corpus_source {
   updated_at                 DateTime                    @default(now()) @db.Timestamptz(6)
   status_id                  Int?                        @db.SmallInt
   source_type_id             Int?                        @db.SmallInt
-  corpus_control_source      corpus_control_source[]
-  corpus_obligation_source   corpus_obligation_source[]
-  corpus_risk_source         corpus_risk_source[]
-  corpus_framework_version   CorpusFrameworkVersion?     @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  corpus_catalog_source_type corpus_catalog_source_type? @relation(fields: [source_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_source_source_type_id")
-  corpus_catalog_status      corpus_catalog_status?      @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_source_status_id")
-  corpus_test_source         corpus_test_source[]
+  pendiente.corpus.control_source      pendiente.corpus.control_source[]
+  pendiente.corpus.obligation_source   pendiente.corpus.obligation_source[]
+  pendiente.corpus.risk_source         pendiente.corpus.risk_source[]
+  corpus.framework_version   CorpusFrameworkVersion?     @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  catalogos.corpus_catalog_source_type catalogos.corpus_catalog_source_type? @relation(fields: [source_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.source_source_type_id")
+  catalogos.corpus_catalog_status      catalogos.corpus_catalog_status?      @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.source_status_id")
+  pendiente.corpus.test_source         pendiente.corpus.test_source[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_test {
+model corpus.test {
   @@schema("corpus")
   id                            String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code                          String                          @unique
@@ -945,21 +945,21 @@ model corpus_test {
   expected_artifacts            String?
   severity_if_fail              Int?                            @default(3) @db.SmallInt
   automation_compatibility      String?
-  corpus_catalog_test_method    corpus_catalog_test_method?     @relation(fields: [method_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_test_method_id")
-  corpus_catalog_status         corpus_catalog_status?          @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_test_status_id")
-  corpus_test_control           corpus_test_control[]
-  corpus_test_control_procedure corpus_test_control_procedure[]
-  corpus_test_control_run       corpus_test_control_run[]
-  corpus_test_script            corpus_test_script[]
-  corpus_test_source            corpus_test_source[]
+  catalogos.corpus_catalog_test_method    catalogos.corpus_catalog_test_method?     @relation(fields: [method_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.test_method_id")
+  catalogos.corpus_catalog_status         catalogos.corpus_catalog_status?          @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus.test_status_id")
+  corpus.test_control           corpus.test_control[]
+  corpus.test_control_procedure corpus.test_control_procedure[]
+  pendiente.corpus.test_control_run       pendiente.corpus.test_control_run[]
+  pendiente.corpus.test_script            pendiente.corpus.test_script[]
+  pendiente.corpus.test_source            pendiente.corpus.test_source[]
 
-  @@index([automation_compatibility], map: "idx_corpus_test_automation_compat")
-  @@index([method_id], map: "idx_corpus_test_method_id")
-  @@index([status_id], map: "idx_corpus_test_status_id")
+  @@index([automation_compatibility], map: "idx_corpus.test_automation_compat")
+  @@index([method_id], map: "idx_corpus.test_method_id")
+  @@index([status_id], map: "idx_corpus.test_status_id")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_test_control {
+model corpus.test_control {
   @@schema("corpus")
   control_id           String        @db.Uuid
   test_id              String        @db.Uuid
@@ -969,15 +969,15 @@ model corpus_test_control {
   rationale            String?
   created_at           DateTime?     @default(now()) @db.Timestamptz(6)
   updated_at           DateTime?     @default(now()) @db.Timestamptz(6)
-  corpus_control       CorpusControl @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_control_fk")
-  corpus_test          corpus_test   @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_test_fk")
+  corpus.control       CorpusControl @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_control_fk")
+  corpus.test          corpus.test   @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_test_fk")
 
   @@id([control_id, test_id])
-  @@index([test_id], map: "idx_corpus_control_test_test_id")
+  @@index([test_id], map: "idx_corpus.control_test_test_id")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_test_control_procedure {
+model corpus.test_control_procedure {
   @@schema("corpus")
   id                       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   control_id               String                  @db.Uuid
@@ -998,10 +998,10 @@ model corpus_test_control_procedure {
   effective_to             DateTime?               @db.Date
   created_at               DateTime                @default(now()) @db.Timestamptz(6)
   updated_at               DateTime                @default(now()) @db.Timestamptz(6)
-  corpus_control           CorpusControl           @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_procedure_control_id_fkey")
-  corpus_framework_version CorpusFrameworkVersion? @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_procedure_framework_version_id_fkey")
-  corpus_catalog_status    corpus_catalog_status   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_control_test_procedure_status_id_fkey")
-  corpus_test              corpus_test             @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_procedure_test_id_fkey")
+  corpus.control           CorpusControl           @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_procedure_control_id_fkey")
+  corpus.framework_version CorpusFrameworkVersion? @relation(fields: [framework_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_procedure_framework_version_id_fkey")
+  catalogos.corpus_catalog_status    catalogos.corpus_catalog_status   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus.control_test_procedure_status_id_fkey")
+  corpus.test              corpus.test             @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_procedure_test_id_fkey")
 
   @@unique([control_id, test_id, version], map: "ux_ctl_test_proc_no_fv", where: raw("(framework_version_id IS NULL)"))
   @@unique([control_id, test_id, framework_version_id, version], map: "ux_ctl_test_proc_with_fv", where: raw("(framework_version_id IS NOT NULL)"))
@@ -1012,7 +1012,7 @@ model corpus_test_control_procedure {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_test_control_run {
+model pendiente.corpus.test_control_run {
   @@schema("corpus")
   id                         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   control_id                 String                    @db.Uuid
@@ -1033,11 +1033,11 @@ model corpus_test_control_run {
   created_at                 DateTime                  @default(now()) @db.Timestamptz(6)
   updated_at                 DateTime                  @default(now()) @db.Timestamptz(6)
   script_id                  String?                   @db.Uuid
-  corpus_evaluation_test_run CorpusEvaluationTestRun[]
-  corpus_material_event      corpus_material_event[]
-  corpus_control             CorpusControl             @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_run_control_id_fkey")
-  corpus_test                corpus_test               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus_control_test_run_test_id_fkey")
-  corpus_test_script         corpus_test_script?       @relation(fields: [script_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_test_control_run_script_fk")
+  pendiente.corpus.evaluation_test_run CorpusEvaluationTestRun[]
+  pendiente.corpus_material_event      pendiente.corpus_material_event[]
+  corpus.control             CorpusControl             @relation(fields: [control_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_run_control_id_fkey")
+  corpus.test                corpus.test               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "corpus.control_test_run_test_id_fkey")
+  pendiente.corpus.test_script         pendiente.corpus.test_script?       @relation(fields: [script_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus.test_control_run_script_fk")
 
   @@index([control_id, test_id, executed_at(sort: Desc)], map: "idx_ctl_test_run_ctl_test_exec")
   @@index([result], map: "idx_ctl_test_run_result")
@@ -1047,7 +1047,7 @@ model corpus_test_control_run {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model corpus_test_script {
+model pendiente.corpus.test_script {
   @@schema("corpus")
   id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   test_id                 String                    @db.Uuid
@@ -1060,19 +1060,19 @@ model corpus_test_script {
   hash                    String
   is_active               Boolean                   @default(true)
   created_at              DateTime                  @default(now()) @db.Timestamptz(6)
-  corpus_test_control_run corpus_test_control_run[]
-  corpus_test             corpus_test               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pendiente.corpus.test_control_run pendiente.corpus.test_control_run[]
+  corpus.test             corpus.test               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([test_id, code, version])
   @@index([test_id, is_active], map: "idx_test_script_active")
 }
 
-model corpus_test_source {
+model pendiente.corpus.test_source {
   @@schema("corpus")
   test_id       String        @db.Uuid
   source_id     String        @db.Uuid
-  corpus_source corpus_source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
-  corpus_test   corpus_test   @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  corpus.source corpus.source @relation(fields: [source_id], references: [id], onUpdate: NoAction)
+  corpus.test   corpus.test   @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([test_id, source_id])
 }

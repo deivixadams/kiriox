@@ -12,7 +12,7 @@ export async function GET(request: Request) {
       { id: string; title: string; code: string | null; domain_id: string }[]
     >`
       SELECT id, title, code, domain_id
-      FROM corpus.corpus_obligation
+      FROM corpus.obligation
       WHERE domain_id = ANY(${domainIds}::uuid[])
       ORDER BY title ASC
     `;

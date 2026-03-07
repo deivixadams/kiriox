@@ -49,7 +49,7 @@ const mapDraft = (draft: any): DraftRecord => ({
 });
 
 export async function createDraft(auth: AuthContext) {
-  const draft = await prisma.corpus_assessment_draft.create({
+  const draft = await prisma.corpus.assessment_draft.create({
     data: {
       tenant_id: auth.tenantId,
       created_by: auth.userId,
@@ -61,14 +61,14 @@ export async function createDraft(auth: AuthContext) {
 }
 
 export async function getDraft(auth: AuthContext, id: string) {
-  const draft = await prisma.corpus_assessment_draft.findFirst({
+  const draft = await prisma.corpus.assessment_draft.findFirst({
     where: { id, tenant_id: auth.tenantId }
   });
   return draft ? mapDraft(draft) : null;
 }
 
 export async function updateDraft(auth: AuthContext, id: string, patch: Partial<DraftRecord>) {
-  const existing = await prisma.corpus_assessment_draft.findFirst({
+  const existing = await prisma.corpus.assessment_draft.findFirst({
     where: { id, tenant_id: auth.tenantId }
   });
   if (!existing) return null;
@@ -95,7 +95,7 @@ export async function updateDraft(auth: AuthContext, id: string, patch: Partial<
   if (patch.windowStart !== undefined) data.window_start = normalizeDate(patch.windowStart);
   if (patch.windowEnd !== undefined) data.window_end = normalizeDate(patch.windowEnd);
 
-  const draft = await prisma.corpus_assessment_draft.update({
+  const draft = await prisma.corpus.assessment_draft.update({
     where: { id },
     data
   });
