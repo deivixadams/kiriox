@@ -1,5 +1,5 @@
-import ScoreOverview from "../_components/ScoreOverview";
+import ScoreWizardClient from './ScoreWizardClient';
 
 export default function ScorePage() {
-    return <ScoreOverview />;
+  return <ScoreWizardClient />;
 }
