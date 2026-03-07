@@ -40,7 +40,8 @@ export async function GET(request: Request) {
         found: true,
         jurisdictionId: rd.id,
         frameworkId: versionRow[0].framework_id,
-        frameworkVersionId: versionRow[0].id,
+        frameworkSourceId: versionRow[0].id,
+        frameworkVersionId: versionRow[0].framework_version_id,
       });
     }
 
@@ -56,6 +57,21 @@ export async function GET(request: Request) {
       FROM pendiente.corpus_framework
       WHERE jurisdiction_id = ${rd.id}
     `;
+    const frameworkSourcesRaw = await prisma.$queryRaw`
+      SELECT fs.id, fs.citation, fs.framework_version_id, fv.framework_id
+      FROM corpus.framework_source fs
+      JOIN corpus.framework_version fv ON fv.id = fs.framework_version_id
+      JOIN pendiente.corpus_framework f ON f.id = fv.framework_id
+      WHERE f.jurisdiction_id = ${rd.id}
+      ORDER BY fs.created_at DESC NULLS LAST, fs.id DESC
+    `;
+    const frameworkSources = (frameworkSourcesRaw as any[]).map((v) => ({
+      id: v.id,
+      citation: v.citation,
+      frameworkVersionId: v.framework_version_id,
+      frameworkId: v.framework_id,
+    }));
+
     const frameworkVersionsRaw = await prisma.$queryRaw`
       SELECT fv.id, fv.version, fv.framework_id
       FROM corpus.framework_version fv
@@ -73,6 +89,7 @@ export async function GET(request: Request) {
       companies,
       jurisdictions,
       frameworks,
+      frameworkSources,
       frameworkVersions,
     });
   } catch (error: any) {

@@ -1,8 +1,10 @@
+
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { CheckCircle2, Network, ShieldCheck, SlidersHorizontal, Target, Layers3, FlaskConical, Play } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import WizardShell from '@/app/validacion/auditorias/nueva/_components/WizardShell';
+import ScoreScopeStep from './_components/ScoreScopeStep';
 import styles from './ScoreWizardClient.module.css';
 
 const TOTAL_STEPS = 7;
@@ -10,269 +12,290 @@ const TOTAL_STEPS = 7;
 const STEP_TITLES = [
   'Contexto y marco',
   'Alcance real',
-  'Perfil de ponderación',
-  'Evaluación 3D',
+  'Perfil de ponderacion',
+  'Evaluacion 3D',
   'Evidencia / Pruebas',
   'Motor y resultado',
-  'Simulación'
+  'Simulacion'
 ];
 
-const MOCK = {
-  context: {
-    jurisdiccion: 'República Dominicana',
-    marco: 'Ley 155-17 (AML/CFT)',
-    version: 'v1',
-    empresa: 'Banco Alpha',
-    periodo: '2024-01-01 → 2024-12-31'
-  },
-  scope: {
-    criterio: 'Top 20% por criticidad + recurrencia',
-    dominios: ['Gobierno AML', 'Monitoreo y Alertas', 'Debida Diligencia'],
-    obligaciones: ['O-AML-021', 'O-AML-033', 'O-AML-044', 'O-AML-052'],
-    riesgos: ['R-AML-007', 'R-AML-012', 'R-AML-019'],
-    controles: ['C-MON-003', 'C-KYC-011', 'C-GOV-005']
-  },
-  weights: {
-    perfil: 'Perfil Sectorial AML – RD v1',
-    parametros: { alpha: 0.25, beta: 0.35, gamma: 1.4 },
-    gatillos: ['No Oficial AML', 'No reporte ROS', 'KYC inexistente']
-  },
-  matrix: [
-    { obligacion: 'O-AML-021', existencia: 'Sí', formalizacion: 'Medio', funcionamiento: 'Bajo' },
-    { obligacion: 'O-AML-033', existencia: 'Sí', formalizacion: 'Alto', funcionamiento: 'Medio' },
-    { obligacion: 'O-AML-044', existencia: 'Sí', formalizacion: 'Medio', funcionamiento: 'Medio' },
-    { obligacion: 'O-AML-052', existencia: 'No', formalizacion: 'Bloqueado', funcionamiento: 'Bloqueado' }
-  ],
-  evidence: [
-    { control: 'C-MON-003', evidencia: 'Log monitoreo Q4', estado: 'Vigente' },
-    { control: 'C-KYC-011', evidencia: 'Política KYC v3', estado: 'Vigente' },
-    { control: 'C-GOV-005', evidencia: 'Acta Comité AML', estado: 'Vencida' }
-  ],
-  engine: {
-    base: 0.38,
-    concentracion: 0.52,
-    interdependencia: 0.61,
-    gatillos: 'Activado: KYC inexistente',
-    score: 74.2
-  },
-  simulation: [
-    { accion: 'Eliminar C-KYC-011', impacto: '+11.5 puntos de exposición' },
-    { accion: 'Reforzar C-MON-003', impacto: '-6.2 puntos de exposición' },
-    { accion: 'Actualizar evidencia C-GOV-005', impacto: '-2.1 puntos de exposición' }
-  ]
+type SelectionItem = {
+  id: string;
+  code: string;
+  title?: string;
+  name?: string;
+  score: number;
+  rank: number;
+  reasons: string[];
+};
+
+type SelectionPayload = {
+  obligations: SelectionItem[];
+  risks: SelectionItem[];
+  controls: SelectionItem[];
+  tests: SelectionItem[];
 };
 
 export default function ScoreWizardClient() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
+  const [companies, setCompanies] = useState<{ id: string; name: string; code?: string }[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [contextLoaded, setContextLoaded] = useState(false);
+  const [scopeMode, setScopeMode] = useState<'top20' | 'all' | null>(null);
+  const [jurisdictionName, setJurisdictionName] = useState('');
+  const [frameworkName, setFrameworkName] = useState('');
+  const [frameworkSourceLabel, setFrameworkSourceLabel] = useState('');
+  const [frameworkSourceId, setFrameworkSourceId] = useState('');
+  const [selection, setSelection] = useState<SelectionPayload | null>(null);
+  const [selectionLoading, setSelectionLoading] = useState(false);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    setStartDate(`${yyyy}-${mm}-${dd}`);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    const loadContext = async () => {
+      try {
+        const res = await fetch('/api/superintendence/context');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!alive) return;
+        const list = Array.isArray(data?.companies) ? data.companies : [];
+        setCompanies(list);
+        if (!selectedCompanyId && list.length > 0) {
+          setSelectedCompanyId(list[0].id);
+        }
+        const jurisdiction = Array.isArray(data?.jurisdictions) ? data.jurisdictions[0] : null;
+        const frameworkSources = Array.isArray(data?.frameworkSources) ? data.frameworkSources : [];
+        const frameworks = Array.isArray(data?.frameworks) ? data.frameworks : [];
+        const latestSource = frameworkSources[0];
+        const framework = frameworks.find((f: any) => f.id === latestSource?.frameworkId);
+        if (jurisdiction?.name) setJurisdictionName(jurisdiction.name);
+        if (framework?.name) setFrameworkName(framework.name);
+        if (latestSource?.citation) setFrameworkSourceLabel(latestSource.citation);
+        if (latestSource?.id) setFrameworkSourceId(latestSource.id);
+        setContextLoaded(true);
+      } catch {
+        if (alive) setContextLoaded(true);
+      }
+    };
+    loadContext();
+    return () => {
+      alive = false;
+    };
+  }, [selectedCompanyId]);
+
+  useEffect(() => {
+    let alive = true;
+    const loadCompanyContext = async () => {
+      if (!selectedCompanyId) return;
+      try {
+        const res = await fetch(`/api/superintendence/context?company_id=${selectedCompanyId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!alive) return;
+        if (data?.frameworkSourceId) setFrameworkSourceId(data.frameworkSourceId);
+      } catch {
+        return;
+      }
+    };
+    loadCompanyContext();
+    return () => {
+      alive = false;
+    };
+  }, [selectedCompanyId]);
+
   const headerItems = useMemo(() => ([
-    { label: 'Jurisdiccion', value: MOCK.context.jurisdiccion },
-    { label: 'Marco', value: MOCK.context.marco },
-    { label: 'Version', value: MOCK.context.version }
-  ]), []);
+    { label: 'Jurisdiccion', value: jurisdictionName || '-' },
+    { label: 'Marco', value: frameworkName || '-' },
+    { label: 'Fuente', value: frameworkSourceLabel || '-' }
+  ]), [jurisdictionName, frameworkName, frameworkSourceLabel]);
 
   const title = STEP_TITLES[step - 1] || 'Wizard';
 
+  const handleSelection = async (mode: 'top20' | 'all') => {
+    if (!selectedCompanyId || !frameworkSourceId || !startDate || !endDate) {
+      setSelectionError('Completa empresa y periodo antes de seleccionar.');
+      return;
+    }
+    setSelectionLoading(true);
+    setSelectionError(null);
+    try {
+      const res = await fetch('/api/score/selector', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: selectedCompanyId,
+          frameworkSourceId,
+          periodStart: startDate,
+          periodEnd: endDate,
+          mode,
+          draftId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'No se pudo generar la seleccion');
+      }
+      setSelection(data.selection || null);
+      setDraftId(data.draftId || null);
+      setScopeMode(mode);
+    } catch (err: any) {
+      setSelectionError(err?.message || 'No se pudo generar la seleccion');
+    } finally {
+      setSelectionLoading(false);
+    }
+  };
+
   return (
-    <WizardShell
-      title={title}
-      subtitle="Score"
-      step={step}
-      totalSteps={TOTAL_STEPS}
-      headerItems={headerItems}
-    >
-      <div className={styles.root}>
-        {step === 1 && (
-          <>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Contexto y marco</h2>
-              <p className={styles.subtitle}>Define el universo normativo y la ventana de evaluación.</p>
-            </div>
-            <div className={styles.grid}>
-              <div className={styles.card}>
-                <span className={styles.label}>Empresa</span>
-                <span className={styles.value}>{MOCK.context.empresa}</span>
+    <div className={styles.shellWrapper}>
+      <WizardShell
+        title={title}
+        subtitle="Score"
+        step={step}
+        totalSteps={TOTAL_STEPS}
+        headerItems={headerItems}
+      >
+        {step === 2 ? (
+          <ScoreScopeStep
+            selection={selection}
+            selectionLoading={selectionLoading}
+            selectionError={selectionError}
+            scopeMode={scopeMode}
+            onSelectTop20={() => handleSelection('top20')}
+            onSelectAll={() => handleSelection('all')}
+            onBack={() => setStep((s) => Math.max(1, s - 1))}
+            onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+            onSave={() => {}}
+          />
+        ) : (
+          <div className={styles.root}>
+          {step === 1 && (
+            <>
+              <div className={styles.header}>
+                <h2 className={styles.title}>Contexto y marco</h2>
+                <p className={styles.subtitle}>Define el universo normativo y la ventana de evaluacion.</p>
               </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Periodo</span>
-                <span className={styles.value}>{MOCK.context.periodo}</span>
+              <div className={styles.grid}>
+                <div className={styles.card}>
+                  <div className={styles.field}>
+                    <span
+                      className={`${styles.label} ${styles.labelClickable}`}
+                      onDoubleClick={() => router.push('/admin/empresa/nuevo?return_to=/score/score')}
+                      title="Doble clic para crear empresa"
+                    >
+                      Empresa
+                    </span>
+                    <select
+                      className={styles.input}
+                      value={selectedCompanyId}
+                      onChange={(e) => setSelectedCompanyId(e.target.value)}
+                      disabled={!contextLoaded}
+                    >
+                      <option value="">{contextLoaded ? 'Seleccione empresa' : 'Cargando...'}</option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>{company.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className={styles.card}>
+                  <div className={styles.field}>
+                    <span className={styles.label}>Periodo inicio</span>
+                    <input
+                      type="date"
+                      className={styles.input}
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                    />
+                  </div>
+                  <div className={styles.field}>
+                    <span className={styles.label}>Periodo fin</span>
+                    <input
+                      type="date"
+                      className={styles.input}
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {step === 2 && (
-          <>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Alcance real (Top 20%)</h2>
-              <p className={styles.subtitle}>Selecciona el universo crítico que entra al score.</p>
-            </div>
-            <div className={styles.card}>
-              <span className={styles.label}>Criterio</span>
-              <span className={styles.value}>{MOCK.scope.criterio}</span>
-            </div>
-            <div className={styles.grid}>
-              <div className={styles.card}>
-                <span className={styles.label}>Dominios</span>
-                <div className={styles.list}>
-                  {MOCK.scope.dominios.map((item) => (
-                    <div key={item} className={styles.pill}><Layers3 size={14} />{item}</div>
-                  ))}
-                </div>
+          {step === 3 && (
+            <>
+              <div className={styles.header}>
+                <h2 className={styles.title}>Perfil de ponderacion</h2>
+                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
               </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Obligaciones</span>
-                <div className={styles.list}>
-                  {MOCK.scope.obligaciones.map((item) => (
-                    <div key={item} className={styles.pill}><Target size={14} />{item}</div>
-                  ))}
-                </div>
-              </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Riesgos</span>
-                <div className={styles.list}>
-                  {MOCK.scope.riesgos.map((item) => (
-                    <div key={item} className={styles.pill}><ShieldCheck size={14} />{item}</div>
-                  ))}
-                </div>
-              </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Controles</span>
-                <div className={styles.list}>
-                  {MOCK.scope.controles.map((item) => (
-                    <div key={item} className={styles.pill}><CheckCircle2 size={14} />{item}</div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {step === 3 && (
-          <>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Perfil de ponderación</h2>
-              <p className={styles.subtitle}>Pesos Wi y parámetros del motor (α, β, γ).</p>
-            </div>
-            <div className={styles.card}>
-              <span className={styles.label}>Perfil activo</span>
-              <span className={styles.value}>{MOCK.weights.perfil}</span>
-            </div>
-            <div className={styles.grid}>
-              <div className={styles.card}>
-                <span className={styles.label}>Parámetros</span>
-                <span className={styles.value}>α {MOCK.weights.parametros.alpha} · β {MOCK.weights.parametros.beta} · γ {MOCK.weights.parametros.gamma}</span>
+          {step === 4 && (
+            <>
+              <div className={styles.header}>
+                <h2 className={styles.title}>Evaluacion 3D</h2>
+                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
               </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Gatillos</span>
-                <div className={styles.list}>
-                  {MOCK.weights.gatillos.map((item) => (
-                    <div key={item} className={styles.row}><span className={styles.rowStrong}>{item}</span></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {step === 4 && (
-          <>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Evaluación 3D</h2>
-              <p className={styles.subtitle}>Existencia, formalización y funcionamiento por obligación.</p>
-            </div>
-            <div className={styles.list}>
-              {MOCK.matrix.map((row) => (
-                <div key={row.obligacion} className={styles.row}>
-                  <span className={styles.rowStrong}>{row.obligacion}</span>
-                  <span>Existencia: {row.existencia}</span>
-                  <span>Formalización: {row.formalizacion}</span>
-                  <span>Funcionamiento: {row.funcionamiento}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+          {step === 5 && (
+            <>
+              <div className={styles.header}>
+                <h2 className={styles.title}>Evidencia / Pruebas</h2>
+                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
+              </div>
+            </>
+          )}
 
-        {step === 5 && (
-          <>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Evidencia / Pruebas</h2>
-              <p className={styles.subtitle}>Estado y vigencia de evidencia crítica por control.</p>
-            </div>
-            <div className={styles.list}>
-              {MOCK.evidence.map((row) => (
-                <div key={row.control} className={styles.row}>
-                  <span className={styles.rowStrong}>{row.control}</span>
-                  <span>{row.evidencia}</span>
-                  <span>{row.estado}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+          {step === 6 && (
+            <>
+              <div className={styles.header}>
+                <h2 className={styles.title}>Motor y resultado</h2>
+                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
+              </div>
+            </>
+          )}
 
-        {step === 6 && (
-          <>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Motor y resultado</h2>
-              <p className={styles.subtitle}>Exposición base, concentración, interdependencia y score.</p>
-            </div>
-            <div className={styles.grid}>
-              <div className={styles.card}>
-                <span className={styles.label}>Exposición base</span>
-                <span className={styles.value}>{MOCK.engine.base}</span>
+          {step === 7 && (
+            <>
+              <div className={styles.header}>
+                <h2 className={styles.title}>Simulacion</h2>
+                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
               </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Concentración</span>
-                <span className={styles.value}>{MOCK.engine.concentracion}</span>
-              </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Interdependencia</span>
-                <span className={styles.value}>{MOCK.engine.interdependencia}</span>
-              </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Gatillos</span>
-                <span className={styles.value}>{MOCK.engine.gatillos}</span>
-              </div>
-              <div className={styles.card}>
-                <span className={styles.label}>Score final</span>
-                <span className={styles.value}>{MOCK.engine.score}%</span>
-              </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {step === 7 && (
-          <>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Simulación (grafo completo)</h2>
-              <p className={styles.subtitle}>Impacto al remover o reforzar controles críticos.</p>
+          <div className={styles.footer}>
+            <div className={styles.footerActions}>
+              <button className={styles.backButton} onClick={() => setStep((s) => Math.max(1, s - 1))}>Volver</button>
+              <button className={styles.ghostButton} onClick={() => {}}>Guardar</button>
+              <button
+                className={styles.primaryButton}
+                onClick={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+                disabled={step === TOTAL_STEPS}
+              >
+                Continuar
+              </button>
             </div>
-            <div className={styles.list}>
-              {MOCK.simulation.map((row) => (
-                <div key={row.accion} className={styles.row}>
-                  <span className={styles.rowStrong}>{row.accion}</span>
-                  <span>{row.impacto}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        <div className={styles.footer}>
-          <div className={styles.footerActions}>
-            <button className={styles.backButton} onClick={() => setStep((s) => Math.max(1, s - 1))}>Volver</button>
-            <button className={styles.ghostButton} onClick={() => {}}>Guardar</button>
-            <button
-              className={styles.primaryButton}
-              onClick={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
-              disabled={step === TOTAL_STEPS}
-            >
-              Continuar
-            </button>
           </div>
-        </div>
-      </div>
-    </WizardShell>
+          </div>
+        )}
+      </WizardShell>
+    </div>
   );
 }

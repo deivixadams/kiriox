@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["catalogos", "corpus", "pendiente", "security"]
+  schemas  = ["catalogos", "corpus", "pendiente", "security", "score"]
 }
 
 model corpus_catalog_control_automation {
@@ -170,6 +170,10 @@ model old_corpus_test {
   @@index([status_id], map: "idx_corpus_test_status_id")
   @@map("__old-corpus_test")
   @@schema("corpus")
+  score_run_test_draft run_test_draft[]
+
+  score_run_test run_test[]
+
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -306,6 +310,10 @@ model company {
   corpus_catalog_status corpus_catalog_status @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_company_status_id_fkey")
 
   @@schema("corpus")
+  score_run_draft run_draft[]
+
+  score_run run[]
+
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -346,6 +354,10 @@ model control {
 
   @@index([primary_cf_risk_id], map: "idx_control_primary_cf")
   @@schema("corpus")
+  score_run_control_draft run_control_draft[]
+
+  score_run_control run_control[]
+
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -588,6 +600,10 @@ model framework_version {
   @@unique([framework_id, version], map: "corpus_framework_version_framework_id_version_key")
   @@index([framework_id], map: "idx_corpus_framework_version_framework_id")
   @@schema("corpus")
+  score_run_draft run_draft[]
+
+  score_run run[]
+
 }
 
 model jurisdiction {
@@ -709,6 +725,10 @@ model obligation {
   @@index([evidence_strength_id], map: "idx_corpus_obligation_evidence_strength_id")
   @@index([obligation_type_id], map: "idx_corpus_obligation_type_id")
   @@schema("corpus")
+  score_run_obligation_draft run_obligation_draft[]
+
+  score_run_obligation run_obligation[]
+
 }
 
 model obligation_graph {
@@ -751,6 +771,10 @@ model risk {
   @@index([parent_risk_id], map: "idx_corpus_risk_parent_risk_id")
   @@index([risk_layer_id], map: "idx_corpus_risk_risk_layer_id")
   @@schema("corpus")
+  score_run_risk_draft run_risk_draft[]
+
+  score_run_risk run_risk[]
+
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -1426,4 +1450,160 @@ model user_x_rbac {
 
   @@unique([user_id, role_id], map: "user_x_rbac_user_role_unique")
   @@schema("security")
+}
+
+model run_draft {
+  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String                @db.Uuid
+  framework_version_id String                @db.Uuid
+  period_start         DateTime              @db.Date
+  period_end           DateTime              @db.Date
+  mode                 String
+  status               String                @default("draft")
+  created_at           DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime              @default(now()) @db.Timestamptz(6)
+  company              company               @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  framework_version    framework_version     @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run_obligation_draft run_obligation_draft[]
+  run_risk_draft       run_risk_draft[]
+  run_control_draft    run_control_draft[]
+  run_test_draft       run_test_draft[]
+
+  @@index([company_id], map: "idx_score_run_draft_company")
+  @@index([framework_version_id], map: "idx_score_run_draft_fv")
+  @@schema("score")
+}
+
+model run {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id        String           @db.Uuid
+  framework_version_id String        @db.Uuid
+  period_start      DateTime         @db.Date
+  period_end        DateTime         @db.Date
+  mode              String
+  status            String           @default("active")
+  created_at        DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime         @default(now()) @db.Timestamptz(6)
+  company           company          @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  framework_version framework_version @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run_obligation    run_obligation[]
+  run_risk          run_risk[]
+  run_control       run_control[]
+  run_test          run_test[]
+
+  @@index([company_id], map: "idx_score_run_company")
+  @@index([framework_version_id], map: "idx_score_run_fv")
+  @@schema("score")
+}
+
+model run_obligation_draft {
+  run_id        String    @db.Uuid
+  obligation_id String    @db.Uuid
+  score         Decimal?  @db.Decimal(10, 6)
+  rank          Int?
+  reasons       Json?
+  run_draft     run_draft @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  obligation    obligation @relation(fields: [obligation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, obligation_id])
+  @@index([obligation_id], map: "idx_score_run_draft_obligation")
+  @@schema("score")
+}
+
+model run_risk_draft {
+  run_id   String   @db.Uuid
+  risk_id  String   @db.Uuid
+  score    Decimal? @db.Decimal(10, 6)
+  rank     Int?
+  reasons  Json?
+  run_draft run_draft @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  risk     risk     @relation(fields: [risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, risk_id])
+  @@index([risk_id], map: "idx_score_run_draft_risk")
+  @@schema("score")
+}
+
+model run_control_draft {
+  run_id    String   @db.Uuid
+  control_id String  @db.Uuid
+  score     Decimal? @db.Decimal(10, 6)
+  rank      Int?
+  reasons   Json?
+  run_draft run_draft @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  control   control @relation(fields: [control_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, control_id])
+  @@index([control_id], map: "idx_score_run_draft_control")
+  @@schema("score")
+}
+
+model run_test_draft {
+  run_id  String   @db.Uuid
+  test_id String   @db.Uuid
+  score   Decimal? @db.Decimal(10, 6)
+  rank    Int?
+  reasons Json?
+  run_draft run_draft @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  old_corpus_test old_corpus_test @relation(fields: [test_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, test_id])
+  @@index([test_id], map: "idx_score_run_draft_test")
+  @@schema("score")
+}
+
+model run_obligation {
+  run_id        String    @db.Uuid
+  obligation_id String    @db.Uuid
+  score         Decimal?  @db.Decimal(10, 6)
+  rank          Int?
+  reasons       Json?
+  run           run       @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  obligation    obligation @relation(fields: [obligation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, obligation_id])
+  @@index([obligation_id], map: "idx_score_run_obligation")
+  @@schema("score")
+}
+
+model run_risk {
+  run_id  String   @db.Uuid
+  risk_id String   @db.Uuid
+  score   Decimal? @db.Decimal(10, 6)
+  rank    Int?
+  reasons Json?
+  run     run      @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  risk    risk     @relation(fields: [risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, risk_id])
+  @@index([risk_id], map: "idx_score_run_risk")
+  @@schema("score")
+}
+
+model run_control {
+  run_id    String   @db.Uuid
+  control_id String  @db.Uuid
+  score     Decimal? @db.Decimal(10, 6)
+  rank      Int?
+  reasons   Json?
+  run       run      @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  control   control  @relation(fields: [control_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, control_id])
+  @@index([control_id], map: "idx_score_run_control")
+  @@schema("score")
+}
+
+model run_test {
+  run_id  String   @db.Uuid
+  test_id String   @db.Uuid
+  score   Decimal? @db.Decimal(10, 6)
+  rank    Int?
+  reasons Json?
+  run     run      @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  old_corpus_test old_corpus_test @relation(fields: [test_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, test_id])
+  @@index([test_id], map: "idx_score_run_test")
+  @@schema("score")
 }
