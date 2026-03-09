@@ -5,6 +5,10 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import WizardShell from '@/app/validacion/auditorias/nueva/_components/WizardShell';
 import ScoreScopeStep from './_components/ScoreScopeStep';
+import ScoreEvaluationDashboardStep from './_components/ScoreEvaluationDashboardStep';
+import ScoreDomainControlsStep from './_components/ScoreDomainControlsStep';
+import ScoreControlEvaluationStep from './_components/ScoreControlEvaluationStep';
+import ScoreResultStep from './_components/ScoreResultStep';
 import styles from './ScoreWizardClient.module.css';
 
 const TOTAL_STEPS = 7;
@@ -17,6 +21,15 @@ const STEP_TITLES = [
   'Evidencia / Pruebas',
   'Motor y resultado',
   'Simulacion'
+];
+
+const ENGINE_PROFILE = [
+  { label: 'Existencia', value: '35%', detail: 'Gate primario de presencia del control' },
+  { label: 'Formalizacion', value: '25%', detail: 'Diseno, politica, procedimiento y trazabilidad' },
+  { label: 'Operacion', value: '40%', detail: 'Desempeno observado en tests y evidencia' },
+  { label: 'Concentracion', value: 'alpha 0.35', detail: 'Penaliza exposicion acumulada por dominio' },
+  { label: 'Propagacion', value: 'eta 0.08', detail: 'Amplifica fragilidad estructural de controles raiz' },
+  { label: 'Curva final', value: 'gamma 0.06', detail: 'Mapea exposicion a score 0-100 no lineal' },
 ];
 
 type SelectionItem = {
@@ -53,6 +66,8 @@ export default function ScoreWizardClient() {
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null);
+  const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
 
   useEffect(() => {
     const today = new Date();
@@ -239,60 +254,76 @@ export default function ScoreWizardClient() {
             <>
               <div className={styles.header}>
                 <h2 className={styles.title}>Perfil de ponderacion</h2>
-                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
+                <p className={styles.subtitle}>Perfil vigente del motor CRE aplicado al resultado final.</p>
+              </div>
+              <div className={styles.grid}>
+                {ENGINE_PROFILE.map((item) => (
+                  <div key={item.label} className={styles.card}>
+                    <div className={styles.cardTitle}>{item.label}</div>
+                    <div className={styles.domainCode}>{item.value}</div>
+                    <div className={styles.cardSubtitle}>{item.detail}</div>
+                  </div>
+                ))}
               </div>
             </>
           )}
 
           {step === 4 && (
-            <>
-              <div className={styles.header}>
-                <h2 className={styles.title}>Evaluacion 3D</h2>
-                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
-              </div>
-            </>
+            <ScoreEvaluationDashboardStep
+              runId={draftId}
+              onSelectDomain={(domainId) => {
+                setSelectedDomainId(domainId);
+                setStep(5);
+              }}
+              onBack={() => setStep((s) => Math.max(1, s - 1))}
+              onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+            />
           )}
 
           {step === 5 && (
-            <>
-              <div className={styles.header}>
-                <h2 className={styles.title}>Evidencia / Pruebas</h2>
-                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
-              </div>
-            </>
+            <ScoreDomainControlsStep
+              runId={draftId}
+              domainId={selectedDomainId}
+              onSelectControl={(controlId) => {
+                setSelectedControlId(controlId);
+                setStep(6);
+              }}
+              onBack={() => setStep(4)}
+              onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+            />
           )}
 
           {step === 6 && (
-            <>
-              <div className={styles.header}>
-                <h2 className={styles.title}>Motor y resultado</h2>
-                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
-              </div>
-            </>
+            <ScoreControlEvaluationStep
+              runId={draftId}
+              controlId={selectedControlId}
+              onBack={() => setStep(5)}
+              onNext={() => setStep(7)}
+            />
           )}
 
           {step === 7 && (
-            <>
-              <div className={styles.header}>
-                <h2 className={styles.title}>Simulacion</h2>
-                <p className={styles.subtitle}>Aun no hay datos cargados.</p>
-              </div>
-            </>
+            <ScoreResultStep
+              runId={draftId}
+              onBack={() => setStep(6)}
+            />
           )}
 
-          <div className={styles.footer}>
-            <div className={styles.footerActions}>
-              <button className={styles.backButton} onClick={() => setStep((s) => Math.max(1, s - 1))}>Volver</button>
-              <button className={styles.ghostButton} onClick={() => {}}>Guardar</button>
-              <button
-                className={styles.primaryButton}
-                onClick={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
-                disabled={step === TOTAL_STEPS}
-              >
-                Continuar
-              </button>
+          {step <= 3 && (
+            <div className={styles.footer}>
+              <div className={styles.footerActions}>
+                <button className={styles.backButton} onClick={() => setStep((s) => Math.max(1, s - 1))}>Volver</button>
+                <button className={styles.ghostButton} onClick={() => {}}>Guardar</button>
+                <button
+                  className={styles.primaryButton}
+                  onClick={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+                  disabled={step === TOTAL_STEPS}
+                >
+                  Continuar
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           </div>
         )}
       </WizardShell>

@@ -1,0 +1,62 @@
+{
+  "tables": [
+    {
+      "table_schema": "_DONOTUSE_",
+      "table_name": "corpus_framework"
+    },
+    {
+      "table_schema": "corpus",
+      "table_name": "framework_version"
+    },
+    {
+      "table_schema": "params",
+      "table_name": "parameter_definition"
+    },
+    {
+      "table_schema": "params",
+      "table_name": "profile"
+    },
+    {
+      "table_schema": "params",
+      "table_name": "profile_parameter_value"
+    }
+  ],
+  "constraints": [
+    {
+      "table_schema": "corpus",
+      "table_name": "domain",
+      "constraint_name": "corpus_domain_framework_version_id_fkey",
+      "column_name": "framework_version_id",
+      "foreign_table_schema": "corpus",
+      "foreign_table_name": "framework_version",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "corpus",
+      "table_name": "framework_source",
+      "constraint_name": "corpus_source_framework_version_id_fkey",
+      "column_name": "framework_version_id",
+      "foreign_table_schema": "corpus",
+      "foreign_table_name": "framework_version",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "constraint_name": "corpus_control_test_procedure_framework_version_id_fkey",
+      "column_name": "framework_version_id",
+      "foreign_table_schema": "corpus",
+      "foreign_table_name": "framework_version",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "corpus",
+      "table_name": "audit_assessment",
+      "constraint_name": "corpus_assessment_framework_version_id_fkey",
+      "column_name": "framework_version_id",
+      "foreign_table_schema": "corpus",
+      "foreign_table_name": "framework_version",
+      "foreign_column_name": "id"
+    }
+  ]
+}

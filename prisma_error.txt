@@ -1,0 +1,38 @@
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma\schema.prisma.
+
+Prisma schema warning:
+- Preview feature "multiSchema" is deprecated. The functionality can be used without specifying it as a preview feature.
+
+Error: Prisma schema validation - (validate wasm)
+Error code: P1012
+error: Type "corpus_parameter_set" is neither a built-in type, nor refers to another model, composite type, or enum.
+  -->  prisma\schema.prisma:126
+   | 
+125 |   corpus_material_event             corpus_material_event[]
+126 |   corpus_parameter_set              corpus_parameter_set[]
+   | 
+error: Type "corpus_parameter_set" is neither a built-in type, nor refers to another model, composite type, or enum.
+  -->  prisma\schema.prisma:597
+   | 
+596 |   corpus_catalog_status             corpus_catalog_status?              @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_framework_version_status_id")
+597 |   corpus_parameter_set              corpus_parameter_set[]
+   | 
+error: Type "corpus_parameter_obligation_weight" is neither a built-in type, nor refers to another model, composite type, or enum.
+  -->  prisma\schema.prisma:718
+   | 
+717 |   corpus_obligation_source           corpus_obligation_source[]
+718 |   corpus_parameter_obligation_weight corpus_parameter_obligation_weight[]
+   | 
+error: Type "corpus_parameter_set" is neither a built-in type, nor refers to another model, composite type, or enum.
+  -->  prisma\schema.prisma:1110
+   | 
+1109 |   audit_evaluation            audit_evaluation              @relation(fields: [evaluation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+1110 |   corpus_parameter_set        corpus_parameter_set          @relation(fields: [parameter_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+   | 
+
+Validation Error Count: 4
+[Context: validate]
+
+Prisma CLI Version : 7.4.1

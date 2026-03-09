@@ -1,0 +1,1968 @@
+{
+  "A": [
+    {
+      "b": "A",
+      "dimension": "EXISTENCE",
+      "weight": "0.300",
+      "is_gate": true,
+      "min_dimension_score": "1.000"
+    },
+    {
+      "b": "A",
+      "dimension": "FORMALIZATION",
+      "weight": "0.300",
+      "is_gate": true,
+      "min_dimension_score": "0.800"
+    },
+    {
+      "b": "A",
+      "dimension": "OPERATION",
+      "weight": "0.400",
+      "is_gate": true,
+      "min_dimension_score": "0.800"
+    }
+  ],
+  "B": [
+    {
+      "b": "B",
+      "ordinal_position": "1",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "10",
+      "column_name": "evidence_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "11",
+      "column_name": "evidence_type",
+      "data_type": "text"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "12",
+      "column_name": "evidence_name",
+      "data_type": "text"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "13",
+      "column_name": "required",
+      "data_type": "boolean"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "14",
+      "column_name": "min_quantity",
+      "data_type": "integer"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "15",
+      "column_name": "window_days",
+      "data_type": "integer"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "2",
+      "column_name": "control_name",
+      "data_type": "text"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "3",
+      "column_name": "dimension",
+      "data_type": "text"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "4",
+      "column_name": "dimension_weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "5",
+      "column_name": "test_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "6",
+      "column_name": "test_code",
+      "data_type": "text"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "7",
+      "column_name": "test_title",
+      "data_type": "text"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "8",
+      "column_name": "test_weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "B",
+      "ordinal_position": "9",
+      "column_name": "is_key",
+      "data_type": "boolean"
+    }
+  ],
+  "C": [
+    {
+      "b": "C",
+      "control_id": "c7f3c1b4-2d1f-4a1e-9c01-101000000006",
+      "control_name": "Actualización periódica KYC",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6500",
+      "test_id": "58659c20-c0c8-4a63-b0f2-fc58fff7c896",
+      "test_code": "CT-T06",
+      "test_title": "RBA: metodología y evaluación periódica",
+      "test_weight": "1.0000",
+      "is_key": true,
+      "evidence_id": "3be64325-92a6-428e-ad8c-48736b99bded",
+      "evidence_type": "RISK",
+      "evidence_name": "Resultado de evaluación de riesgo",
+      "required": true,
+      "min_quantity": 1,
+      "window_days": 365
+    },
+    {
+      "b": "C",
+      "control_id": "c7f3c1b4-2d1f-4a1e-9c01-101000000006",
+      "control_name": "Actualización periódica KYC",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6500",
+      "test_id": "58659c20-c0c8-4a63-b0f2-fc58fff7c896",
+      "test_code": "CT-T06",
+      "test_title": "RBA: metodología y evaluación periódica",
+      "test_weight": "1.0000",
+      "is_key": true,
+      "evidence_id": "b2e3ecfa-f587-480c-b5b4-9e385a9ae49f",
+      "evidence_type": "RISK",
+      "evidence_name": "Metodología de riesgo",
+      "required": true,
+      "min_quantity": 1,
+      "window_days": null
+    },
+    {
+      "b": "C",
+      "control_id": "c7f3c1b4-2d1f-4a1e-9c01-101000000006",
+      "control_name": "Actualización periódica KYC",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6500",
+      "test_id": "58659c20-c0c8-4a63-b0f2-fc58fff7c896",
+      "test_code": "CT-T06",
+      "test_title": "RBA: metodología y evaluación periódica",
+      "test_weight": "1.0000",
+      "is_key": true,
+      "evidence_id": "eb0ca306-08fe-4003-83aa-4e222f34674f",
+      "evidence_type": "GOVERNANCE",
+      "evidence_name": "Evidencia de aprobación",
+      "required": true,
+      "min_quantity": 1,
+      "window_days": null
+    },
+    {
+      "b": "C",
+      "control_id": "9e1c2c4a-8d7b-4c1a-a1f1-401000000001",
+      "control_name": "Control de acceso mínimo sistemas AML",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6000",
+      "test_id": "b21b8e62-967c-4bbf-86ff-58c27654b9e7",
+      "test_code": "CT-T13",
+      "test_title": "Seguridad de acceso: RBAC mínimo y SoD técnica",
+      "test_weight": "0.6000",
+      "is_key": true,
+      "evidence_id": "65436ce3-677c-4578-91f1-3217063a91d1",
+      "evidence_type": "TECHNICAL",
+      "evidence_name": "Audit trail / trazabilidad",
+      "required": true,
+      "min_quantity": 1,
+      "window_days": 180
+    },
+    {
+      "b": "C",
+      "control_id": "9e1c2c4a-8d7b-4c1a-a1f1-401000000001",
+      "control_name": "Control de acceso mínimo sistemas AML",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6000",
+      "test_id": "b21b8e62-967c-4bbf-86ff-58c27654b9e7",
+      "test_code": "CT-T13",
+      "test_title": "Seguridad de acceso: RBAC mínimo y SoD técnica",
+      "test_weight": "0.6000",
+      "is_key": true,
+      "evidence_id": "29e6562b-014e-4701-8bc8-0f5aca3ce53e",
+      "evidence_type": "TECHNICAL",
+      "evidence_name": "Log de acceso",
+      "required": true,
+      "min_quantity": 2,
+      "window_days": 180
+    },
+    {
+      "b": "C",
+      "control_id": "9e1c2c4a-8d7b-4c1a-a1f1-401000000001",
+      "control_name": "Control de acceso mínimo sistemas AML",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6000",
+      "test_id": "b21b8e62-967c-4bbf-86ff-58c27654b9e7",
+      "test_code": "CT-T13",
+      "test_title": "Seguridad de acceso: RBAC mínimo y SoD técnica",
+      "test_weight": "0.6000",
+      "is_key": true,
+      "evidence_id": "18efe163-dd5f-442e-a9ef-0aef07435baf",
+      "evidence_type": "TECHNICAL",
+      "evidence_name": "Configuración de sistema/regla",
+      "required": true,
+      "min_quantity": 1,
+      "window_days": null
+    },
+    {
+      "b": "C",
+      "control_id": "c7f3c1b4-2d1f-4a1e-9c01-101000000004",
+      "control_name": "Determinación propósito relación comercial",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6500",
+      "test_id": "002c34f4-d8dd-49fd-8bff-548d81baad26",
+      "test_code": "CT-T07",
+      "test_title": "Regla obligatoria con bloqueo (hard-stop)",
+      "test_weight": "0.6000",
+      "is_key": true,
+      "evidence_id": "38f859c2-4519-40dc-a27c-32da8954e421",
+      "evidence_type": "TECHNICAL",
+      "evidence_name": "Resultado de prueba de control",
+      "required": true,
+      "min_quantity": 2,
+      "window_days": 180
+    },
+    {
+      "b": "C",
+      "control_id": "c7f3c1b4-2d1f-4a1e-9c01-101000000004",
+      "control_name": "Determinación propósito relación comercial",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6500",
+      "test_id": "002c34f4-d8dd-49fd-8bff-548d81baad26",
+      "test_code": "CT-T07",
+      "test_title": "Regla obligatoria con bloqueo (hard-stop)",
+      "test_weight": "0.6000",
+      "is_key": true,
+      "evidence_id": "4d80bdc3-23f5-44b3-8986-640a49a07da2",
+      "evidence_type": "TECHNICAL",
+      "evidence_name": "Log de sistema o ejecución",
+      "required": true,
+      "min_quantity": 2,
+      "window_days": 180
+    },
+    {
+      "b": "C",
+      "control_id": "c7f3c1b4-2d1f-4a1e-9c01-101000000004",
+      "control_name": "Determinación propósito relación comercial",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6500",
+      "test_id": "002c34f4-d8dd-49fd-8bff-548d81baad26",
+      "test_code": "CT-T07",
+      "test_title": "Regla obligatoria con bloqueo (hard-stop)",
+      "test_weight": "0.6000",
+      "is_key": true,
+      "evidence_id": "d5af40ce-e25e-4169-8a28-69a10121c14e",
+      "evidence_type": "TECHNICAL",
+      "evidence_name": "Export de configuración",
+      "required": true,
+      "min_quantity": 1,
+      "window_days": null
+    },
+    {
+      "b": "C",
+      "control_id": "c7f3c1b4-2d1f-4a1e-9c01-101000000013",
+      "control_name": "Gestión de escenarios de monitoreo",
+      "dimension": "OPERATION",
+      "dimension_weight": "0.6500",
+      "test_id": "ba7ce813-7ab4-4d6c-8347-e7e4dd09833c",
+      "test_code": "CT-T10",
+      "test_title": "Monitoreo transaccional: motor, escenarios y alertas",
+      "test_weight": "0.6000",
+      "is_key": true,
+      "evidence_id": "d7a01478-432d-4498-be39-5f09b805d0d1",
+      "evidence_type": "OPERATIONAL",
+      "evidence_name": "Muestra de alertas",
+      "required": true,
+      "min_quantity": 3,
+      "window_days": 90
+    }
+  ],
+  "D": [
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "audit_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "domain_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "obligation_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "assessment_method",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "design_effectiveness",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "operating_effectiveness",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "notes",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "created_by",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation",
+      "column_name": "updated_by",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "audit_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "domain_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "obligation_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "assessment_method",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "design_effectiveness",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "operating_effectiveness",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "notes",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "created_by",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "audit",
+      "table_name": "audit_evaluation_draft",
+      "column_name": "updated_by",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "dimension",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "is_gate",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "min_dimension_score",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "evidence_required",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "evidence_min_spec",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "is_active",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "effective_from",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "effective_to",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "framework_version_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__borrame-controltest_dimension_model",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "code",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "name",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "method",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "expected_result",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "evidence_type",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "description",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "status_id",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "method_id",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "expected_artifacts",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "severity_if_fail",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test",
+      "column_name": "automation_compatibility",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "test_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "framework_version_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "version",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "title",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "objective",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "steps",
+      "data_type": "jsonb"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "procedure_text",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "expected_artifacts",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "parameters_schema",
+      "data_type": "jsonb"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "owner_role",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "status_id",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "approved_by",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "approved_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "effective_from",
+      "data_type": "date"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "effective_to",
+      "data_type": "date"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "__old-corpus_test_control_procedure",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_assessment_draft",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "assessment_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "period_start",
+      "data_type": "date"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "period_end",
+      "data_type": "date"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "status_id",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "notes",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "created_by",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "audit_evaluation",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "code",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "name",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "control_type_id",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "automation_id",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "frequency_id",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "description",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "owner_role",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "evidence_required",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "status_id",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "control_objective",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "control_scope",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "is_hard_gate",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "rationale",
+      "data_type": "jsonb"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control",
+      "column_name": "primary_cf_risk_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control_dimension_model",
+      "column_name": "dimension",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control_dimension_model",
+      "column_name": "weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control_dimension_model",
+      "column_name": "is_gate",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "control_dimension_model",
+      "column_name": "min_dimension_score",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "control_dimension_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "test_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "test_weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "is_key",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "expected_frequency",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "automation_method",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "automation_ref",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "severity",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "is_active",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "effective_from",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "effective_to",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "framework_version_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_dimension_test",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "evidence_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "authority_level",
+      "data_type": "character varying"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "source_proximity",
+      "data_type": "character varying"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "independence_level",
+      "data_type": "character varying"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "tamper_resistance",
+      "data_type": "character varying"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "reproducibility_level",
+      "data_type": "character varying"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "primary_usage",
+      "data_type": "character varying"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "corroboration_required",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "default_weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "rationale",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "is_active",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "effective_from",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "effective_to",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_authority",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "evidence_type",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "name",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "spec_schema",
+      "data_type": "jsonb"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "code",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "description",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "validation_method",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_evidence_catalog",
+      "column_name": "is_automatable",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "control_name",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "dimension",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "dimension_weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "test_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "test_code",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "test_title",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "test_weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "is_key",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "evidence_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "evidence_type",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "evidence_name",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "required",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "min_quantity",
+      "data_type": "integer"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_graph_view",
+      "column_name": "window_days",
+      "data_type": "integer"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "control_dimension_test_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "evidence_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "required",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "min_quantity",
+      "data_type": "integer"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "window_days",
+      "data_type": "integer"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "acceptance_notes",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_required_evidence",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "code",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "title",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "objective",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "procedure_text",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "parameters_schema",
+      "data_type": "jsonb"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "owner_role",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "framework_version_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "effective_from",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "effective_to",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "controltest_test_catalog",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "domain",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "framework_source",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "framework_version",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "jurisdiction",
+      "column_name": "status",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "obligation_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "satisfaction_mode",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "evidence_required",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "min_coverage_threshold",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "regulator_acceptance",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "max_usable_coverage",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "role_in_satisfaction",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "is_primary",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "is_mandatory",
+      "data_type": "boolean"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "aggregation_group",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "sequence_order",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "dependency_rule",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "coverage_weight",
+      "data_type": "numeric"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_obligation_control",
+      "column_name": "rationale",
+      "data_type": "jsonb"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_risk_control",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_risk_control",
+      "column_name": "risk_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_risk_control",
+      "column_name": "mitigation_strength",
+      "data_type": "smallint"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_risk_control",
+      "column_name": "framework_version_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_risk_control",
+      "column_name": "effect_type",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_risk_control",
+      "column_name": "rationale",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "map_risk_control",
+      "column_name": "coverage_notes",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "obligation",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "obligation_mapping_remediation",
+      "column_name": "status",
+      "data_type": "text"
+    },
+    {
+      "b": "D",
+      "table_schema": "corpus",
+      "table_name": "risk",
+      "column_name": "status",
+      "data_type": "text"
+    }
+  ],
+  "E": [
+    {
+      "b": "E",
+      "ordinal_position": "1",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "10",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "11",
+      "column_name": "created_by",
+      "data_type": "uuid"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "12",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "13",
+      "column_name": "updated_by",
+      "data_type": "uuid"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "2",
+      "column_name": "audit_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "3",
+      "column_name": "domain_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "4",
+      "column_name": "obligation_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "5",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "6",
+      "column_name": "assessment_method",
+      "data_type": "text"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "7",
+      "column_name": "design_effectiveness",
+      "data_type": "numeric"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "8",
+      "column_name": "operating_effectiveness",
+      "data_type": "numeric"
+    },
+    {
+      "b": "E",
+      "ordinal_position": "9",
+      "column_name": "notes",
+      "data_type": "text"
+    }
+  ],
+  "F": [],
+  "G": [
+    {
+      "b": "G",
+      "ordinal_position": "1",
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "10",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "11",
+      "column_name": "created_by",
+      "data_type": "uuid"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "12",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "13",
+      "column_name": "updated_by",
+      "data_type": "uuid"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "2",
+      "column_name": "audit_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "3",
+      "column_name": "domain_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "4",
+      "column_name": "obligation_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "5",
+      "column_name": "control_id",
+      "data_type": "uuid"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "6",
+      "column_name": "assessment_method",
+      "data_type": "text"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "7",
+      "column_name": "design_effectiveness",
+      "data_type": "numeric"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "8",
+      "column_name": "operating_effectiveness",
+      "data_type": "numeric"
+    },
+    {
+      "b": "G",
+      "ordinal_position": "9",
+      "column_name": "notes",
+      "data_type": "text"
+    }
+  ],
+  "H": []
+}

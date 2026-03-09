@@ -1,0 +1,777 @@
+[
+  {
+    "report_section": "1. RESUMEN GENERAL",
+    "item_code": null,
+    "detail": "{\n    \"total_mappings\": 174,\n    \"duplicate_pairs\": 0,\n    \"total_obligations\": 72,\n    \"obligations_without_primary\": 67,\n    \"obligations_without_controls\": 0,\n    \"obligations_with_multiple_primary\": 0,\n    \"max_obligations_supported_by_one_control\": 8\n}"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_001",
+    "detail": "Adopción formal Programa AML | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_002",
+    "detail": "Aprobación por órgano administración | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_003",
+    "detail": "Versionado formal del Programa AML | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_004",
+    "detail": "Asignación recursos suficientes | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_005",
+    "detail": "Definición apetito riesgo AML | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_006",
+    "detail": "Supervisión periódica del programa | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_007",
+    "detail": "Programa AML consolidado grupo | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_008",
+    "detail": "Régimen disciplinario AML | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_009",
+    "detail": "Código ética con enforcement | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_010",
+    "detail": "Capacitación AML por rol | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_011",
+    "detail": "Evaluación efectividad capacitación | controls=1 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_012",
+    "detail": "Gestión centralizada hallazgos | controls=1 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_013",
+    "detail": "Gestión formal excepciones AML | controls=1 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_014",
+    "detail": "Gestión cambio con evaluación riesgo | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_015",
+    "detail": "Designación formal Oficial Cumplimiento | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_016",
+    "detail": "Independencia funcional OC | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_017",
+    "detail": "Acceso directo órgano administración | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_018",
+    "detail": "Acceso efectivo a datos AML | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_019",
+    "detail": "Facultad detener onboarding | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_020",
+    "detail": "Protección funcional OC | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_021",
+    "detail": "Continuidad operativa rol OC | controls=1 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_022",
+    "detail": "Gestión conflictos interés OC | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_023",
+    "detail": "Metodología RBA formal versionada | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_024",
+    "detail": "Evaluación institucional riesgo periódica | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_025",
+    "detail": "Segmentación clientes trazable | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_026",
+    "detail": "Evaluación riesgo productos | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_027",
+    "detail": "Evaluación riesgo canales | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_028",
+    "detail": "Evaluación riesgo jurisdiccional | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_029",
+    "detail": "Evaluación nuevos productos | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_030",
+    "detail": "Triggers riesgo→acción | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_031",
+    "detail": "Gobierno modelo y drift | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_032",
+    "detail": "Métricas concentración riesgo | controls=1 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_033",
+    "detail": "Identificación cliente previa onboarding | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_034",
+    "detail": "Verificación identidad cliente | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_035",
+    "detail": "Identificación beneficiario final | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_036",
+    "detail": "Verificación beneficiario final | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_037",
+    "detail": "Propósito y naturaleza relación | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_038",
+    "detail": "Perfil económico cliente | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_039",
+    "detail": "Fuente fondos por riesgo | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_040",
+    "detail": "EDD alto riesgo | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_041",
+    "detail": "Detección y clasificación PEP | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_042",
+    "detail": "Prohibición cuentas anónimas | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_043",
+    "detail": "Prohibición bancos pantalla | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_045",
+    "detail": "Mantenimiento KYC por triggers | controls=1 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_046",
+    "detail": "Tercerización CDD con controles | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_047",
+    "detail": "Screening listas sanciones | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_049",
+    "detail": "Congelamiento inmediato activos | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_051",
+    "detail": "Medidas reforzadas jurisdicción alto riesgo | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_052",
+    "detail": "Monitoreo transaccional basado riesgo | controls=4 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_054",
+    "detail": "Gestión alertas y casos trazable | controls=4 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_055",
+    "detail": "Investigación reproducible | controls=4 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_056",
+    "detail": "Decisión sospecha documentada | controls=4 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_057",
+    "detail": "Reporte ROS plazo legal | controls=5 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_058",
+    "detail": "Reporte ROS intentadas | controls=4 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_059",
+    "detail": "Reporte transacciones efectivo | controls=4 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_060",
+    "detail": "Prohibición tipping-off | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_061",
+    "detail": "Retroalimentación análisis a riesgo | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_062",
+    "detail": "Retención registros 10 años | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_063",
+    "detail": "Disponibilidad inmediata autoridades | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_064",
+    "detail": "Integridad e inalterabilidad información | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_065",
+    "detail": "Control acceso IAM AML | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_066",
+    "detail": "Logs auditoría sistemas AML | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_068",
+    "detail": "Respaldo y recuperación probada | controls=1 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_069",
+    "detail": "Atención requerimientos autoridad | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_070",
+    "detail": "Procedimientos cooperación legal | controls=3 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_071",
+    "detail": "Cumplimiento medidas correctivas supervisor | controls=2 | primary=0"
+  },
+  {
+    "report_section": "3. OBLIGACIONES SIN CONTROL PRIMARIO",
+    "item_code": "OB_072",
+    "detail": "Prohibición participación LA/FT | controls=2 | primary=0"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-EX-006",
+    "detail": "Metodología RBA institucional | obligations_supported=5"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-EX-007",
+    "detail": "Evaluación institucional de riesgo AML | obligations_supported=5"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-EX-014",
+    "detail": "Screening listas de sanciones | obligations_supported=5"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-EX-015",
+    "detail": "Conservación de registros AML | obligations_supported=4"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-002",
+    "detail": "Captura completa de expediente KYC | obligations_supported=8"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-003",
+    "detail": "Bloqueo expediente KYC incompleto | obligations_supported=4"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-010",
+    "detail": "Screening onboarding | obligations_supported=6"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-011",
+    "detail": "Screening periódico clientes | obligations_supported=4"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-014",
+    "detail": "Generación de alertas AML | obligations_supported=6"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-015",
+    "detail": "Investigación de alertas AML | obligations_supported=5"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-016",
+    "detail": "Documentación de análisis AML | obligations_supported=4"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-017",
+    "detail": "Decisión sospecha/no sospecha | obligations_supported=4"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-OP-018",
+    "detail": "Workflow de gestión de casos | obligations_supported=8"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-ST-001",
+    "detail": "Gobernanza AML del directorio | obligations_supported=5"
+  },
+  {
+    "report_section": "6. CONCENTRACION DE CONTROLES (TOP 15)",
+    "item_code": "C-TE-005",
+    "detail": "Audit trail inmutable AML | obligations_supported=6"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_001",
+    "detail": "Adopción formal Programa AML | count=2 | C-EX-001 | C-ST-001 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_002",
+    "detail": "Aprobación por órgano administración | count=2 | C-ST-001 | C-ST-002 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_003",
+    "detail": "Versionado formal del Programa AML | count=2 | C-EX-002 | C-ST-008 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_004",
+    "detail": "Asignación recursos suficientes | count=2 | C-ST-001 {OVERSIGHT} | C-ST-003"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_005",
+    "detail": "Definición apetito riesgo AML | count=2 | C-EX-006 | C-ST-001 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_006",
+    "detail": "Supervisión periódica del programa | count=2 | C-ST-002 | C-ST-010 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_007",
+    "detail": "Programa AML consolidado grupo | count=2 | C-ST-001 {OVERSIGHT} | C-ST-013"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_008",
+    "detail": "Régimen disciplinario AML | count=2 | C-ST-006 {EVIDENCE} | C-ST-007"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_009",
+    "detail": "Código ética con enforcement | count=2 | C-ST-006 | C-ST-007 {CORRECTIVE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_010",
+    "detail": "Capacitación AML por rol | count=2 | C-ST-005 | C-ST-007 {CORRECTIVE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_011",
+    "detail": "Evaluación efectividad capacitación | count=1 | C-ST-005"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_012",
+    "detail": "Gestión centralizada hallazgos | count=1 | C-ST-011"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_013",
+    "detail": "Gestión formal excepciones AML | count=1 | C-ST-014"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_014",
+    "detail": "Gestión cambio con evaluación riesgo | count=2 | C-ST-008 | C-ST-015 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_015",
+    "detail": "Designación formal Oficial Cumplimiento | count=2 | C-EX-003 | C-ST-004 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_016",
+    "detail": "Independencia funcional OC | count=2 | C-EX-004 | C-EX-005 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_017",
+    "detail": "Acceso directo órgano administración | count=2 | C-EX-005 | C-ST-002 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_018",
+    "detail": "Acceso efectivo a datos AML | count=3 | C-TE-006 | C-TE-007 | C-TE-008"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_019",
+    "detail": "Facultad detener onboarding | count=2 | C-EX-008 {EXECUTION} | C-OP-003"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_020",
+    "detail": "Protección funcional OC | count=2 | C-EX-005 {TRACEABILITY} | C-ST-004"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_021",
+    "detail": "Continuidad operativa rol OC | count=1 | C-ST-003"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_022",
+    "detail": "Gestión conflictos interés OC | count=2 | C-ST-009 | C-TE-002"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_023",
+    "detail": "Metodología RBA formal versionada | count=2 | C-EX-006 | C-ST-008 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_024",
+    "detail": "Evaluación institucional riesgo periódica | count=2 | C-EX-007 | C-OP-009 {EXECUTION}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_025",
+    "detail": "Segmentación clientes trazable | count=2 | C-EX-006 {OVERSIGHT} | C-OP-009"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_026",
+    "detail": "Evaluación riesgo productos | count=2 | C-EX-007 {OVERSIGHT} | C-ST-015"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_027",
+    "detail": "Evaluación riesgo canales | count=2 | C-EX-007 | C-ST-015 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_028",
+    "detail": "Evaluación riesgo jurisdiccional | count=2 | C-EX-006 {OVERSIGHT} | C-EX-007"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_029",
+    "detail": "Evaluación nuevos productos | count=2 | C-EX-007 {OVERSIGHT} | C-ST-015"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_030",
+    "detail": "Triggers riesgo→acción | count=2 | C-EX-006 | C-OP-014 {EXECUTION}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_031",
+    "detail": "Gobierno modelo y drift | count=3 | C-TE-009 | C-TE-010 | C-TE-012"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_032",
+    "detail": "Métricas concentración riesgo | count=1 | C-ST-010"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_033",
+    "detail": "Identificación cliente previa onboarding | count=3 | C-EX-008 | C-OP-001 {EXECUTION} | C-OP-002 {EVIDENCE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_034",
+    "detail": "Verificación identidad cliente | count=3 | C-OP-001 | C-OP-002 {EVIDENCE} | C-OP-003 {HARD_GATE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_035",
+    "detail": "Identificación beneficiario final | count=2 | C-EX-009 | C-OP-002 {EVIDENCE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_036",
+    "detail": "Verificación beneficiario final | count=2 | C-OP-002 {EVIDENCE} | C-OP-009"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_037",
+    "detail": "Propósito y naturaleza relación | count=2 | C-OP-002 {EVIDENCE} | C-OP-004"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_038",
+    "detail": "Perfil económico cliente | count=2 | C-OP-002 {EVIDENCE} | C-OP-005"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_039",
+    "detail": "Fuente fondos por riesgo | count=2 | C-OP-007 | C-OP-008 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_040",
+    "detail": "EDD alto riesgo | count=2 | C-OP-007 | C-OP-008 {HARD_GATE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_041",
+    "detail": "Detección y clasificación PEP | count=2 | C-OP-008 | C-OP-010 {DETECTIVE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_042",
+    "detail": "Prohibición cuentas anónimas | count=2 | C-EX-010 | C-OP-003 {HARD_GATE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_043",
+    "detail": "Prohibición bancos pantalla | count=2 | C-EX-011 | C-EX-018 {OVERSIGHT}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_044",
+    "detail": "No relación sin CDD completa | count=4 | C-EX-008 [PRIMARY] {PRIMARY} | C-OP-001 {EXECUTION} | C-OP-002 {EVIDENCE} | C-OP-003"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_045",
+    "detail": "Mantenimiento KYC por triggers | count=1 | C-OP-006"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_046",
+    "detail": "Tercerización CDD con controles | count=2 | C-EX-018 | C-OP-002"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_047",
+    "detail": "Screening listas sanciones | count=3 | C-EX-014 | C-OP-010 {EXECUTION} | C-OP-011 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_048",
+    "detail": "Gestión hit con cadena custodia | count=3 | C-EX-014 [PRIMARY] {PRIMARY} | C-OP-010 {EXECUTION} | C-OP-011"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_049",
+    "detail": "Congelamiento inmediato activos | count=3 | C-EX-014 | C-OP-010 {DETECTIVE} | C-OP-011 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_050",
+    "detail": "Bloqueo provisión fondos | count=4 | C-EX-012 | C-EX-014 [PRIMARY] {PRIMARY} | C-OP-010 {DETECTIVE} | C-OP-011 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_051",
+    "detail": "Medidas reforzadas jurisdicción alto riesgo | count=2 | C-OP-010 | C-OP-014"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_052",
+    "detail": "Monitoreo transaccional basado riesgo | count=4 | C-OP-012 | C-OP-013 {OVERSIGHT} | C-OP-014 {DETECTIVE} | C-OP-018 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_053",
+    "detail": "Cobertura monitoreo justificada | count=4 | C-OP-012 [PRIMARY] {PRIMARY} | C-OP-013 | C-OP-014 {TRACEABILITY} | C-OP-018 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_054",
+    "detail": "Gestión alertas y casos trazable | count=4 | C-OP-014 {EXECUTION} | C-OP-015 {DETECTIVE} | C-OP-016 {EVIDENCE} | C-OP-018"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_055",
+    "detail": "Investigación reproducible | count=4 | C-OP-015 | C-OP-016 {EVIDENCE} | C-OP-017 {CORRECTIVE} | C-OP-018 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_056",
+    "detail": "Decisión sospecha documentada | count=4 | C-OP-015 {DETECTIVE} | C-OP-016 {EVIDENCE} | C-OP-017 | C-OP-018 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_057",
+    "detail": "Reporte ROS plazo legal | count=5 | C-OP-015 {DETECTIVE} | C-OP-017 {EXECUTION} | C-OP-018 {TRACEABILITY} | C-OP-019 | C-OP-020 {EVIDENCE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_058",
+    "detail": "Reporte ROS intentadas | count=4 | C-OP-015 {DETECTIVE} | C-OP-017 {EXECUTION} | C-OP-018 {TRACEABILITY} | C-OP-019"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_059",
+    "detail": "Reporte transacciones efectivo | count=4 | C-EX-017 | C-OP-014 {DETECTIVE} | C-OP-018 {TRACEABILITY} | C-OP-020 {EVIDENCE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_060",
+    "detail": "Prohibición tipping-off | count=2 | C-OP-016 | C-ST-006 {EVIDENCE}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_061",
+    "detail": "Retroalimentación análisis a riesgo | count=2 | C-TE-011 | C-TE-013"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_062",
+    "detail": "Retención registros 10 años | count=3 | C-EX-015 | C-EX-016 {EVIDENCE} | C-TE-005 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_063",
+    "detail": "Disponibilidad inmediata autoridades | count=3 | C-EX-015 {EVIDENCE} | C-EX-016 | C-TE-005 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_064",
+    "detail": "Integridad e inalterabilidad información | count=3 | C-EX-015 {EVIDENCE} | C-TE-003 {EVIDENCE} | C-TE-005"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_065",
+    "detail": "Control acceso IAM AML | count=3 | C-TE-001 | C-TE-003 {EVIDENCE} | C-TE-005 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_066",
+    "detail": "Logs auditoría sistemas AML | count=3 | C-TE-003 | C-TE-004 {OVERSIGHT} | C-TE-005 {TRACEABILITY}"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_067",
+    "detail": "Seguridad información AML | count=3 | C-TE-001 [PRIMARY] {PRIMARY} | C-TE-005 {TRACEABILITY} | C-TE-014"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_068",
+    "detail": "Respaldo y recuperación probada | count=1 | C-TE-015"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_069",
+    "detail": "Atención requerimientos autoridad | count=3 | C-EX-013 | C-OP-020 | C-TE-004"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_070",
+    "detail": "Procedimientos cooperación legal | count=3 | C-EX-015 {TRACEABILITY} | C-EX-016 {EVIDENCE} | C-ST-013"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_071",
+    "detail": "Cumplimiento medidas correctivas supervisor | count=2 | C-ST-011 {TRACEABILITY} | C-ST-012"
+  },
+  {
+    "report_section": "7. ARQUITECTURA FINAL OBLIGACION -> CONTROLES",
+    "item_code": "OB_072",
+    "detail": "Prohibición participación LA/FT | count=2 | C-EX-012 | C-EX-014 {DETECTIVE}"
+  }
+]

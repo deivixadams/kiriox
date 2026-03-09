@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     const controlIds = unique(obligationControls.map((c) => c.control_id));
     const controls = await prisma.control.findMany({
       where: { id: { in: controlIds }, status: 'active' },
-      select: { id: true, code: true, name: true, is_hard_gate: true, evidence_required: true },
+      select: { id: true, code: true, name: true, description: true, is_hard_gate: true, evidence_required: true },
     });
 
     let riskControls = await prisma.map_risk_control.findMany({
@@ -97,7 +97,10 @@ export async function POST(request: Request) {
       select: { id: true, code: true, name: true, description: true, risk_layer_id: true },
     });
 
-    const riskMap = new Map(risks.map((r) => [r.id, r]));
+    const riskMap = new Map<
+      string,
+      { id: string; code: string; name: string; description: string | null; risk_layer_id: number }
+    >(risks.map((r) => [r.id, r]));
 
     const controlTests = await prisma.old_corpus_test_control_procedure.findMany({
       where: {
@@ -333,6 +336,7 @@ export async function POST(request: Request) {
         id: c.id,
         code: c.code,
         name: c.name,
+        description: c.description,
         score: c.selectorScore,
         rank: idx + 1,
         reasons: c.reasons,

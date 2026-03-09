@@ -112,7 +112,10 @@ export default function ScoreScopeStep({
             {selection?.controls.map((item) => (
               <label key={item.id} className={styles.optionRow}>
                 <input type="checkbox" checked readOnly disabled />
-                {item.name || item.code}
+                <span>
+                  <div className={styles.riskTitle}>{item.name || item.title || item.code}</div>
+                  <div className={styles.riskSubtitle}>{item.description || '—'}</div>
+                </span>
               </label>
             ))}
           </div>
