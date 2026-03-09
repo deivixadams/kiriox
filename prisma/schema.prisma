@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["catalogos", "corpus", "pendiente", "security", "score"]
+  schemas  = ["catalogos", "corpus", "pendiente", "security", "score", "params"]
 }
 
 model corpus_catalog_control_automation {
@@ -1179,118 +1179,6 @@ model corpus_obligation_source {
   @@schema("pendiente")
 }
 
-model corpus_param_change_log {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  param_id      String?        @db.Uuid
-  old_value     Decimal?       @db.Decimal
-  new_value     Decimal?       @db.Decimal
-  changed_by    String?        @db.Uuid
-  change_reason String?
-  change_type   String?        @db.VarChar(50)
-  created_at    DateTime?      @default(now()) @db.Timestamp(6)
-  corpus_params corpus_params? @relation(fields: [param_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("pendiente")
-}
-
-model corpus_param_profile_values {
-  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  profile_id            String?                @db.Uuid
-  param_id              String?                @db.Uuid
-  value                 Decimal                @db.Decimal
-  created_at            DateTime?              @default(now()) @db.Timestamp(6)
-  corpus_params         corpus_params?         @relation(fields: [param_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_param_profiles corpus_param_profiles? @relation(fields: [profile_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("pendiente")
-}
-
-model corpus_param_profiles {
-  id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id                   String                        @db.Uuid
-  profile_name                String                        @db.VarChar(255)
-  jurisdiction_id             String?                       @db.Uuid
-  version_number              Int?                          @default(1)
-  hash_snapshot               String?
-  status                      String?                       @default("draft") @db.VarChar(50)
-  created_at                  DateTime?                     @default(now()) @db.Timestamp(6)
-  approved_at                 DateTime?                     @db.Timestamp(6)
-  approved_by                 String?                       @db.Uuid
-  activated_at                DateTime?                     @db.Timestamp(6)
-  is_active                   Boolean?                      @default(false)
-  corpus_param_profile_values corpus_param_profile_values[]
-
-  @@schema("pendiente")
-}
-
-model corpus_parameter_obligation_weight {
-  parameter_set_id     String               @db.Uuid
-  obligation_id        String               @db.Uuid
-  weight               Decimal              @db.Decimal(10, 6)
-  obligation           obligation           @relation(fields: [obligation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_parameter_set corpus_parameter_set @relation(fields: [parameter_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([parameter_set_id, obligation_id])
-  @@schema("pendiente")
-}
-
-model corpus_parameter_set {
-  id                                 String                               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  framework_version_id               String                               @db.Uuid
-  version                            String
-  status_id                          Int                                  @db.SmallInt
-  hash                               String
-  approved_by                        String?
-  approved_at                        DateTime?                            @db.Timestamptz(6)
-  created_at                         DateTime                             @default(now()) @db.Timestamptz(6)
-  corpus_model_run                   corpus_model_run[]
-  corpus_parameter_obligation_weight corpus_parameter_obligation_weight[]
-  framework_version                  framework_version                    @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_catalog_status              corpus_catalog_status                @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  corpus_parameter_value             corpus_parameter_value[]
-
-  @@schema("pendiente")
-}
-
-model corpus_parameter_value {
-  parameter_set_id     String               @db.Uuid
-  key                  String
-  value                Json
-  notes                String?
-  corpus_parameter_set corpus_parameter_set @relation(fields: [parameter_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([parameter_set_id, key])
-  @@schema("pendiente")
-}
-
-model corpus_params {
-  id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id                   String                        @db.Uuid
-  param_code                  String                        @unique @db.VarChar(100)
-  param_name                  String                        @db.VarChar(255)
-  category                    String                        @db.VarChar(50)
-  description                 String
-  technical_description       String
-  default_value               Decimal                       @db.Decimal
-  configurable_value          Decimal                       @db.Decimal
-  min_allowed_value           Decimal                       @db.Decimal
-  max_allowed_value           Decimal                       @db.Decimal
-  requires_approval           Boolean?                      @default(true)
-  is_active                   Boolean?                      @default(true)
-  is_locked                   Boolean?                      @default(false)
-  version_number              Int?                          @default(1)
-  effective_from              DateTime?                     @default(now()) @db.Timestamp(6)
-  effective_to                DateTime?                     @db.Timestamp(6)
-  created_at                  DateTime?                     @default(now()) @db.Timestamp(6)
-  created_by                  String?                       @db.Uuid
-  updated_at                  DateTime?                     @default(now()) @db.Timestamp(6)
-  updated_by                  String?                       @db.Uuid
-  corpus_param_change_log     corpus_param_change_log[]
-  corpus_param_profile_values corpus_param_profile_values[]
-
-  @@schema("pendiente")
-}
-
 model corpus_risk_source {
   risk_id          String           @db.Uuid
   source_id        String           @db.Uuid
@@ -1490,9 +1378,27 @@ model run {
   run_risk          run_risk[]
   run_control       run_control[]
   run_test          run_test[]
+  run_result        run_result?
 
   @@index([company_id], map: "idx_score_run_company")
   @@index([framework_version_id], map: "idx_score_run_fv")
+  @@schema("score")
+}
+
+model run_result {
+  run_id          String   @id @db.Uuid
+  engine_version  String
+  score_total     Decimal? @db.Decimal(10, 4)
+  score_band      String?
+  e_base          Decimal? @db.Decimal(14, 6)
+  e_conc          Decimal? @db.Decimal(14, 6)
+  e_sys           Decimal? @db.Decimal(14, 6)
+  e_final         Decimal? @db.Decimal(14, 6)
+  result_payload  Json
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  run             run      @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
   @@schema("score")
 }
 
@@ -1606,4 +1512,229 @@ model run_test {
   @@id([run_id, test_id])
   @@index([test_id], map: "idx_score_run_test")
   @@schema("score")
+}
+
+model score_test_result_draft {
+  run_id            String   @db.Uuid
+  control_id        String   @db.Uuid
+  dimension         String
+  test_id           String   @db.Uuid
+  score             Decimal? @db.Decimal(6, 4)
+  passed            Boolean?
+  assessment_method String?
+  evaluator_notes   String?
+  reasons           Json?
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([run_id, control_id, dimension, test_id])
+  @@index([run_id], map: "idx_score_test_result_draft_run")
+  @@index([control_id], map: "idx_score_test_result_draft_control")
+  @@index([test_id], map: "idx_score_test_result_draft_test")
+  @@schema("score")
+}
+
+model score_test_result {
+  run_id            String   @db.Uuid
+  control_id        String   @db.Uuid
+  dimension         String
+  test_id           String   @db.Uuid
+  score             Decimal? @db.Decimal(6, 4)
+  passed            Boolean?
+  assessment_method String?
+  evaluator_notes   String?
+  reasons           Json?
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([run_id, control_id, dimension, test_id])
+  @@index([run_id], map: "idx_score_test_result_run")
+  @@index([control_id], map: "idx_score_test_result_control")
+  @@index([test_id], map: "idx_score_test_result_test")
+  @@schema("score")
+}
+
+model evidence_score_draft {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  run_id                String   @db.Uuid
+  control_id            String   @db.Uuid
+  dimension             String
+  test_id               String   @db.Uuid
+  storage_provider_code String
+  bucket                String?
+  object_key            String
+  logical_path          String?
+  sha256                String
+  file_name_original    String
+  mime_type             String?
+  size_bytes            BigInt?
+  uploaded_at           DateTime @default(now()) @db.Timestamptz(6)
+  uploaded_by           String?  @db.Uuid
+  caption               String?
+  is_sealed             Boolean  @default(false)
+
+  @@index([run_id], map: "idx_evidence_score_draft_run")
+  @@index([control_id], map: "idx_evidence_score_draft_control")
+  @@index([test_id], map: "idx_evidence_score_draft_test")
+  @@schema("score")
+}
+
+model evidence_score {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  run_id                String   @db.Uuid
+  control_id            String   @db.Uuid
+  dimension             String
+  test_id               String   @db.Uuid
+  storage_provider_code String
+  bucket                String?
+  object_key            String
+  logical_path          String?
+  sha256                String
+  file_name_original    String
+  mime_type             String?
+  size_bytes            BigInt?
+  uploaded_at           DateTime @default(now()) @db.Timestamptz(6)
+  uploaded_by           String?  @db.Uuid
+  caption               String?
+  is_sealed             Boolean  @default(false)
+
+  @@index([run_id], map: "idx_evidence_score_run")
+  @@index([control_id], map: "idx_evidence_score_control")
+  @@index([test_id], map: "idx_evidence_score_test")
+  @@schema("score")
+}
+
+model params_profile {
+  id                   String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                 String                           @unique
+  name                 String
+  description          String?
+  status_code          String                           @default("DRAFT")
+  scope_code           String                           @default("GLOBAL")
+  version_no           Int                              @default(1)
+  parent_profile_id    String?                          @db.Uuid
+  jurisdiction_id      String?                          @db.Uuid
+  framework_version_id String?                          @db.Uuid
+  company_id           String?                          @db.Uuid
+  is_official          Boolean                          @default(false)
+  is_default           Boolean                          @default(false)
+  is_locked            Boolean                          @default(false)
+  effective_from       DateTime                         @default(now()) @db.Timestamptz(6)
+  effective_to         DateTime?                        @db.Timestamptz(6)
+  rationale            String?
+  notes                Json?
+  parameters_hash      String?
+  submitted_at         DateTime?                        @db.Timestamptz(6)
+  approved_at          DateTime?                        @db.Timestamptz(6)
+  archived_at          DateTime?                        @db.Timestamptz(6)
+  created_at           DateTime                         @default(now()) @db.Timestamptz(6)
+  created_by           String?                          @db.Uuid
+  updated_at           DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_by           String?                          @db.Uuid
+  submitted_by         String?                          @db.Uuid
+  approved_by          String?                          @db.Uuid
+  archived_by          String?                          @db.Uuid
+  is_active            Boolean                          @default(false)
+  activated_at         DateTime?                        @db.Timestamp(6)
+  info                 Json?
+
+  values               params_profile_parameter_value[]
+
+  @@map("profile")
+  @@schema("params")
+}
+
+model params_parameter_definition {
+  id                    String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                  String                           @unique
+  name                  String
+  description           String?
+  group_code            String
+  data_type_code        String
+  applies_to_scope_code String?
+  engine_layer          String                           @default("OFFICIAL")
+  unit                  String?
+  sort_order            Int                              @default(0)
+  is_required           Boolean                          @default(true)
+  is_user_editable      Boolean                          @default(true)
+  is_system_managed     Boolean                          @default(false)
+  is_active             Boolean                          @default(true)
+  min_numeric           Decimal?                         @db.Decimal
+  max_numeric           Decimal?                         @db.Decimal
+  allowed_text_values   Json?
+  validation_schema     Json?
+  default_numeric       Decimal?                         @db.Decimal
+  default_boolean       Boolean?
+  default_text          String?
+  default_jsonb         Json?
+  created_at            DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                         @default(now()) @db.Timestamptz(6)
+  info                  Json?
+
+  values                params_profile_parameter_value[]
+
+  @@map("parameter_definition")
+  @@schema("params")
+}
+
+model params_profile_parameter_value {
+  id                      String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profile_id              String                      @db.Uuid
+  parameter_definition_id String                      @db.Uuid
+  source_code             String                      @default("DEFAULT")
+  rationale               String?
+  numeric_value           Decimal?                    @db.Decimal
+  boolean_value           Boolean?
+  text_value              String?
+  jsonb_value             Json?
+  created_at              DateTime                    @default(now()) @db.Timestamptz(6)
+  created_by              String?                     @db.Uuid
+  updated_at              DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_by              String?                     @db.Uuid
+  info                    String?                     @db.Text
+
+  profile                 params_profile              @relation(fields: [profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  definition              params_parameter_definition @relation(fields: [parameter_definition_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([profile_id, parameter_definition_id])
+  @@map("profile_parameter_value")
+  @@schema("params")
+}
+
+model corpus_parameter_set {
+  id                       String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  framework_version_id     String                            @db.Uuid
+  version                  String
+  status_id                Int                               @db.SmallInt
+  hash                     String
+  approved_by              String?
+  approved_at              DateTime?                         @db.Timestamptz(6)
+  created_at               DateTime                          @default(now()) @db.Timestamptz(6)
+  corpus_model_run         corpus_model_run[]
+  corpus_parameter_obligation_weight corpus_parameter_obligation_weight[]
+  framework_version        framework_version                 @relation(fields: [framework_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus_catalog_status    corpus_catalog_status             @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus_parameter_value   corpus_parameter_value[]
+
+  @@schema("pendiente")
+}
+
+model corpus_parameter_value {
+  parameter_set_id String               @db.Uuid
+  key              String
+  value            Json
+  notes            String?
+  corpus_parameter_set   corpus_parameter_set @relation(fields: [parameter_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([parameter_set_id, key])
+  @@schema("pendiente")
+}
+
+model corpus_parameter_obligation_weight {
+  parameter_set_id String               @db.Uuid
+  obligation_id    String               @db.Uuid
+  weight           Decimal              @db.Decimal(10, 6)
+  obligation       obligation           @relation(fields: [obligation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  corpus_parameter_set   corpus_parameter_set @relation(fields: [parameter_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([parameter_set_id, obligation_id])
+  @@schema("pendiente")
 }

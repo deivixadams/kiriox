@@ -44,6 +44,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body.parametros-gate .layout-wrapper > aside {
+  display: none !important;
+}
+
+body.parametros-gate .layout-wrapper > div > header {
+  display: none !important;
+}
+
+body.parametros-gate .content-inner {
+  padding: 0 !important;
+  max-width: none !important;
+}
+
+body.parametros-gate .main-content {
+  overflow: hidden;
+}
+
 select {
   color: var(--foreground);
   background-color: rgba(15, 23, 42, 0.9);
@@ -89,6 +106,7 @@ select option {
   border-radius: 12px;
   padding: 1.5rem;
 }
+
 
 /* Scrollbar */
 ::-webkit-scrollbar {
