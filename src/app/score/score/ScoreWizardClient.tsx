@@ -5,7 +5,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import WizardShell from '@/app/validacion/auditorias/nueva/_components/WizardShell';
 import ScoreScopeStep from './_components/ScoreScopeStep';
-import ScoreEvaluationDashboardStep from './_components/ScoreEvaluationDashboardStep';
+import ScoreControl4DStep from './_components/ScoreControl4DStep';
 import ScoreDomainControlsStep from './_components/ScoreDomainControlsStep';
 import ScoreControlEvaluationStep from './_components/ScoreControlEvaluationStep';
 import ScoreResultStep from './_components/ScoreResultStep';
@@ -17,19 +17,22 @@ const STEP_TITLES = [
   'Contexto y marco',
   'Alcance real',
   'Perfil de ponderacion',
-  'Evaluacion 3D',
+  'Evaluacion 4D',
   'Evidencia / Pruebas',
   'Motor y resultado',
   'Simulacion'
 ];
 
-const ENGINE_PROFILE = [
-  { label: 'Existencia', value: '35%', detail: 'Gate primario de presencia del control' },
-  { label: 'Formalizacion', value: '25%', detail: 'Diseno, politica, procedimiento y trazabilidad' },
-  { label: 'Operacion', value: '40%', detail: 'Desempeno observado en tests y evidencia' },
-  { label: 'Concentracion', value: 'alpha 0.35', detail: 'Penaliza exposicion acumulada por dominio' },
-  { label: 'Propagacion', value: 'eta 0.08', detail: 'Amplifica fragilidad estructural de controles raiz' },
-  { label: 'Curva final', value: 'gamma 0.06', detail: 'Mapea exposicion a score 0-100 no lineal' },
+const ENGINE_PROFILE_BASE = [
+  { key: 'w_D', label: 'Diseño', detail: 'Mide cuánto influye el diseño del control (política, estructura, alcance). Si baja, el motor asume controles frágiles desde el origen.' },
+  { key: 'w_F', label: 'Formalizacion', detail: 'Pondera la calidad documental y procedimental. Si baja, el score reduce la defensa porque no hay trazabilidad formal sólida.' },
+  { key: 'w_O', label: 'Operacion', detail: 'Da peso al funcionamiento real y continuo. Si baja, el motor interpreta que la ejecución práctica es débil aunque existan documentos.' },
+  { key: 'w_P', label: 'Pruebas', detail: 'Valor asignado a la verificación mediante pruebas. Si baja, las pruebas influyen menos y el sistema depende más de otros componentes.' },
+  { key: 'w_S', label: 'Evidencia', detail: 'Refuerza la evidencia válida y reciente. Si baja, la inspección se vuelve más riesgosa porque la defensa pierde sustento.' },
+  { key: 'alpha', label: 'Concentracion', detail: 'Penaliza exposición acumulada cuando los riesgos se concentran en pocos dominios. Mayor alpha significa castigo más fuerte.' },
+  { key: 'beta', label: 'Interdependencia', detail: 'Amplifica exposición cuando fallas en un dominio arrastran a otros. Mayor beta aumenta la fragilidad sistémica.' },
+  { key: 'gamma', label: 'Curva final', detail: 'Controla la no linealidad del score. Valores altos hacen que pequeños deterioros se amplifiquen en el resultado final.' },
+  { key: 'eta', label: 'Mezcla experto/grafo', detail: 'Balancea criterio experto vs estructura del grafo para dependencias. Más eta = más peso experto.' },
 ];
 
 type SelectionItem = {
@@ -68,6 +71,10 @@ export default function ScoreWizardClient() {
   const [draftId, setDraftId] = useState<string | null>(null);
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null);
   const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
+  const [controlEvaluations, setControlEvaluations] = useState<any[]>([]);
+  const [engineProfile, setEngineProfile] = useState(
+    ENGINE_PROFILE_BASE.map((item) => ({ ...item, value: '—' }))
+  );
 
   useEffect(() => {
     const today = new Date();
@@ -112,6 +119,61 @@ export default function ScoreWizardClient() {
 
   useEffect(() => {
     let alive = true;
+    const loadEngineProfile = async () => {
+      try {
+        const res = await fetch('/api/params/active');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!alive) return;
+        const params = data?.parameters || [];
+        const paramMap = new Map<string, number>(
+          params.map((p: any) => [p.code, typeof p.numeric_value === 'number' ? p.numeric_value : Number(p.numeric_value)])
+        );
+        setEngineProfile(
+          ENGINE_PROFILE_BASE.map((item) => {
+            const val = paramMap.get(item.key);
+            const formatted = Number.isFinite(val)
+              ? Number(val).toFixed(4).replace(/\.?0+$/, '')
+              : '—';
+            return {
+              ...item,
+              value: item.key.startsWith('w_') ? formatted : `${item.key} ${formatted}`,
+            };
+          })
+        );
+      } catch {
+        return;
+      }
+    };
+    loadEngineProfile();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (step !== 5 || !draftId || selectedDomainId) return;
+    let alive = true;
+    const loadFirstDomain = async () => {
+      try {
+        const res = await fetch(`/api/score/runs/${draftId}/domains`);
+        const data = await res.json();
+        if (!res.ok) return;
+        const domains = Array.isArray(data.domains) ? data.domains : [];
+        if (!alive || domains.length === 0) return;
+        setSelectedDomainId(domains[0].domainId || null);
+      } catch {
+        return;
+      }
+    };
+    loadFirstDomain();
+    return () => {
+      alive = false;
+    };
+  }, [step, draftId, selectedDomainId]);
+
+  useEffect(() => {
+    let alive = true;
     const loadCompanyContext = async () => {
       if (!selectedCompanyId) return;
       try {
@@ -139,7 +201,7 @@ export default function ScoreWizardClient() {
   const title = STEP_TITLES[step - 1] || 'Wizard';
 
   const handleSelection = async (mode: 'top20' | 'all') => {
-    if (!selectedCompanyId || !frameworkSourceId || !startDate || !endDate) {
+    if (!selectedCompanyId || !startDate || !endDate) {
       setSelectionError('Completa empresa y periodo antes de seleccionar.');
       return;
     }
@@ -257,7 +319,7 @@ export default function ScoreWizardClient() {
                 <p className={styles.subtitle}>Perfil vigente del motor CRE aplicado al resultado final.</p>
               </div>
               <div className={styles.grid}>
-                {ENGINE_PROFILE.map((item) => (
+                {engineProfile.map((item) => (
                   <div key={item.label} className={styles.card}>
                     <div className={styles.cardTitle}>{item.label}</div>
                     <div className={styles.domainCode}>{item.value}</div>
@@ -269,14 +331,13 @@ export default function ScoreWizardClient() {
           )}
 
           {step === 4 && (
-            <ScoreEvaluationDashboardStep
+            <ScoreControl4DStep
               runId={draftId}
-              onSelectDomain={(domainId) => {
-                setSelectedDomainId(domainId);
-                setStep(5);
-              }}
+              evaluations={controlEvaluations}
+              onChange={setControlEvaluations}
               onBack={() => setStep((s) => Math.max(1, s - 1))}
               onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+              onSave={() => {}}
             />
           )}
 

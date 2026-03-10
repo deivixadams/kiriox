@@ -599,6 +599,7 @@ model framework_version {
 
   @@unique([framework_id, version], map: "corpus_framework_version_framework_id_version_key")
   @@index([framework_id], map: "idx_corpus_framework_version_framework_id")
+  @@map("_Delete_framework_version")
   @@schema("corpus")
   score_run_draft run_draft[]
 

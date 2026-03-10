@@ -65,7 +65,7 @@ export default function ScoreScopeStep({
         </div>
         <div className={styles.tableActions}>
           <button type="button" className={styles.primaryButton} onClick={onSelectTop20} disabled={selectionLoading}>
-            Seleccionar Top 20%
+            Evaluar núcleo crítico
           </button>
           <button
             type="button"

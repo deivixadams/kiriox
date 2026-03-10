@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         FROM corpus.corpus.superintendence s
         JOIN corpus.jurisdiction j ON j.id = s.jurisdiction_id
         JOIN pendiente.corpus_framework f ON f.id = s.framework_id
-        JOIN corpus.framework_version v ON v.id = s.framework_version_id
+        JOIN corpus._Delete_framework_version v ON v.id = s.framework_version_id
         WHERE s.company_id = ${companyId}
           AND s.is_active = true
         LIMIT 1

@@ -24,15 +24,22 @@ export async function POST(request: Request) {
       draftId,
     } = body || {};
 
-    if (!companyId || !frameworkSourceId || !periodStart || !periodEnd || !mode) {
+    if (!companyId || !periodStart || !periodEnd || !mode) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const source = await prisma.framework_source.findUnique({
-      where: { id: frameworkSourceId },
-      select: { framework_version_id: true },
-    });
-    const frameworkVersionId = source?.framework_version_id || frameworkSourceId;
+    let frameworkVersionId = null as string | null;
+    if (frameworkSourceId) {
+      const source = await prisma.framework_source.findUnique({
+        where: { id: frameworkSourceId },
+        select: { framework_version_id: true },
+      });
+      frameworkVersionId = source?.framework_version_id || null;
+    }
+
+    if (!frameworkVersionId) {
+      return NextResponse.json({ error: 'framework_source_id invalido o sin version asociada' }, { status: 400 });
+    }
 
     const obligations = await prisma.obligation.findMany({
       where: {
@@ -274,11 +281,15 @@ export async function POST(request: Request) {
     const percentileIndex = Math.floor(controlScoresSorted.length * 0.2);
     const percentileThreshold = controlScoresSorted[percentileIndex]?.selectorScore ?? 0;
 
-    const selectedControls = mode === 'all'
+    const selectedControlsRaw = mode === 'all'
       ? controlScoresSorted
       : controlScoresSorted.filter((c) =>
           c.selectorScore >= percentileThreshold || c.reasons.includes('covers_multiple_obligations')
         ).slice(0, 15);
+
+    const selectedControls = [...selectedControlsRaw].sort((a, b) =>
+      String(a.code || '').localeCompare(String(b.code || ''), 'es', { sensitivity: 'base' })
+    );
 
     const selectedControlIdsFinal = new Set(selectedControls.map((c) => c.id));
 

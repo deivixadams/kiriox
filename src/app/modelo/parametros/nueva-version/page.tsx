@@ -32,6 +32,12 @@ type ParameterRow = {
     unit: string | null;
 };
 
+function toNumber(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+}
+
 const UNIT_LABELS: Record<string, string> = {
     alpha: 'Concentración',
     beta: 'Interdependencia',
@@ -204,7 +210,9 @@ export default async function NuevaVersionPage() {
                                         <tbody>
                                             {rows.map((param) => {
                                                 const info = extractInfo(param.info);
-                                                const defaultValue = param.numeric_value ?? param.default_numeric ?? null;
+                                                const defaultValue = toNumber(param.numeric_value ?? param.default_numeric);
+                                                const minValue = toNumber(param.min_numeric);
+                                                const maxValue = toNumber(param.max_numeric);
                                                 return (
                                                     <tr key={param.code}>
                                                         <td>
@@ -236,8 +244,8 @@ export default async function NuevaVersionPage() {
                                                             <ParamValueInput
                                                                 name={`param_${param.code}`}
                                                                 defaultValue={defaultValue}
-                                                                min={param.min_numeric !== null ? Number(param.min_numeric) : undefined}
-                                                                max={param.max_numeric !== null ? Number(param.max_numeric) : undefined}
+                                                                min={minValue ?? undefined}
+                                                                max={maxValue ?? undefined}
                                                                 required
                                                             />
                                                         </td>

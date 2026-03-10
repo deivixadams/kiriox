@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Prisma } from '@prisma/client';
-import ParametrosGate from './ParametrosGate';
 import styles from './ParametrosPage.module.css';
 
 type ActiveProfile = {
@@ -159,7 +158,6 @@ export default async function ParametrosPage() {
     }, {});
 
     return (
-        <ParametrosGate>
             <div className="animate-fade-in">
                 <div className="section-header">
                     <Link href="/admin" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--muted)', textDecoration: 'none', fontSize: '0.9rem', marginRight: '1rem' }}>
@@ -374,6 +372,5 @@ export default async function ParametrosPage() {
                     ))}
                 </div>
             </div>
-        </ParametrosGate>
     );
 }
