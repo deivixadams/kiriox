@@ -17,7 +17,7 @@ const STEP_TITLES = [
   'Contexto y marco',
   'Alcance real',
   'Perfil de ponderacion',
-  'Evaluacion 4D',
+  'Evaluacion 4 dimensiones del control | Existencia, diseño, formalización y operación por control.',
   'Evidencia / Pruebas',
   'Motor y resultado',
   'Simulacion'
@@ -59,6 +59,7 @@ export default function ScoreWizardClient() {
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [endDateAuto, setEndDateAuto] = useState(true);
   const [contextLoaded, setContextLoaded] = useState(false);
   const [scopeMode, setScopeMode] = useState<'top20' | 'all' | null>(null);
   const [jurisdictionName, setJurisdictionName] = useState('');
@@ -72,6 +73,7 @@ export default function ScoreWizardClient() {
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null);
   const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
   const [controlEvaluations, setControlEvaluations] = useState<any[]>([]);
+  const [controlStats, setControlStats] = useState<{ total: number; evaluated: number }>({ total: 0, evaluated: 0 });
   const [engineProfile, setEngineProfile] = useState(
     ENGINE_PROFILE_BASE.map((item) => ({ ...item, value: '—' }))
   );
@@ -83,6 +85,19 @@ export default function ScoreWizardClient() {
     const dd = String(today.getDate()).padStart(2, '0');
     setStartDate(`${yyyy}-${mm}-${dd}`);
   }, []);
+
+  useEffect(() => {
+    if (!startDate) return;
+    if (!endDateAuto) return;
+    const [y, m, d] = startDate.split('-').map(Number);
+    if (!y || !m || !d) return;
+    const base = new Date(y, m - 1, d);
+    base.setDate(base.getDate() + 10);
+    const yyyy = base.getFullYear();
+    const mm = String(base.getMonth() + 1).padStart(2, '0');
+    const dd = String(base.getDate()).padStart(2, '0');
+    setEndDate(`${yyyy}-${mm}-${dd}`);
+  }, [startDate, endDateAuto]);
 
   useEffect(() => {
     let alive = true;
@@ -133,11 +148,11 @@ export default function ScoreWizardClient() {
           ENGINE_PROFILE_BASE.map((item) => {
             const val = paramMap.get(item.key);
             const formatted = Number.isFinite(val)
-              ? Number(val).toFixed(4).replace(/\.?0+$/, '')
+              ? Number(val).toFixed(2)
               : '—';
             return {
               ...item,
-              value: item.key.startsWith('w_') ? formatted : `${item.key} ${formatted}`,
+              value: `${item.key.toUpperCase()} ${formatted}`,
             };
           })
         );
@@ -192,11 +207,15 @@ export default function ScoreWizardClient() {
     };
   }, [selectedCompanyId]);
 
-  const headerItems = useMemo(() => ([
-    { label: 'Jurisdiccion', value: jurisdictionName || '-' },
-    { label: 'Marco', value: frameworkName || '-' },
-    { label: 'Fuente', value: frameworkSourceLabel || '-' }
-  ]), [jurisdictionName, frameworkName, frameworkSourceLabel]);
+  const headerItems = useMemo(() => {
+    if (step !== 4) return [];
+    const total = controlStats.total;
+    const evaluated = controlStats.evaluated;
+    return [
+      { label: 'Total controles', value: String(total) },
+      { label: 'Evaluados', value: `${evaluated}/${total}` },
+    ];
+  }, [step, controlStats]);
 
   const title = STEP_TITLES[step - 1] || 'Wizard';
 
@@ -293,7 +312,10 @@ export default function ScoreWizardClient() {
                       type="date"
                       className={styles.input}
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setEndDateAuto(true);
+                      }}
                       onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
                     />
                   </div>
@@ -303,7 +325,10 @@ export default function ScoreWizardClient() {
                       type="date"
                       className={styles.input}
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setEndDateAuto(false);
+                      }}
                       onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
                     />
                   </div>
@@ -335,6 +360,7 @@ export default function ScoreWizardClient() {
               runId={draftId}
               evaluations={controlEvaluations}
               onChange={setControlEvaluations}
+              onStatsChange={setControlStats}
               onBack={() => setStep((s) => Math.max(1, s - 1))}
               onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
               onSave={() => {}}

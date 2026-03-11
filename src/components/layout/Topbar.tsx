@@ -71,7 +71,7 @@ export default function Topbar() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <ScopeSelector label="Leyes" value="155-17" />
+                    <ScopeSelector label="Jurisdiccion" value="Republica Dominicana" />
                     <ScopeSelector label="Empresa" value="Todas" />
                 </div>
             </div>

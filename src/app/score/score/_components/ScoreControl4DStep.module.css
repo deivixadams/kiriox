@@ -104,11 +104,46 @@
   font-size: 15px;
   font-weight: 800;
   color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.controlDesc {
+.controlCodeInline {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.15);
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.controlRow {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 12px;
   font-size: 12px;
-  color: #94a3b8;
+  color: #cbd5f5;
+}
+
+.controlLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #93c5fd;
+}
+
+.controlValue {
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+.controlValueFailure {
+  color: #fca5a5;
 }
 
 .statusDot {
@@ -256,8 +291,14 @@
 }
 
 .cardGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dimensionRow {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   gap: 14px;
 }
 
@@ -284,6 +325,51 @@
   color: #94a3b8;
 }
 
+.criteriaCard {
+  background: rgba(11, 18, 32, 0.85);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.08);
+}
+
+.criteriaTitle {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #bfdbfe;
+}
+
+.criteriaBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: #cbd5f5;
+  line-height: 1.5;
+}
+
+.criteriaLine {
+  padding-left: 12px;
+  position: relative;
+}
+
+.criteriaLine::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.6);
+}
+
+
 .statusGroup {
   display: flex;
   flex-wrap: wrap;
@@ -304,6 +390,8 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
   cursor: pointer;
+  min-width: 140px;
+  justify-content: center;
 }
 
 .statusActive {
@@ -404,6 +492,24 @@
   flex-wrap: wrap;
 }
 
+.evidenceButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.18);
+  color: #e0f2fe;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-width: 140px;
+}
+
 .uploadButton {
   display: inline-flex;
   align-items: center;
@@ -495,7 +601,7 @@
 }
 
 @media (max-width: 1100px) {
-  .cardGrid {
+  .dimensionRow {
     grid-template-columns: 1fr;
   }
 }

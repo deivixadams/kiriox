@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Sparkles, Upload, RotateCcw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import styles from './ScoreControl4DStep.module.css';
 
 type ControlItem = {
@@ -9,6 +9,7 @@ type ControlItem = {
   code: string;
   name: string;
   description?: string | null;
+  control_type_code?: string | null;
   evaluation_4d?: {
     dimensions: Record<DimensionKey, DimensionStatus>;
     notes: string;
@@ -29,6 +30,7 @@ type Props = {
   runId: string | null;
   evaluations: ControlEvaluation[];
   onChange: (next: ControlEvaluation[]) => void;
+  onStatsChange?: (stats: { total: number; evaluated: number }) => void;
   onBack: () => void;
   onNext: () => void;
   onSave: () => void;
@@ -36,15 +38,24 @@ type Props = {
 
 const DIMENSIONS: { key: DimensionKey; label: string; helper: string }[] = [
   { key: 'existencia', label: 'Existencia', helper: 'Existe el control de forma verificable.' },
-  { key: 'diseno', label: 'Diseño', helper: 'Diseño adecuado y alineado al riesgo.' },
   { key: 'formalizacion', label: 'Formalizacion', helper: 'Documentado, aprobado y vigente.' },
   { key: 'operacion', label: 'Operacion', helper: 'Funciona de forma consistente.' },
 ];
+
+const DIMENSION_KEY_MAP: Record<string, DimensionKey> = {
+  EXISTENCE: 'existencia',
+  DESIGN: 'diseno',
+  DISENO: 'diseno',
+  'DISEÑO': 'diseno',
+  FORMALIZATION: 'formalizacion',
+  OPERATION: 'operacion',
+};
 
 export default function ScoreControl4DStep({
   runId,
   evaluations,
   onChange,
+  onStatsChange,
   onBack,
   onNext,
   onSave,
@@ -53,8 +64,13 @@ export default function ScoreControl4DStep({
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [activeControlId, setActiveControlId] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [criteriaByDimension, setCriteriaByDimension] = useState<Record<DimensionKey, string[]>>({
+    existencia: [],
+    diseno: [],
+    formalizacion: [],
+    operacion: [],
+  });
+  const [criteriaLoading, setCriteriaLoading] = useState(false);
 
   useEffect(() => {
     if (!runId) return;
@@ -112,6 +128,58 @@ export default function ScoreControl4DStep({
     [controls, activeControlId]
   );
 
+  useEffect(() => {
+    if (!runId || !activeControlId) {
+      setCriteriaByDimension({
+        existencia: [],
+        diseno: [],
+        formalizacion: [],
+        operacion: [],
+      });
+      return;
+    }
+    let alive = true;
+    const loadCriteria = async () => {
+      setCriteriaLoading(true);
+      try {
+        const res = await fetch(`/api/score/runs/${runId}/controls/${activeControlId}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || 'No se pudo cargar criterios');
+        const next: Record<DimensionKey, string[]> = {
+          existencia: [],
+          diseno: [],
+          formalizacion: [],
+          operacion: [],
+        };
+        const criteria = data?.criteriaByDimension;
+        if (criteria && typeof criteria === 'object') {
+          Object.entries(criteria).forEach(([key, list]) => {
+            const mapped = DIMENSION_KEY_MAP[String(key).toUpperCase()];
+            if (!mapped) return;
+            next[mapped] = Array.isArray(list) ? list.map((v) => String(v)) : [];
+          });
+        }
+        if (!alive) return;
+        setCriteriaByDimension(next);
+      } catch {
+        if (alive) {
+          setCriteriaByDimension({
+            existencia: [],
+            diseno: [],
+            formalizacion: [],
+            operacion: [],
+          });
+        }
+      } finally {
+        if (alive) setCriteriaLoading(false);
+      }
+    };
+    loadCriteria();
+    return () => {
+      alive = false;
+    };
+  }, [runId, activeControlId]);
+
   const saveEvaluation = async (controlId: string, evaluation: ControlEvaluation) => {
     if (!runId) return;
     await fetch(`/api/score/runs/${runId}/controls/${controlId}/evaluation`, {
@@ -146,82 +214,6 @@ export default function ScoreControl4DStep({
     saveEvaluation(controlId, nextItem);
   };
 
-  const handleRefineNotes = async (control: ControlItem, notes: string) => {
-    if (!runId) return;
-    setAiLoading(true);
-    try {
-      const res = await fetch('/api/ai/control-notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          controlName: control.name,
-          text: notes,
-          howToEvaluate: '',
-          coverageNotes: '',
-          controlDescription: control.description || '',
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data?.text) {
-        updateEvaluation(control.id, { notes: data.text });
-      }
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const handleRefineDimensionNotes = async (
-    control: ControlItem,
-    dimension: DimensionKey,
-    notes: string
-  ) => {
-    if (!runId) return;
-    setAiLoading(true);
-    try {
-      const res = await fetch('/api/ai/control-notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          controlName: `${control.name} · ${dimension}`,
-          text: notes,
-          howToEvaluate: '',
-          coverageNotes: '',
-          controlDescription: control.description || '',
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data?.text) {
-        const existing = evalMap.get(control.id);
-        const nextNotes = {
-          existencia: existing?.dimensionNotes?.existencia || '',
-          diseno: existing?.dimensionNotes?.diseno || '',
-          formalizacion: existing?.dimensionNotes?.formalizacion || '',
-          operacion: existing?.dimensionNotes?.operacion || '',
-        };
-        nextNotes[dimension] = data.text;
-        updateEvaluation(control.id, { dimensionNotes: nextNotes });
-      }
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const handleUploadEvidence = async (control: ControlItem, file: File, dimension: string) => {
-    if (!runId) return;
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('run_id', runId);
-      formData.append('control_id', control.id);
-      formData.append('dimension', dimension);
-      formData.append('test_id', control.id);
-      const res = await fetch('/api/score/evidence/upload', { method: 'POST', body: formData });
-      if (!res.ok) return;
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const updateDimension = (controlId: string, key: DimensionKey, status: DimensionStatus) => {
     const existing = evalMap.get(controlId);
@@ -238,6 +230,21 @@ export default function ScoreControl4DStep({
   const evaluatedCount = useMemo(() => {
     return evaluations.filter((ev) => Object.values(ev.dimensions || {}).some((v) => v)).length;
   }, [evaluations]);
+
+  useEffect(() => {
+    if (!onStatsChange) return;
+    onStatsChange({ total: controls.length, evaluated: evaluatedCount });
+  }, [controls.length, evaluatedCount, onStatsChange]);
+
+  const allEvaluated = useMemo(() => {
+    if (!controls.length) return false;
+    return controls.every((control) => {
+      const evaluation = evalMap.get(control.id);
+      if (!evaluation) return false;
+      const requiredKeys = DIMENSIONS.map((dim) => dim.key);
+      return requiredKeys.every((key) => Boolean(evaluation.dimensions?.[key]));
+    });
+  }, [controls, evalMap]);
 
   if (!runId) {
     return (
@@ -262,13 +269,8 @@ export default function ScoreControl4DStep({
     <div className={styles.root}>
       <div className={styles.header}>
         <div className={styles.headerIntro}>
-          <h2 className={styles.title}>Evaluacion 4D de controles</h2>
-          <p className={styles.subtitle}>Califica existencia, diseño, formalización y operación por control.</p>
         </div>
-        <div className={styles.headerMeta}>
-          <span className={styles.metaPill}>Total controles: {controls.length}</span>
-          <span className={styles.metaPillMuted}>{evaluatedCount}/{controls.length}</span>
-        </div>
+        <div className={styles.headerMeta} />
       </div>
 
       <div className={styles.controlStrip}>
@@ -287,8 +289,50 @@ export default function ScoreControl4DStep({
               <div className={styles.controlCardHeader}>
                 {hasStatus && <span className={styles.statusDot} />}
               </div>
-              <div className={styles.controlName}>{activeControl.name}</div>
-              <div className={styles.controlDesc}>{activeControl.description || 'Sin descripcion registrada.'}</div>
+              <div className={styles.controlName}>
+                {activeControl.name}
+                {activeControl.control_type_code ? (
+                  <span className={styles.controlCodeInline}>{activeControl.control_type_code}</span>
+                ) : null}
+                {activeControl.code ? (
+                  <span className={styles.controlCodeInline}>{activeControl.code}</span>
+                ) : null}
+                {typeof activeControl.is_active === 'boolean' ? (
+                  <span className={styles.controlCodeInline}>
+                    {activeControl.is_active ? 'Activo' : 'Inactivo'}
+                  </span>
+                ) : null}
+              </div>
+              <div className={styles.controlRow}>
+                <span className={styles.controlLabel}>Descripcion</span>
+                <span className={styles.controlValue}>{activeControl.description || 'Sin descripcion registrada.'}</span>
+              </div>
+              {activeControl.control_objective && (
+                <div className={styles.controlRow}>
+                  <span className={styles.controlLabel}>Objetivo del control</span>
+                  <span className={styles.controlValue}>{activeControl.control_objective}</span>
+                </div>
+              )}
+              {activeControl.systemic_effect && (
+                <div className={styles.controlRow}>
+                  <span className={styles.controlLabel}>Systemic effect</span>
+                  <span className={styles.controlValue}>{activeControl.systemic_effect}</span>
+                </div>
+              )}
+              {activeControl.dependency_logic && (
+                <div className={styles.controlRow}>
+                  <span className={styles.controlLabel}>Dependency logic</span>
+                  <span className={styles.controlValue}>{activeControl.dependency_logic}</span>
+                </div>
+              )}
+              {activeControl.failure_mode && (
+                <div className={styles.controlRow}>
+                  <span className={styles.controlLabel}>Failure mode</span>
+                  <span className={`${styles.controlValue} ${styles.controlValueFailure}`}>
+                    {activeControl.failure_mode}
+                  </span>
+                </div>
+              )}
               <div className={styles.controlNavRow}>
                 <button
                   type="button"
@@ -333,45 +377,11 @@ export default function ScoreControl4DStep({
                   const current = evalMap.get(activeControl.id)?.dimensions?.[dimension.key] || '';
                   const dimensionNotes = evalMap.get(activeControl.id)?.dimensionNotes?.[dimension.key] || '';
                   return (
-                    <div key={dimension.key} className={styles.subCard}>
+                    <div key={dimension.key} className={styles.dimensionRow}>
+                      <div className={styles.subCard}>
                       <div className={styles.subCardTitle}>{dimension.label}</div>
                       <div className={styles.subCardBody}>{dimension.helper}</div>
-                      <div className={styles.statusGroup}>
-                        <button
-                          type="button"
-                          className={`${styles.statusButton} ${current === 'cumple' ? styles.statusActive : ''}`}
-                          onClick={() => updateDimension(activeControl.id, dimension.key, 'cumple')}
-                        >
-                          Cumple
-                        </button>
-                        <button
-                          type="button"
-                          className={`${styles.statusButton} ${current === 'parcial' ? styles.statusActive : ''}`}
-                          onClick={() => updateDimension(activeControl.id, dimension.key, 'parcial')}
-                        >
-                          Parcial
-                        </button>
-                        <button
-                          type="button"
-                          className={`${styles.statusButton} ${current === 'no_cumple' ? styles.statusActive : ''}`}
-                          onClick={() => updateDimension(activeControl.id, dimension.key, 'no_cumple')}
-                        >
-                          No cumple
-                        </button>
-                      </div>
                       <div className={styles.textBlock}>
-                        <div className={styles.textHeaderRow}>
-                          <label className={styles.textLabel}>Observacion del auditor</label>
-                          <button
-                            type="button"
-                            className={styles.aiButton}
-                            onClick={() => handleRefineDimensionNotes(activeControl, dimension.key, dimensionNotes)}
-                            disabled={aiLoading}
-                          >
-                            {aiLoading ? <span className={styles.aiSpinner} /> : <Sparkles className={styles.aiIcon} />}
-                            IA
-                          </button>
-                        </div>
                         <textarea
                           value={dimensionNotes}
                           onChange={(e) => {
@@ -385,26 +395,51 @@ export default function ScoreControl4DStep({
                             nextNotes[dimension.key] = e.target.value;
                             updateEvaluation(activeControl.id, { dimensionNotes: nextNotes });
                           }}
-                          placeholder={`Observaciones sobre ${dimension.label.toLowerCase()}...`}
                           className={styles.textarea}
-                          rows={3}
+                          rows={4}
                         />
-                        <div className={styles.actionRow}>
-                          <label className={styles.uploadButton}>
-                            <input
-                              type="file"
-                              className={styles.uploadInput}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                e.currentTarget.value = '';
-                                handleUploadEvidence(activeControl, file, dimension.label.toUpperCase());
-                              }}
-                              disabled={uploading}
-                            />
-                            <Upload className={styles.actionIcon} />
-                            {uploading ? 'Subiendo...' : 'Subir evidencia'}
-                          </label>
+                      </div>
+                      <div className={styles.actionRow}>
+                        <button type="button" className={styles.evidenceButton}>
+                          Cargar evidencia
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.statusButton} ${current === 'cumple' ? styles.statusActive : ''}`}
+                          onClick={() => updateDimension(activeControl.id, dimension.key, 'cumple')}
+                        >
+                          Cumple
+                        </button>
+                        {dimension.key !== 'existencia' && (
+                          <button
+                            type="button"
+                            className={`${styles.statusButton} ${current === 'parcial' ? styles.statusActive : ''}`}
+                            onClick={() => updateDimension(activeControl.id, dimension.key, 'parcial')}
+                          >
+                            Cumple parcial
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className={`${styles.statusButton} ${current === 'no_cumple' ? styles.statusActive : ''}`}
+                          onClick={() => updateDimension(activeControl.id, dimension.key, 'no_cumple')}
+                        >
+                          No cumple
+                        </button>
+                      </div>
+                      </div>
+                      <div className={styles.criteriaCard}>
+                        <div className={styles.criteriaTitle}>Como se evalua</div>
+                        <div className={styles.criteriaBody}>
+                          {criteriaLoading && (
+                            <div className={styles.criteriaLine}>Cargando criterios...</div>
+                          )}
+                          {!criteriaLoading && criteriaByDimension[dimension.key].length === 0 && (
+                            <div className={styles.criteriaLine}>Sin criterios registrados.</div>
+                          )}
+                          {!criteriaLoading && criteriaByDimension[dimension.key].map((item) => (
+                            <div key={item} className={styles.criteriaLine}>{item}</div>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -412,52 +447,6 @@ export default function ScoreControl4DStep({
                 })}
               </div>
 
-              <div className={styles.textBlock}>
-                <div className={styles.textHeaderRow}>
-                  <label className={styles.textLabel}>Observaciones adicionales</label>
-                  <button
-                    type="button"
-                    className={styles.aiButton}
-                    onClick={() => handleRefineNotes(activeControl, evalMap.get(activeControl.id)?.notes || '')}
-                    disabled={aiLoading}
-                  >
-                    {aiLoading ? <span className={styles.aiSpinner} /> : <Sparkles className={styles.aiIcon} />}
-                    IA
-                  </button>
-                </div>
-                <textarea
-                  value={evalMap.get(activeControl.id)?.notes || ''}
-                  onChange={(e) => updateEvaluation(activeControl.id, { notes: e.target.value })}
-                  placeholder="Notas sobre evidencia, hallazgos o contexto de este control."
-                  className={styles.textarea}
-                  rows={5}
-                />
-                <div className={styles.actionRow}>
-                  <label className={styles.uploadButton}>
-                    <input
-                      type="file"
-                      className={styles.uploadInput}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        e.currentTarget.value = '';
-                        handleUploadEvidence(activeControl, file);
-                      }}
-                      disabled={uploading}
-                    />
-                    <Upload className={styles.actionIcon} />
-                    {uploading ? 'Subiendo...' : 'Subir evidencia'}
-                  </label>
-                  <button
-                    type="button"
-                    className={styles.clearButton}
-                    onClick={() => updateEvaluation(activeControl.id, { notes: '' })}
-                  >
-                    <RotateCcw className={styles.actionIcon} />
-                    Limpiar contenido
-                  </button>
-                </div>
-              </div>
             </div>
           )}
       </section>
@@ -466,7 +455,9 @@ export default function ScoreControl4DStep({
         <div className={styles.footerActions}>
           <button className={styles.backButton} onClick={onBack}>Volver</button>
           <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
-          <button className={styles.primaryButton} onClick={onNext}>Continuar</button>
+          <button className={styles.primaryButton} onClick={onNext} disabled={!allEvaluated}>
+            Continuar
+          </button>
         </div>
       </div>
     </div>
