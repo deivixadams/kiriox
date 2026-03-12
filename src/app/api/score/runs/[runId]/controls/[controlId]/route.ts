@@ -30,17 +30,15 @@ export async function GET(
       return NextResponse.json({ error: 'Control not found' }, { status: 404 });
     }
 
-    const dimensionModel = await prisma.controltest_dimension_model.findMany({
-      select: {
-        dimension: true,
-        weight: true,
-        is_gate: true,
-        min_dimension_score: true,
-        evidence_required: true,
-        evidence_min_spec: true,
-      },
-      orderBy: { dimension: 'asc' },
-    });
+    const dimensionModel = await prisma.$queryRaw(Prisma.sql`
+      SELECT
+        dimension,
+        weight,
+        is_gate,
+        min_dimension_score
+      FROM corpus.control_dimension_model
+      ORDER BY dimension
+    `);
 
     const modelColumns = await prisma.$queryRaw<Array<{ column_name: string }>>(Prisma.sql`
       SELECT column_name
@@ -114,6 +112,34 @@ export async function GET(
       });
     }
 
+    const evaluatorRows = await prisma.$queryRaw(Prisma.sql`
+      SELECT
+        cdm.dimension,
+        cec.evaluator_steps
+      FROM corpus.control_evaluation_catalog cec
+      JOIN corpus.control_dimension_model cdm
+        ON cdm.id = cec.dimension_id
+      WHERE cec.control_id = ${controlId}::uuid
+        AND cec.is_active = true
+        AND (cec.effective_to IS NULL OR cec.effective_to > NOW())
+      ORDER BY cdm.dimension
+    `);
+
+    (evaluatorRows as any[]).forEach((row) => {
+      const dimension = String(row.dimension || '');
+      if (!criteriaByDimension[dimension]) criteriaByDimension[dimension] = [];
+      if (!row.evaluator_steps) return;
+      const steps = String(row.evaluator_steps)
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      steps.forEach((step) => {
+        if (!criteriaByDimension[dimension].includes(step)) {
+          criteriaByDimension[dimension].push(step);
+        }
+      });
+    });
+
     const tests = await prisma.$queryRaw(Prisma.sql`
       SELECT
         control_id,
@@ -137,10 +163,17 @@ export async function GET(
       where: { run_id: runId, control_id: controlId },
     });
 
-    const evidence = await prisma.evidence_score_draft.findMany({
-      where: { run_id: runId, control_id: controlId },
-      orderBy: { uploaded_at: 'desc' },
-    });
+    const evidenceTable = await prisma.$queryRaw<Array<{ rel: string | null }>>(Prisma.sql`
+      SELECT to_regclass('score.evidence_score_draft')::text AS rel
+    `);
+    const hasEvidenceTable = Boolean(evidenceTable[0]?.rel);
+
+    const evidence = hasEvidenceTable
+      ? await prisma.evidence_score_draft.findMany({
+          where: { run_id: runId, control_id: controlId },
+          orderBy: { uploaded_at: 'desc' },
+        })
+      : [];
 
     return NextResponse.json({
       runId,
