@@ -570,12 +570,6 @@
   height: 12px;
 }
 
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .backButton {
   background: transparent;
   border: none;
@@ -586,6 +580,21 @@
 }
 
 .footerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.footerNav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.footerRight {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -629,4 +638,8 @@
   .controlNavRow {
     grid-template-columns: 1fr;
   }
+}
+.footer {
+  display: flex;
+  align-items: center;
 }

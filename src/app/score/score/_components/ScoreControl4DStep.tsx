@@ -10,6 +10,7 @@ type ControlItem = {
   name: string;
   description?: string | null;
   control_type_code?: string | null;
+  required_test?: boolean | null;
   evaluation_4d?: {
     dimensions: Record<DimensionKey, DimensionStatus>;
     notes: string;
@@ -133,6 +134,27 @@ export default function ScoreControl4DStep({
     () => controls.find((control) => control.id === activeControlId) || null,
     [controls, activeControlId]
   );
+
+  const activeIndex = useMemo(() => {
+    if (!activeControlId) return -1;
+    return filteredControls.findIndex((control) => control.id === activeControlId);
+  }, [filteredControls, activeControlId]);
+
+  const prevControl = useMemo(() => {
+    if (activeIndex <= 0) return null;
+    return filteredControls[activeIndex - 1] || null;
+  }, [filteredControls, activeIndex]);
+
+  const nextControl = useMemo(() => {
+    if (activeIndex < 0 || activeIndex >= filteredControls.length - 1) return null;
+    return filteredControls[activeIndex + 1] || null;
+  }, [filteredControls, activeIndex]);
+
+  const activeHasStatus = useMemo(() => {
+    if (!activeControl) return false;
+    const evaluation = evalMap.get(activeControl.id);
+    return Boolean(evaluation && Object.values(evaluation.dimensions || {}).some((v) => v));
+  }, [activeControl, evalMap]);
 
   useEffect(() => {
     if (!runId || !activeControlId) {
@@ -268,7 +290,9 @@ export default function ScoreControl4DStep({
     return controls.every((control) => {
       const evaluation = evalMap.get(control.id);
       if (!evaluation) return false;
-      const requiredKeys = DIMENSIONS.map((dim) => dim.key);
+      const requiredKeys = DIMENSIONS
+        .filter((dim) => dim.key !== 'operacion' || control.required_test !== false)
+        .map((dim) => dim.key);
       return requiredKeys.every((key) => Boolean(evaluation.dimensions?.[key]));
     });
   }, [controls, evalMap]);
@@ -305,85 +329,57 @@ export default function ScoreControl4DStep({
         {!loading && filteredControls.length === 0 && (
           <div className={styles.empty}>No hay controles seleccionados.</div>
         )}
-        {!loading && activeControl && (() => {
-          const evaluation = evalMap.get(activeControl.id);
-          const hasStatus = evaluation && Object.values(evaluation.dimensions || {}).some((v) => v);
-          const currentIndex = filteredControls.findIndex((c) => c.id === activeControl.id);
-          const prev = currentIndex > 0 ? filteredControls[currentIndex - 1] : null;
-          const next = currentIndex >= 0 && currentIndex < filteredControls.length - 1 ? filteredControls[currentIndex + 1] : null;
-          return (
-            <div className={styles.controlStripCard}>
-              <div className={styles.controlCardHeader}>
-                {hasStatus && <span className={styles.statusDot} />}
-              </div>
-              <div className={styles.controlName}>
-                {activeControl.name}
-                {activeControl.control_type_code ? (
-                  <span className={styles.controlCodeInline}>{activeControl.control_type_code}</span>
-                ) : null}
-                {activeControl.code ? (
-                  <span className={styles.controlCodeInline}>{activeControl.code}</span>
-                ) : null}
-                {typeof activeControl.is_active === 'boolean' ? (
-                  <span className={styles.controlCodeInline}>
-                    {activeControl.is_active ? 'Activo' : 'Inactivo'}
-                  </span>
-                ) : null}
-              </div>
-              <div className={styles.controlRow}>
-                <span className={styles.controlLabel}>Descripcion</span>
-                <span className={styles.controlValue}>{activeControl.description || 'Sin descripcion registrada.'}</span>
-              </div>
-              {activeControl.control_objective && (
-                <div className={styles.controlRow}>
-                  <span className={styles.controlLabel}>Objetivo del control</span>
-                  <span className={styles.controlValue}>{activeControl.control_objective}</span>
-                </div>
-              )}
-              {activeControl.systemic_effect && (
-                <div className={styles.controlRow}>
-                  <span className={styles.controlLabel}>Systemic effect</span>
-                  <span className={styles.controlValue}>{activeControl.systemic_effect}</span>
-                </div>
-              )}
-              {activeControl.dependency_logic && (
-                <div className={styles.controlRow}>
-                  <span className={styles.controlLabel}>Dependency logic</span>
-                  <span className={styles.controlValue}>{activeControl.dependency_logic}</span>
-                </div>
-              )}
-              {activeControl.failure_mode && (
-                <div className={styles.controlRow}>
-                  <span className={styles.controlLabel}>Failure mode</span>
-                  <span className={`${styles.controlValue} ${styles.controlValueFailure}`}>
-                    {activeControl.failure_mode}
-                  </span>
-                </div>
-              )}
-              <div className={styles.controlNavRow}>
-                <button
-                  type="button"
-                  className={styles.controlNavButton}
-                  onClick={() => prev && setActiveControlId(prev.id)}
-                  disabled={!prev}
-                >
-                  Control anterior
-                </button>
-                <div className={styles.controlNavMeta}>
-                  Control {currentIndex + 1} de {filteredControls.length}
-                </div>
-                <button
-                  type="button"
-                  className={styles.controlNavButtonPrimary}
-                  onClick={() => next && setActiveControlId(next.id)}
-                  disabled={!next}
-                >
-                  Control siguiente
-                </button>
-              </div>
+        {!loading && activeControl && (
+          <div className={styles.controlStripCard}>
+            <div className={styles.controlCardHeader}>
+              {activeHasStatus && <span className={styles.statusDot} />}
             </div>
-          );
-        })()}
+            <div className={styles.controlName}>
+              {activeControl.name}
+              {activeControl.control_type_code ? (
+                <span className={styles.controlCodeInline}>{activeControl.control_type_code}</span>
+              ) : null}
+              {activeControl.code ? (
+                <span className={styles.controlCodeInline}>{activeControl.code}</span>
+              ) : null}
+              {typeof activeControl.is_active === 'boolean' ? (
+                <span className={styles.controlCodeInline}>
+                  {activeControl.is_active ? 'Activo' : 'Inactivo'}
+                </span>
+              ) : null}
+            </div>
+            <div className={styles.controlRow}>
+              <span className={styles.controlLabel}>Descripcion</span>
+              <span className={styles.controlValue}>{activeControl.description || 'Sin descripcion registrada.'}</span>
+            </div>
+            {activeControl.control_objective && (
+              <div className={styles.controlRow}>
+                <span className={styles.controlLabel}>Objetivo del control</span>
+                <span className={styles.controlValue}>{activeControl.control_objective}</span>
+              </div>
+            )}
+            {activeControl.systemic_effect && (
+              <div className={styles.controlRow}>
+                <span className={styles.controlLabel}>Systemic effect</span>
+                <span className={styles.controlValue}>{activeControl.systemic_effect}</span>
+              </div>
+            )}
+            {activeControl.dependency_logic && (
+              <div className={styles.controlRow}>
+                <span className={styles.controlLabel}>Dependency logic</span>
+                <span className={styles.controlValue}>{activeControl.dependency_logic}</span>
+              </div>
+            )}
+            {activeControl.failure_mode && (
+              <div className={styles.controlRow}>
+                <span className={styles.controlLabel}>Failure mode</span>
+                <span className={`${styles.controlValue} ${styles.controlValueFailure}`}>
+                  {activeControl.failure_mode}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <section className={styles.content}>
@@ -400,16 +396,19 @@ export default function ScoreControl4DStep({
           {activeControl && (
             <div className={styles.detailStack}>
               <div className={styles.cardGrid}>
-                {DIMENSIONS.map((dimension) => {
+                {(activeControl.required_test === false
+                  ? DIMENSIONS.filter((dim) => dim.key !== 'operacion')
+                  : DIMENSIONS
+                ).map((dimension) => {
                   const current = evalMap.get(activeControl.id)?.dimensions?.[dimension.key] || '';
                   const dimensionNotes = evalMap.get(activeControl.id)?.dimensionNotes?.[dimension.key] || '';
                   const hasTests = dimension.key === 'operacion'
-                    ? (dimensionTestCounts[dimension.key] || 0) > 0
+                    ? activeControl.required_test !== false
                     : true;
                   return (
                     <div key={dimension.key} className={styles.dimensionRow}>
                       <div
-                        className={`${styles.subCard} ${!hasTests ? styles.subCardDisabled : ''} ${dimension.key !== 'operacion' ? styles.subCardFull : ''}`}
+                        className={`${styles.subCard} ${!hasTests ? styles.subCardDisabled : ''}`}
                       >
                         <div className={styles.subCardTitle}>{dimension.label}</div>
                         <div className={styles.subCardBody}>{dimension.helper}</div>
@@ -464,22 +463,20 @@ export default function ScoreControl4DStep({
                           </button>
                         </div>
                       </div>
-                      {dimension.key === 'operacion' && (
-                        <div className={styles.criteriaCard}>
-                          <div className={styles.criteriaTitle}>Como se evalua</div>
-                          <div className={styles.criteriaBody}>
-                            {criteriaLoading && (
-                              <div className={styles.criteriaLine}>Cargando criterios...</div>
-                            )}
-                            {!criteriaLoading && criteriaByDimension[dimension.key].length === 0 && (
-                              <div className={styles.criteriaLine}>Sin criterios registrados.</div>
-                            )}
-                            {!criteriaLoading && criteriaByDimension[dimension.key].map((item) => (
-                              <div key={item} className={styles.criteriaLine}>{item}</div>
-                            ))}
-                          </div>
+                      <div className={styles.criteriaCard}>
+                        <div className={styles.criteriaTitle}>Como se evalua</div>
+                        <div className={styles.criteriaBody}>
+                          {criteriaLoading && (
+                            <div className={styles.criteriaLine}>Cargando criterios...</div>
+                          )}
+                          {!criteriaLoading && criteriaByDimension[dimension.key].length === 0 && (
+                            <div className={styles.criteriaLine}>Sin criterios registrados.</div>
+                          )}
+                          {!criteriaLoading && criteriaByDimension[dimension.key].map((item) => (
+                            <div key={item} className={styles.criteriaLine}>{item}</div>
+                          ))}
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -491,11 +488,34 @@ export default function ScoreControl4DStep({
 
       <div className={styles.footer}>
         <div className={styles.footerActions}>
-          <button className={styles.backButton} onClick={onBack}>Volver</button>
-          <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
-          <button className={styles.primaryButton} onClick={onNext} disabled={!allEvaluated}>
-            Continuar
-          </button>
+          <div className={styles.footerNav}>
+            <button
+              type="button"
+              className={styles.controlNavButton}
+              onClick={() => prevControl && setActiveControlId(prevControl.id)}
+              disabled={!prevControl}
+            >
+              Control anterior
+            </button>
+            <div className={styles.controlNavMeta}>
+              Control {activeIndex + 1} de {filteredControls.length}
+            </div>
+            <button
+              type="button"
+              className={styles.controlNavButtonPrimary}
+              onClick={() => nextControl && setActiveControlId(nextControl.id)}
+              disabled={!nextControl}
+            >
+              Control siguiente
+            </button>
+          </div>
+          <div className={styles.footerRight}>
+            <button className={styles.backButton} onClick={onBack}>Volver</button>
+            <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
+            <button className={styles.primaryButton} onClick={onNext} disabled={!allEvaluated}>
+              Continuar
+            </button>
+          </div>
         </div>
       </div>
     </div>
