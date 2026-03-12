@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo, useState } from 'react';
 import {
@@ -16,7 +16,46 @@ import Link from 'next/link';
 
 export default function AuditDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
-    const { data: assessments = [] } = useQuery({
+    const DUMMY_ASSESSMENTS = [
+        {
+            id: "ASMT-001",
+            name: "Evaluación Anual Prevención de Lavado 2025",
+            company: "Banco del Progreso S.A.",
+            framework: "Ley 155-17 Dominicana",
+            findings: 12,
+            readiness: 85,
+            status: "Finalizado"
+        },
+        {
+            id: "ASMT-002",
+            name: "Auditoría de Cumplimiento de Operaciones",
+            company: "Fiduciaria Nacional",
+            framework: "Estándar GAFI/FATF",
+            findings: 4,
+            readiness: 72,
+            status: "En Proceso"
+        },
+        {
+            id: "ASMT-003",
+            name: "Revisión de Debida Diligencia Intensificada",
+            company: "Seguros del Caribe",
+            framework: "Normativa Sector Seguros",
+            findings: 8,
+            readiness: 94,
+            status: "Finalizado"
+        },
+        {
+            id: "ASMT-004",
+            name: "Validación de Matriz de Riesgo Institucional",
+            company: "Cooperativa de Ahorros",
+            framework: "Regulación IDECOOP",
+            findings: 2,
+            readiness: 68,
+            status: "En Proceso"
+        }
+    ];
+
+    const { data: fetchedAssessments = [] } = useQuery({
         queryKey: ['audit-assessments'],
         queryFn: async () => {
             const res = await fetch('/api/audit/assessments');
@@ -24,6 +63,10 @@ export default function AuditDashboard() {
             return res.json();
         }
     });
+
+    const assessments = useMemo(() => {
+        return fetchedAssessments.length > 0 ? fetchedAssessments : DUMMY_ASSESSMENTS;
+    }, [fetchedAssessments]);
 
     const filteredAssessments = useMemo(() => {
         const term = searchQuery.trim().toLowerCase();
