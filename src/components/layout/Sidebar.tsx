@@ -44,21 +44,19 @@ const institutionalMenu: MenuSection[] = [
         title: "SCORE",
         items: [
             { icon: BarChart3, label: "Score", href: "/score/score", tooltip: "Resumen general del score." },
-            { icon: BarChart3, label: "Dashboard", href: "/score/dashboard", tooltip: "Vista ejecutiva unificada del score." },
             { icon: PlayCircle, label: "Motor", href: "/score/motor", tooltip: "Motor de calculo y ejecucion de corridas." },
-            { icon: Activity, label: "Simulacion", href: "/score/simulacion", tooltip: "Simulaciones del motor y escenarios." },
             { icon: Sigma, label: "Historico", href: "/score/historico", tooltip: "Historial de scores y corridas." },
         ]
     },
     {
         id: "validacion",
-        title: "VALIDACION",
+        title: "AUDITORÍA",
         items: [
+            { icon: ClipboardList, label: "Plan de auditoría", href: "/validacion/plan", tooltip: "Planificación estratégica de auditoría." },
+            { icon: Users, label: "Equipo de auditoría", href: "/validacion/equipo", tooltip: "Definición del equipo auditor y roles." },
             { icon: ClipboardList, label: "Auditorias", href: "/validacion/auditorias", tooltip: "Modulo de auditoria y validacion." },
-            { icon: CheckSquare, label: "Checklists", href: "/validacion/checklists", tooltip: "Listas de verificacion y seguimiento." },
-            { icon: ShieldCheck, label: "Pruebas", href: "/validacion/pruebas", tooltip: "Ejecucion de pruebas y resultados." },
-            { icon: ShieldCheck, label: "Evidencia", href: "/validacion/evidencia", tooltip: "Evidencia versionada y trazable." },
             { icon: AlertTriangle, label: "Hallazgos", href: "/validacion/hallazgos", tooltip: "Gestion de hallazgos." },
+            { icon: CheckSquare, label: "Checklists", href: "/validacion/checklists", tooltip: "Listas de verificacion y seguimiento." },
             { icon: Users, label: "Auditados", href: "/validacion/auditados", tooltip: "Entidades auditadas y monitoreadas." },
         ]
     },
@@ -149,6 +147,82 @@ export default function Sidebar() {
             </div>
 
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto', overflowX: 'hidden' }}>
+                <Link
+                    href="/score/dashboard"
+                    title="Vista ejecutiva unificada del score."
+                    className={`sidebar-link ${pathname === '/score/dashboard' ? 'active' : ''}`}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        padding: '0.7rem 0.75rem',
+                        borderRadius: '10px',
+                        color: pathname === '/score/dashboard' ? 'white' : 'var(--foreground)',
+                        textDecoration: 'none',
+                        transition: 'all 0.2s ease',
+                        fontSize: '0.85rem',
+                        background: pathname === '/score/dashboard' ? 'var(--primary-glow)' : 'transparent',
+                        position: 'relative'
+                    }}
+                >
+                    <BarChart3 size={18} color={pathname === '/score/dashboard' ? "white" : "var(--primary)"} />
+                    {!collapsed && <span>Dashboard</span>}
+                    {pathname === '/score/dashboard' && !collapsed && (
+                        <div style={{ position: 'absolute', right: '0.5rem', width: '4px', height: '12px', borderRadius: '4px', background: 'white' }} />
+                    )}
+                </Link>
+
+                <Link
+                    href="/score/simulacion"
+                    title="Simulaciones del motor y escenarios."
+                    className={`sidebar-link ${pathname === '/score/simulacion' ? 'active' : ''}`}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        padding: '0.7rem 0.75rem',
+                        borderRadius: '10px',
+                        color: pathname === '/score/simulacion' ? 'white' : 'var(--foreground)',
+                        textDecoration: 'none',
+                        transition: 'all 0.2s ease',
+                        fontSize: '0.85rem',
+                        background: pathname === '/score/simulacion' ? 'var(--primary-glow)' : 'transparent',
+                        position: 'relative'
+                    }}
+                >
+                    <Activity size={18} color={pathname === '/score/simulacion' ? "white" : "var(--primary)"} />
+                    {!collapsed && <span>Simulación</span>}
+                    {pathname === '/score/simulacion' && !collapsed && (
+                        <div style={{ position: 'absolute', right: '0.5rem', width: '4px', height: '12px', borderRadius: '4px', background: 'white' }} />
+                    )}
+                </Link>
+
+                <Link
+                    href="/validacion/pruebas"
+                    title="Ejecucion de pruebas y resultados."
+                    className={`sidebar-link ${pathname === '/validacion/pruebas' ? 'active' : ''}`}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        padding: '0.7rem 0.75rem',
+                        borderRadius: '10px',
+                        color: pathname === '/validacion/pruebas' ? 'white' : 'var(--foreground)',
+                        textDecoration: 'none',
+                        transition: 'all 0.2s ease',
+                        fontSize: '0.85rem',
+                        background: pathname === '/validacion/pruebas' ? 'var(--primary-glow)' : 'transparent',
+                        position: 'relative',
+                        marginBottom: '0.5rem'
+                    }}
+                >
+                    <ShieldCheck size={18} color={pathname === '/validacion/pruebas' ? "white" : "var(--primary)"} />
+                    {!collapsed && <span>Auditoría Continua</span>}
+                    {pathname === '/validacion/pruebas' && !collapsed && (
+                        <div style={{ position: 'absolute', right: '0.5rem', width: '4px', height: '12px', borderRadius: '4px', background: 'white' }} />
+                    )}
+                </Link>
+
                 {institutionalMenu.map((section) => (
                     <div key={section.id} style={{ marginBottom: '0.5rem' }}>
                         {!collapsed ? (
