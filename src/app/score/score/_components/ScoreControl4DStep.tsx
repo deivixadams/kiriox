@@ -285,18 +285,6 @@ export default function ScoreControl4DStep({
     onStatsChange({ total: controls.length, evaluated: evaluatedCount });
   }, [controls.length, evaluatedCount, onStatsChange]);
 
-  const allEvaluated = useMemo(() => {
-    if (!controls.length) return false;
-    return controls.every((control) => {
-      const evaluation = evalMap.get(control.id);
-      if (!evaluation) return false;
-      const requiredKeys = DIMENSIONS
-        .filter((dim) => dim.key !== 'operacion' || control.required_test !== false)
-        .map((dim) => dim.key);
-      return requiredKeys.every((key) => Boolean(evaluation.dimensions?.[key]));
-    });
-  }, [controls, evalMap]);
-
   if (!runId) {
     return (
       <div className={styles.root}>
@@ -512,7 +500,7 @@ export default function ScoreControl4DStep({
           <div className={styles.footerRight}>
             <button className={styles.backButton} onClick={onBack}>Volver</button>
             <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
-            <button className={styles.primaryButton} onClick={onNext} disabled={!allEvaluated}>
+            <button className={styles.primaryButton} onClick={onNext}>
               Continuar
             </button>
           </div>

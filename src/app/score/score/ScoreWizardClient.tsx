@@ -6,21 +6,23 @@ import { useRouter } from 'next/navigation';
 import WizardShell from '@/app/validacion/auditorias/nueva/_components/WizardShell';
 import ScoreScopeStep from './_components/ScoreScopeStep';
 import ScoreControl4DStep from './_components/ScoreControl4DStep';
+import ScoreSummaryStep from './_components/ScoreSummaryStep';
 import ScoreDomainControlsStep from './_components/ScoreDomainControlsStep';
 import ScoreControlEvaluationStep from './_components/ScoreControlEvaluationStep';
 import ScoreResultStep from './_components/ScoreResultStep';
 import styles from './ScoreWizardClient.module.css';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const STEP_TITLES = [
   'Contexto y marco',
   'Alcance real',
   'Perfil de ponderacion',
   'Evaluacion 4 dimensiones del control | Existencia, diseño, formalización y operación por control.',
+  'Score',
   'Evidencia / Pruebas',
-  'Motor y resultado',
-  'Simulacion'
+  'Evaluacion de control',
+  'Motor y resultado'
 ];
 
 const ENGINE_PROFILE_BASE = [
@@ -382,31 +384,39 @@ export default function ScoreWizardClient() {
           )}
 
           {step === 5 && (
+            <ScoreSummaryStep
+              runId={draftId}
+              onBack={() => setStep(4)}
+              onNext={() => setStep(6)}
+            />
+          )}
+
+          {step === 6 && (
             <ScoreDomainControlsStep
               runId={draftId}
               domainId={selectedDomainId}
               onSelectControl={(controlId) => {
                 setSelectedControlId(controlId);
-                setStep(6);
+                setStep(7);
               }}
-              onBack={() => setStep(4)}
+              onBack={() => setStep(5)}
               onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
             />
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <ScoreControlEvaluationStep
               runId={draftId}
               controlId={selectedControlId}
-              onBack={() => setStep(5)}
-              onNext={() => setStep(7)}
+              onBack={() => setStep(6)}
+              onNext={() => setStep(8)}
             />
           )}
 
-          {step === 7 && (
+          {step === 8 && (
             <ScoreResultStep
               runId={draftId}
-              onBack={() => setStep(6)}
+              onBack={() => setStep(7)}
             />
           )}
 
