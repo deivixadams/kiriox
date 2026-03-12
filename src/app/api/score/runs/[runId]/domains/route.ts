@@ -35,10 +35,10 @@ export async function GET(
           ON so.obligation_id = o.id
       ),
       domain_controls AS (
-        SELECT DISTINCT do.domain_id, moc.control_id
-        FROM domain_obligations do
+        SELECT DISTINCT dob.domain_id, moc.control_id
+        FROM domain_obligations dob
         JOIN corpus.map_obligation_control moc
-          ON moc.obligation_id = do.obligation_id
+          ON moc.obligation_id = dob.obligation_id
       ),
       control_eval AS (
         SELECT DISTINCT control_id
@@ -49,11 +49,11 @@ export async function GET(
         d.id AS domain_id,
         d.code AS domain_code,
         d.name AS domain_name,
-        COUNT(DISTINCT do.obligation_id) AS obligations,
+        COUNT(DISTINCT dob.obligation_id) AS obligations,
         COUNT(DISTINCT dc.control_id) AS controls,
         COUNT(DISTINCT ce.control_id) AS evaluated_controls
       FROM corpus.domain d
-      LEFT JOIN domain_obligations do ON do.domain_id = d.id
+      LEFT JOIN domain_obligations dob ON dob.domain_id = d.id
       LEFT JOIN domain_controls dc ON dc.domain_id = d.id
       LEFT JOIN control_eval ce ON ce.control_id = dc.control_id
       WHERE d.framework_version_id = ${run.framework_version_id}::uuid

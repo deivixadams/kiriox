@@ -7,12 +7,11 @@ import WizardShell from '@/app/validacion/auditorias/nueva/_components/WizardShe
 import ScoreScopeStep from './_components/ScoreScopeStep';
 import ScoreControl4DStep from './_components/ScoreControl4DStep';
 import ScoreSummaryStep from './_components/ScoreSummaryStep';
-import ScoreDomainControlsStep from './_components/ScoreDomainControlsStep';
-import ScoreControlEvaluationStep from './_components/ScoreControlEvaluationStep';
+import ScoreControlResultsStep from './_components/ScoreControlResultsStep';
 import ScoreResultStep from './_components/ScoreResultStep';
 import styles from './ScoreWizardClient.module.css';
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 7;
 
 const STEP_TITLES = [
   'Contexto y marco',
@@ -20,8 +19,7 @@ const STEP_TITLES = [
   'Perfil de ponderacion',
   'Evaluacion 4 dimensiones del control | Existencia, diseño, formalización y operación por control.',
   'Score',
-  'Evidencia / Pruebas',
-  'Evaluacion de control',
+  'Resultados de controles',
   'Motor y resultado'
 ];
 
@@ -72,8 +70,6 @@ export default function ScoreWizardClient() {
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
-  const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null);
-  const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
   const [controlEvaluations, setControlEvaluations] = useState<any[]>([]);
   const [controlStats, setControlStats] = useState<{ total: number; evaluated: number }>({ total: 0, evaluated: 0 });
   const [engineProfile, setEngineProfile] = useState(
@@ -168,27 +164,6 @@ export default function ScoreWizardClient() {
       alive = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (step !== 5 || !draftId || selectedDomainId) return;
-    let alive = true;
-    const loadFirstDomain = async () => {
-      try {
-        const res = await fetch(`/api/score/runs/${draftId}/domains`);
-        const data = await res.json();
-        if (!res.ok) return;
-        const domains = Array.isArray(data.domains) ? data.domains : [];
-        if (!alive || domains.length === 0) return;
-        setSelectedDomainId(domains[0].domainId || null);
-      } catch {
-        return;
-      }
-    };
-    loadFirstDomain();
-    return () => {
-      alive = false;
-    };
-  }, [step, draftId, selectedDomainId]);
 
   useEffect(() => {
     let alive = true;
@@ -392,31 +367,17 @@ export default function ScoreWizardClient() {
           )}
 
           {step === 6 && (
-            <ScoreDomainControlsStep
+            <ScoreControlResultsStep
               runId={draftId}
-              domainId={selectedDomainId}
-              onSelectControl={(controlId) => {
-                setSelectedControlId(controlId);
-                setStep(7);
-              }}
               onBack={() => setStep(5)}
-              onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+              onNext={() => setStep(7)}
             />
           )}
 
           {step === 7 && (
-            <ScoreControlEvaluationStep
-              runId={draftId}
-              controlId={selectedControlId}
-              onBack={() => setStep(6)}
-              onNext={() => setStep(8)}
-            />
-          )}
-
-          {step === 8 && (
             <ScoreResultStep
               runId={draftId}
-              onBack={() => setStep(7)}
+              onBack={() => setStep(6)}
             />
           )}
 

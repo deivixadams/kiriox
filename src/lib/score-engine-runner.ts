@@ -5,7 +5,7 @@ import {
   type CreScoreEngineInput,
   type CreScoreEngineOutput,
   type StructuralLevel,
-} from '../../XDATA/_GRAFO/score';
+} from './score-engine';
 
 const ENGINE_VERSION = 'cre-score-engine-v1';
 
