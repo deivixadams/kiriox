@@ -75,7 +75,7 @@ const institutionalMenu: MenuSection[] = [
         title: "INTELIGENCIA",
         items: [
             { icon: TrendingUp, label: "Tendencias", href: "/score/tendencias", tooltip: "Evolucion de score y senales." },
-            { icon: AlertTriangle, label: "Alertas", href: "/score/dashboard", tooltip: "Alertas e indicadores tempranos." },
+            { icon: AlertTriangle, label: "Alertas", href: "/score/alertas", tooltip: "Alertas e indicadores tempranos." },
         ]
     },
     {
