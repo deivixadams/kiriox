@@ -41,6 +41,133 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'framework_source_id invalido o sin version asociada' }, { status: 400 });
     }
 
+    if (mode === 'top20') {
+      const viewObligations = await prisma.$queryRaw(Prisma.sql`
+        SELECT DISTINCT obligation_id, obligation_code, obligation_title
+        FROM corpus._score_v_cre_structural_controls_explain_v1
+      `);
+
+      const viewRisks = await prisma.$queryRaw(Prisma.sql`
+        SELECT DISTINCT v.risk_id, v.risk_code, v.risk_title, r.description
+        FROM corpus._score_v_cre_structural_controls_explain_v1 v
+        LEFT JOIN corpus.risk r ON r.id = v.risk_id
+      `);
+
+      const viewControls = await prisma.$queryRaw(Prisma.sql`
+        SELECT DISTINCT v.control_id, v.control_code, c.name, c.description
+        FROM corpus._score_v_cre_structural_controls_explain_v1 v
+        LEFT JOIN corpus.control c ON c.id = v.control_id
+      `);
+
+      const viewPayload = {
+        obligations: (viewObligations as any[]).map((o, idx) => ({
+          id: o.obligation_id,
+          code: o.obligation_code,
+          title: o.obligation_title,
+          score: 0,
+          rank: idx + 1,
+          reasons: ['structural_view'],
+        })),
+        risks: (viewRisks as any[]).map((r, idx) => ({
+          id: r.risk_id,
+          code: r.risk_code,
+          name: r.risk_title,
+          description: r.description,
+          score: 0,
+          rank: idx + 1,
+          reasons: ['structural_view'],
+        })),
+        controls: (viewControls as any[]).map((c, idx) => ({
+          id: c.control_id,
+          code: c.control_code,
+          name: c.name,
+          description: c.description,
+          score: 0,
+          rank: idx + 1,
+          reasons: ['structural_view'],
+        })),
+        tests: [] as any[],
+      };
+
+      if (
+        viewPayload.obligations.length ||
+        viewPayload.risks.length ||
+        viewPayload.controls.length
+      ) {
+        const run = await prisma.$transaction(async (tx) => {
+          const runDraft = draftId
+            ? await tx.run_draft.update({
+                where: { id: draftId },
+                data: {
+                  company_id: companyId,
+                  framework_version_id: frameworkVersionId,
+                  period_start: new Date(periodStart),
+                  period_end: new Date(periodEnd),
+                  mode,
+                  updated_at: new Date(),
+                },
+              })
+            : await tx.run_draft.create({
+                data: {
+                  company_id: companyId,
+                  framework_version_id: frameworkVersionId,
+                  period_start: new Date(periodStart),
+                  period_end: new Date(periodEnd),
+                  mode,
+                },
+              });
+
+          await Promise.all([
+            tx.run_obligation_draft.deleteMany({ where: { run_id: runDraft.id } }),
+            tx.run_risk_draft.deleteMany({ where: { run_id: runDraft.id } }),
+            tx.run_control_draft.deleteMany({ where: { run_id: runDraft.id } }),
+            tx.run_test_draft.deleteMany({ where: { run_id: runDraft.id } }),
+          ]);
+
+          if (viewPayload.obligations.length) {
+            await tx.run_obligation_draft.createMany({
+              data: viewPayload.obligations.map((o) => ({
+                run_id: runDraft.id,
+                obligation_id: o.id,
+                score: o.score,
+                rank: o.rank,
+                reasons: o.reasons,
+              })),
+            });
+          }
+          if (viewPayload.risks.length) {
+            await tx.run_risk_draft.createMany({
+              data: viewPayload.risks.map((r) => ({
+                run_id: runDraft.id,
+                risk_id: r.id,
+                score: r.score,
+                rank: r.rank,
+                reasons: r.reasons,
+              })),
+            });
+          }
+          if (viewPayload.controls.length) {
+            await tx.run_control_draft.createMany({
+              data: viewPayload.controls.map((c) => ({
+                run_id: runDraft.id,
+                control_id: c.id,
+                score: c.score,
+                rank: c.rank,
+                reasons: c.reasons,
+              })),
+            });
+          }
+
+          return runDraft;
+        });
+
+        return NextResponse.json({
+          draftId: run.id,
+          selection: viewPayload,
+        });
+      }
+    }
+
     const obligations = await prisma.obligation.findMany({
       where: {
         status: 'active',

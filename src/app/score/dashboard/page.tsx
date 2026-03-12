@@ -1,529 +1,477 @@
-import {
-    Activity,
-    AlertTriangle,
-    BarChart3,
-    CheckCircle2,
-    ClipboardList,
-    Database,
-    Shield,
-    TrendingDown,
-    TrendingUp
-} from "lucide-react";
+import { Prisma } from '@prisma/client';
+import styles from './page.module.css';
 
-export default function ScoreDashboardPage() {
-    const card = "rounded-xl bg-[#111A2E] ring-1 ring-white/5 shadow-[0_6px_20px_rgba(0,0,0,0.35)]";
-    const cardHover = "transition duration-200 ease-out hover:bg-[#16223B]";
-    const cardPad = "p-6";
+type Row = Record<string, any>;
 
-    const pageHeader = "flex items-end justify-between gap-3";
-    const sectionBlock = "space-y-8";
-    const sectionHeader = "flex items-end justify-between gap-3";
-    const sectionHeaderStyle = { marginBottom: "2.5rem" as const };
-    const panelBlock = "space-y-6";
-    const panelHeader = "flex items-center justify-between gap-3";
-    const sectionInfo = "space-y-1";
-    const sectionTitle = "text-sm font-semibold text-[#F1F5F9]";
-    const sectionHint = "text-xs text-[#94A3B8]";
-    const sectionAction = "text-xs text-[#3B82F6] hover:text-[#60A5FA] transition";
+function formatValue(value: any) {
+  if (value === null || value === undefined) return '—';
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === 'number') {
+    if (Number.isInteger(value)) return value.toString();
+    return value.toFixed(2);
+  }
+  return String(value);
+}
 
-    // KPI Card - Dark theme with new layout format
-    const statCardWrap = "rounded-2xl p-8 flex flex-col relative overflow-hidden min-h-[220px] bg-[#111A2E] ring-1 ring-white/5 shadow-lg transition hover:bg-[#16223B]";
-    const statIconWrap = "absolute top-6 right-6 h-12 w-12 flex items-center justify-center opacity-10";
-    const statIcon = "h-10 w-10 text-[#3B82F6]";
-    const statLabel = "text-[14px] font-bold uppercase tracking-[0.1em] text-[#3B82F6]";
-    const statValue = "mt-4 text-[52px] font-bold text-[#F1F5F9] tabular-nums leading-none";
-    const statMetaWrap = "mt-auto flex items-end justify-between w-full";
-    const statTrend = "flex items-center gap-1.5 text-[14px] text-[#94A3B8] font-medium";
-    const statTrendIcon = "h-4 w-4 text-[#10B981]";
-    const statGraph = "w-24 h-10";
+function safeNumber(value: any) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
 
-    const heroWrap = `${card} ${cardPad} grid grid-cols-12 gap-5`;
-    const heroLeft = "col-span-12 lg:col-span-7";
-    const heroRight = "col-span-12 lg:col-span-5 flex items-center justify-end";
-    const heroEyebrow = "text-[11px] uppercase tracking-[0.08em] text-[#94A3B8]";
-    const heroTitle = "mt-1 text-xl font-semibold text-[#F1F5F9]";
-    const heroSubtitle = "mt-1 text-sm text-[#94A3B8] leading-relaxed";
-    const scoreLabel = "text-[11px] uppercase tracking-[0.08em] text-[#94A3B8] text-right";
-    const scoreValueBase = "mt-1 text-6xl font-bold tabular-nums text-right drop-shadow-[0_0_12px_rgba(59,130,246,0.15)]";
-    const scoreSuccess = "text-[#10B981]";
-    const scoreWarning = "text-[#F59E0B]";
-    const scoreDanger = "text-[#EF4444]";
-    const scoreCritical = "text-[#DC2626]";
-    const scorePill = "mt-3 inline-flex items-center gap-2 rounded-md bg-white/5 ring-1 ring-white/10 px-3 py-1 text-xs text-[#F1F5F9]";
+function findKey(columns: string[], candidates: string[]) {
+  const lower = columns.map((c) => c.toLowerCase());
+  for (const candidate of candidates) {
+    const idx = lower.findIndex((c) => c === candidate.toLowerCase());
+    if (idx >= 0) return columns[idx];
+  }
+  for (const candidate of candidates) {
+    const idx = lower.findIndex((c) => c.includes(candidate.toLowerCase()));
+    if (idx >= 0) return columns[idx];
+  }
+  return '';
+}
 
-    const trendWrap = `${card} ${cardPad} min-h-[220px]`;
-    const trendHeader = "flex items-center justify-between";
-    const trendTitle = "text-sm font-semibold text-[#F1F5F9]";
-    const trendMeta = "text-xs text-[#94A3B8] tabular-nums";
-    const trendCanvas = "mt-4 h-[140px] rounded-lg bg-[#0B1220] ring-1 ring-white/5";
+function buildColumns(rows: Row[]) {
+  if (!rows.length) return [];
+  return Object.keys(rows[0]);
+}
 
-    const tableWrap = `${card} overflow-hidden`;
-    const tableHeader = "bg-[#16223B] px-5 py-4 flex items-center justify-between";
-    const tableTitle = "text-sm font-semibold text-[#F1F5F9]";
-    const tableSub = "text-xs text-[#94A3B8]";
-    const tableEl = "w-full text-sm";
-    const thead = "bg-[#16223B] text-[11px] uppercase tracking-[0.08em] text-[#94A3B8]";
-    const th = "px-5 py-3 text-left font-medium";
-    const tbody = "divide-y divide-white/5";
-    const tr = "bg-[#111A2E] hover:bg-[#16223B] transition";
-    const td = "px-5 py-4 text-[#F1F5F9] align-middle";
-    const tdMuted = "text-[#94A3B8]";
-    const rowCritical = "bg-[rgba(239,68,68,0.08)] hover:bg-[rgba(239,68,68,0.12)]";
-    const rowWarning = "bg-[rgba(245,158,11,0.08)] hover:bg-[rgba(245,158,11,0.12)]";
+async function loadDashboardRows() {
+  const prisma = (await import('@/lib/prisma')).default;
+  try {
+    const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
+      SELECT * FROM dashboard_top_control
+    `);
+    return { rows, source: 'dashboard_top_control' };
+  } catch {
+    const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
+      SELECT * FROM corpus.dashboard_top_control
+    `);
+    return { rows, source: 'corpus.dashboard_top_control' };
+  }
+}
 
-    const badgeBase = "inline-flex items-center rounded-lg px-3 py-1.5 text-[11px] font-bold ring-1 ring-inset uppercase tracking-wider";
-    const badgeActive = `${badgeBase} bg-[#f97316] text-white ring-[#fdba74]/30`;
-    const badgeInProgress = `${badgeBase} bg-[#f97316] text-white ring-[#fdba74]/30`;
-    const badgeWarning = `${badgeBase} bg-[rgba(245,158,11,0.12)] text-[#F59E0B] ring-[rgba(245,158,11,0.25)]`;
-    const badgeDanger = `${badgeBase} bg-[rgba(239,68,68,0.12)] text-[#EF4444] ring-[rgba(239,68,68,0.25)]`;
-    const badgeSuccess = `${badgeBase} bg-[#10b981] text-white ring-[#6ee7b7]/30`;
+export default async function ScoreDashboardPage() {
+  let rows: Row[] = [];
+  let source = 'dashboard_top_control';
 
-    const riskPill = "inline-flex items-center rounded-lg px-4 py-2 text-[12px] font-medium bg-[#10b981]/10 text-[#10b981] ring-1 ring-[#10b981]/20";
-    const riskPillHigh = "inline-flex items-center rounded-lg px-4 py-2 text-[12px] font-medium bg-[#10b981]/10 text-[#10b981] ring-1 ring-[#10b981]/20";
+  try {
+    const result = await loadDashboardRows();
+    rows = result.rows || [];
+    source = result.source;
+  } catch {
+    rows = [];
+  }
 
-    const auditorAvatar = "h-10 w-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center";
+  const columns = buildColumns(rows);
+  const keyMap = {
+    controlCode: findKey(columns, ['control_code', 'code']),
+    controlName: findKey(columns, ['control_name', 'control_title', 'name']),
+    controlType: findKey(columns, ['control_type', 'type']),
+    domainName: findKey(columns, ['domain_name', 'domain']),
+    obligations: findKey(columns, ['obligations_supported', 'obligations', 'obligation_count']),
+    risks: findKey(columns, ['risks_mitigated', 'risks', 'risk_count']),
+    structuralScore: findKey(columns, ['structural_score', 'structural']),
+    fragilityScore: findKey(columns, ['fragility_score', 'fragility']),
+    systemicScore: findKey(columns, ['systemic_impact_score', 'systemic']),
+    rank: findKey(columns, ['final_weighted_rank', 'rank']),
+    status: findKey(columns, ['status']),
+    description: findKey(columns, ['description']),
+    objective: findKey(columns, ['control_objective', 'objective']),
+    failure: findKey(columns, ['failure_mode', 'failure']),
+    designIntent: findKey(columns, ['design_intent']),
+  };
 
-    const btnPrimary = "inline-flex items-center justify-center gap-2 rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3B82F6] transition ring-1 ring-inset ring-white/10";
-    const btnGhost = "inline-flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold text-[#F1F5F9] hover:bg-white/10 transition ring-1 ring-inset ring-white/10";
+  const totalRows = rows.length;
+  const systemicValues = keyMap.systemicScore
+    ? rows.map((row) => safeNumber(row[keyMap.systemicScore])).filter((v) => v !== null) as number[]
+    : [];
+  const fragilityValues = keyMap.fragilityScore
+    ? rows.map((row) => safeNumber(row[keyMap.fragilityScore])).filter((v) => v !== null) as number[]
+    : [];
+  const structuralValues = keyMap.structuralScore
+    ? rows.map((row) => safeNumber(row[keyMap.structuralScore])).filter((v) => v !== null) as number[]
+    : [];
 
-    const pageWrap = "min-h-screen bg-[#0B1220]";
-    const pageContainer = "mx-auto w-full max-w-[1400px] px-6 py-16";
-    const pageTitle = "text-3xl font-semibold text-[#F1F5F9]";
-    const pageSubtitle = "mt-2 max-w-3xl text-sm text-[#94A3B8] leading-relaxed";
-    const pageSections = "mt-32 flex flex-col gap-[6rem]";
-    const topGrid = "mt-10 mb-16 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6";
-    const midGrid = "mt-10 mb-16 grid grid-cols-1 gap-6";
-    const insightGrid = "mt-10 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6";
-    const heroCol = "col-span-1";
-    const trendCol = "col-span-1";
-    const bottomGrid = "mt-10 grid grid-cols-1 xl:grid-cols-12 gap-6";
-    const auditsCol = "xl:col-span-7";
-    const findingsCol = "xl:col-span-5";
-    const alertsRow = "mt-20";
+  const avgSystemic = systemicValues.length
+    ? systemicValues.reduce((acc, val) => acc + val, 0) / systemicValues.length
+    : null;
+  const avgFragility = fragilityValues.length
+    ? fragilityValues.reduce((acc, val) => acc + val, 0) / fragilityValues.length
+    : null;
+  const avgStructural = structuralValues.length
+    ? structuralValues.reduce((acc, val) => acc + val, 0) / structuralValues.length
+    : null;
 
-    const kpiItems = [
-        { label: "Total Requerimientos", value: "102", meta: "+12.5% vs last month", icon: ClipboardList, trend: "up" },
-        { label: "Dominios Activos", value: "12", meta: "+2 vs last period", icon: Shield, trend: "up" },
-        { label: "Riesgos Críticos", value: "08", meta: "-15.2% vs last month", icon: AlertTriangle, trend: "down" },
-        { label: "Controles Efectivos", value: "41", meta: "Stable", icon: CheckCircle2, trend: "up" }
-    ];
+  const topControls = [...rows]
+    .sort((a, b) => {
+      const aVal = safeNumber(a[keyMap.systemicScore]) ?? safeNumber(a[keyMap.structuralScore]) ?? 0;
+      const bVal = safeNumber(b[keyMap.systemicScore]) ?? safeNumber(b[keyMap.structuralScore]) ?? 0;
+      return bVal - aVal;
+    })
+    .slice(0, 6);
 
-    const audits = [
-        {
-            id: "AUD-2026-001",
-            objective: "Evaluar controles operativos y tecnológicos críticos",
-            auditor: "Laura Méndez",
-            auditorRole: "AUDITOR PRINCIPAL",
-            risk: "Riesgo medio por procesos manuales",
-            status: "EN CURSO",
-            date: "1/10/2026",
-            dateLabel: "CALENDARIO"
-        },
-        {
-            id: "AUD-2025-011",
-            objective: "Revisar cumplimiento normativo y riesgos de fraude",
-            auditor: "Carlos Ríos",
-            auditorRole: "AUDITOR PRINCIPAL",
-            risk: "Riesgo alto por crecimiento acelerado",
-            status: "CERRADA",
-            date: "11/5/2025",
-            dateLabel: "CALENDARIO"
-        }
-    ];
+  const maxSystemic = systemicValues.length ? Math.max(...systemicValues) : 1;
 
-    const findings = [
-        { id: "H-889", title: "Evidencia KYC vencida", severity: "Critico", area: "Onboarding", updated: "2026-02-28" },
-        { id: "H-874", title: "Parametros sin version aprobada", severity: "Alto", area: "Motor", updated: "2026-02-22" },
-        { id: "H-861", title: "Alertas sin cierre formal", severity: "Medio", area: "Monitoreo", updated: "2026-02-18" }
-    ];
+  const domainSummary = rows.reduce((acc: Record<string, { count: number; impact: number }>, row) => {
+    const name = keyMap.domainName ? String(row[keyMap.domainName] ?? 'Sin dominio') : 'Sin dominio';
+    const impact = safeNumber(row[keyMap.systemicScore]) ?? 0;
+    if (!acc[name]) acc[name] = { count: 0, impact: 0 };
+    acc[name].count += 1;
+    acc[name].impact += impact;
+    return acc;
+  }, {});
 
-    const alerts = [
-        { title: "Score bajo en Monitoreo", detail: "3 dominios con caida > 6% en los ultimos 30 dias", trend: "down" },
-        { title: "ParametroSet pendiente", detail: "Version v2.4 esperando aprobacion de comite", trend: "flat" },
-        { title: "Cobertura de evidencia", detail: "Se requiere evidencia adicional en 2 unidades", trend: "up" }
-    ];
+  const domainCards = Object.entries(domainSummary)
+    .map(([name, values]) => ({
+      name,
+      count: values.count,
+      avgImpact: values.count ? values.impact / values.count : 0,
+    }))
+    .sort((a, b) => b.avgImpact - a.avgImpact)
+    .slice(0, 6);
 
-    const miniTrends = [
-        { title: "Cobertura de evidencia", meta: "Semanal", min: "61%", max: "92%", delta: "+3.1%" },
-        { title: "Riesgos criticos", meta: "Ultimos 30 dias", min: "4", max: "12", delta: "-2" },
-        { title: "Controles efectivos", meta: "Trimestre", min: "72%", max: "88%", delta: "+1.4%" }
-    ];
+  const tableColumns = [
+    keyMap.controlCode,
+    keyMap.controlName,
+    keyMap.controlType,
+    keyMap.domainName,
+    keyMap.obligations,
+    keyMap.risks,
+    keyMap.structuralScore,
+    keyMap.fragilityScore,
+    keyMap.systemicScore,
+    keyMap.rank,
+  ].filter(Boolean) as string[];
 
-    const scoreValue = 84.5;
-    const scoreColor =
-        scoreValue >= 90 ? scoreSuccess :
-            scoreValue >= 80 ? scoreWarning :
-                scoreValue >= 70 ? scoreDanger : scoreCritical;
+  const displayColumns = tableColumns.length ? tableColumns : columns;
 
-    return (
-        <div className={pageWrap}>
-            <div className={pageContainer}>
-                <div className={pageHeader} style={{ marginBottom: "3rem" }}>
-                    <div>
-                        <h1 className={pageTitle}>Dashboard Score</h1>
-                        <p className={pageSubtitle}>
-                            Vista ejecutiva de ejecuciones, evidencia y control operativo para el score institucional.
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button className={btnGhost}>Exportar</button>
-                        <button className={btnPrimary}>Nueva corrida</button>
-                    </div>
-                </div>
+  const maxStructural = structuralValues.length ? Math.max(...structuralValues) : 1;
+  const maxFragility = fragilityValues.length ? Math.max(...fragilityValues) : 1;
+  const canEnhancedTable =
+    Boolean(keyMap.controlCode || keyMap.controlName) &&
+    Boolean(keyMap.systemicScore || keyMap.structuralScore || keyMap.fragilityScore);
 
-                <div className={pageSections}>
-                    <section className={sectionBlock}>
-                        <div className={sectionHeader} style={sectionHeaderStyle}>
-                            <div className={sectionInfo}>
-                                <div className={sectionTitle}>Indicadores clave</div>
-                                <div className={sectionHint}>Vision rapida del estado operativo</div>
-                            </div>
-                            <button className={sectionAction}>Ver detalle</button>
-                        </div>
-                        <div className={topGrid}>
-                            {kpiItems.map((item) => {
-                                const Icon = item.icon;
-                                return (
-                                    <div key={item.label} className={statCardWrap}>
-                                        <div className={statIconWrap}>
-                                            <Icon className={statIcon} />
-                                        </div>
-                                        <div className={statLabel}>{item.label}</div>
-                                        <div className={statValue}>{item.value}</div>
-
-                                        <div className={statMetaWrap}>
-                                            <div className={statTrend}>
-                                                {item.trend === "up" ? (
-                                                    <TrendingUp className={statTrendIcon} />
-                                                ) : (
-                                                    <TrendingDown className="h-4 w-4 text-[#EF4444]" />
-                                                )}
-                                                <span>{item.meta}</span>
-                                            </div>
-                                            <div className={statGraph}>
-                                                <svg viewBox="0 0 100 40" className="w-full h-full" preserveAspectRatio="none">
-                                                    <path
-                                                        d="M0 30 Q 25 35, 40 20 T 70 25 T 100 10"
-                                                        fill="none"
-                                                        stroke={item.trend === "up" ? "#3B82F6" : "#EF4444"}
-                                                        strokeWidth="3"
-                                                        strokeLinecap="round"
-                                                    />
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </section>
-
-                    <section className={sectionBlock}>
-                        <div className={sectionHeader} style={sectionHeaderStyle}>
-                            <div className={sectionInfo}>
-                                <div className={sectionTitle}>Resumen ejecutivo</div>
-                                <div className={sectionHint}>Ejecuciones, evidencia y tendencia</div>
-                            </div>
-                            <button className={sectionAction}>Explorar</button>
-                        </div>
-                        <div className={midGrid}>
-                            <div className={heroCol}>
-                                <div className={heroWrap}>
-                                    <div className={heroLeft}>
-                                        <div className={heroEyebrow}>Ultimo score calificado</div>
-                                        <div className={heroTitle}>Integridad AML - Corte 2026 Q1</div>
-                                        <div className={heroSubtitle}>
-                                            El motor ejecuto la corrida mas reciente con evidencia completa y ParameterSet
-                                            aprobado por gobernanza. Revision de variaciones criticas en curso.
-                                        </div>
-                                        <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#94A3B8]">
-                                            <span className="inline-flex items-center gap-2">
-                                                <Activity className="h-4 w-4 text-[#3B82F6]" /> Motor v2.4 Stable
-                                            </span>
-                                            <span className="inline-flex items-center gap-2">
-                                                <Database className="h-4 w-4 text-[#3B82F6]" /> 148 evidencias validadas
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className={heroRight}>
-                                        <div>
-                                            <div className={scoreLabel}>Score ejecutivo</div>
-                                            <div className={`${scoreValueBase} ${scoreColor}`}>{scoreValue.toFixed(1)}%</div>
-                                            <div className={scorePill}>
-                                                <BarChart3 className="h-4 w-4 text-[#3B82F6]" />
-                                                Variacion +1.3% vs trimestre anterior
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className={trendCol}>
-                                <div className={trendWrap}>
-                                    <div className={trendHeader}>
-                                        <div>
-                                            <div className={trendTitle}>Tendencia 90 dias</div>
-                                            <div className={sectionHint}>Ejecuciones de score</div>
-                                        </div>
-                                        <div className={trendMeta}>+4.2%</div>
-                                    </div>
-                                    <div className={trendCanvas} />
-                                    <div className="mt-3 flex items-center justify-between text-xs text-[#94A3B8]">
-                                        <span>Min 78.1</span>
-                                        <span>Max 86.9</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className={sectionBlock}>
-                        <div className={sectionHeader} style={sectionHeaderStyle}>
-                            <div className={sectionInfo}>
-                                <div className={sectionTitle}>Insights operativos</div>
-                                <div className={sectionHint}>Lecturas rapidas para seguimiento diario</div>
-                            </div>
-                            <button className={sectionAction}>Ver tendencias</button>
-                        </div>
-                        <div className={insightGrid}>
-                            {miniTrends.map((trend) => (
-                                <div key={trend.title} className={trendWrap}>
-                                    <div className={trendHeader}>
-                                        <div>
-                                            <div className={trendTitle}>{trend.title}</div>
-                                            <div className={sectionHint}>{trend.meta}</div>
-                                        </div>
-                                        <div className={trendMeta}>{trend.delta}</div>
-                                    </div>
-                                    <div className={trendCanvas} />
-                                    <div className="mt-3 flex items-center justify-between text-xs text-[#94A3B8]">
-                                        <span>Min {trend.min}</span>
-                                        <span>Max {trend.max}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className={sectionBlock}>
-                        <div className={sectionHeader} style={sectionHeaderStyle}>
-                            <div className={sectionInfo}>
-                                <div className={sectionTitle}>Hallazgos prioritarios</div>
-                                <div className={sectionHint}>Seguimiento de severidad y criticidad</div>
-                            </div>
-                            <button className={sectionAction}>Ver todos los hallazgos</button>
-                        </div>
-                        <div className={tableWrap}>
-                            <div className={tableHeader} style={{ background: "transparent", padding: "1.5rem" }}>
-                                <div className="text-sm font-semibold text-[#F1F5F9]">Tabla de Hallazgos</div>
-                            </div>
-                            <table className={tableEl}>
-                                <thead className={thead}>
-                                    <tr>
-                                        <th className={th}>ID</th>
-                                        <th className={th}>Hallazgo</th>
-                                        <th className={th}>Severidad</th>
-                                        <th className={th}>Actualizado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className={tbody}>
-                                    {findings.map((finding) => (
-                                        <tr
-                                            key={finding.id}
-                                            className={`${tr} ${finding.severity === "Critico" ? rowCritical : finding.severity === "Alto" ? rowWarning : ""}`}
-                                        >
-                                            <td className={td}>{finding.id}</td>
-                                            <td className={td}>
-                                                <div className="font-semibold">{finding.title}</div>
-                                                <div className={`${tdMuted} text-xs`}>{finding.area}</div>
-                                            </td>
-                                            <td className={td}>
-                                                <span
-                                                    className={
-                                                        finding.severity === "Critico"
-                                                            ? badgeDanger
-                                                            : finding.severity === "Alto"
-                                                                ? badgeWarning
-                                                                : badgeInProgress
-                                                    }
-                                                >
-                                                    {finding.severity}
-                                                </span>
-                                            </td>
-                                            <td className={`${td} ${tdMuted}`}>{finding.updated}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-
-                    <section className={sectionBlock}>
-                        <div className={sectionHeader} style={sectionHeaderStyle}>
-                            <div className={sectionInfo}>
-                                <div className={sectionTitle}>Análisis Comparativo</div>
-                                <div className={sectionHint}>Evolución histórica de métricas de cumplimiento (Últimos 3 años)</div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">
-                                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#8B5CF6]" /> Auditorías 2024</span>
-                                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#10B981]" /> Auditorías 2025</span>
-                                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#F59E0B]" /> Auditorías 2026</span>
-                                </div>
-                                <button className="rounded bg-white/5 px-2 py-1 text-[10px] font-bold text-[#F1F5F9] uppercase tracking-widest">Vista Anual</button>
-                            </div>
-                        </div>
-                        <div className={`${card} p-10 relative overflow-hidden bg-[#111A2E]/50`}>
-                            <div className="flex items-center gap-4 mb-10">
-                                <div className="h-10 w-10 rounded-xl bg-[#3B82F6]/10 flex items-center justify-center border border-[#3B82F6]/20">
-                                    <TrendingUp className="h-5 w-5 text-[#3B82F6]" />
-                                </div>
-                                <div className="text-lg font-bold text-[#F1F5F9]">Análisis Comparativo de <span className="text-[#3B82F6] italic">Hallazgos</span></div>
-                            </div>
-
-                            <div className="relative h-[300px] w-full">
-                                {/* Simple Grid */}
-                                <div className="absolute inset-0 flex flex-col justify-between opacity-10">
-                                    {[0, 15, 30, 45, 60].reverse().map(val => (
-                                        <div key={val} className="flex items-center gap-4 w-full">
-                                            <span className="text-[10px] text-white w-4">{val}</span>
-                                            <div className="h-px bg-white flex-1" />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Chart SVG */}
-                                <svg className="absolute inset-x-8 inset-y-0 h-full w-[calc(100%-4rem)] overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 300">
-                                    {/* Line 2024 (Purple) */}
-                                    <path
-                                        d="M0 250 Q 150 260, 300 240 T 600 200 T 900 180 T 1000 120"
-                                        fill="none" stroke="#8B5CF6" strokeWidth="3" strokeLinecap="round"
-                                    />
-                                    {/* Line 2025 (Green) */}
-                                    <path
-                                        d="M0 200 Q 200 150, 400 180 T 700 150 T 1000 160"
-                                        fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round"
-                                    />
-                                    {/* Line 2026 (Orange) */}
-                                    <path
-                                        d="M0 280 Q 250 100, 500 150 T 800 120 T 1000 110"
-                                        fill="none" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round"
-                                    />
-
-                                    {/* Tooltip Point */}
-                                    <circle cx="150" cy="180" r="5" fill="#F59E0B" />
-                                </svg>
-
-                                {/* Timeline selector mock */}
-                                <div className="absolute -bottom-6 inset-x-8 h-4 rounded-full bg-white/5 border border-white/10 flex items-center px-2">
-                                    <div className="h-2 w-2 rounded-full bg-white/20" />
-                                    <div className="flex-1 h-px bg-white/10 mx-2" />
-                                    <div className="h-2 w-2 rounded-full bg-white/20" />
-                                </div>
-                            </div>
-
-                            <div className="mt-12 flex justify-between px-8 text-[10px] font-bold text-[#94A3B8] uppercase">
-                                <span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span><span>Jul</span><span>Ago</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dic</span>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className={sectionBlock}>
-                        <div className={sectionHeader} style={sectionHeaderStyle}>
-                            <div className={sectionInfo}>
-                                <div className={sectionTitle}>Control de Auditoría</div>
-                                <div className={sectionHint}>Vista global de ejecuciones reglamentarias</div>
-                            </div>
-                            <button className={sectionAction}>Descargar Reporte</button>
-                        </div>
-                        <div className={tableWrap}>
-                            <div className={tableHeader} style={{ background: "transparent", padding: "2rem 1.5rem" }}>
-                                <div className="flex items-center gap-4">
-                                    <div className="h-10 w-10 rounded-xl bg-[#3B82F6]/10 flex items-center justify-center border border-[#3B82F6]/20">
-                                        <Activity className="h-5 w-5 text-[#3B82F6]" />
-                                    </div>
-                                    <div>
-                                        <div className="text-lg font-bold text-[#F1F5F9]">Auditorías <span className="text-[#3B82F6] italic">Realizadas</span></div>
-                                        <div className="text-[10px] uppercase tracking-widest text-[#94A3B8] font-bold">CONTROL DE EJECUCIÓN EN TIEMPO REAL</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <table className={tableEl}>
-                                <thead className="text-[10px] uppercase tracking-widest text-[#94A3B8]/60 font-bold">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left">AUDITORÍA / OBJETIVO</th>
-                                        <th className="px-6 py-4 text-left">AUDITOR LÍDER</th>
-                                        <th className="px-6 py-4 text-center">NIVEL RIESGO</th>
-                                        <th className="px-6 py-4 text-center">ESTADO</th>
-                                        <th className="px-6 py-4 text-right">FECHA INICIO</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/[0.02]">
-                                    {audits.map((audit) => (
-                                        <tr key={audit.id} className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="px-6 py-6">
-                                                <div className="font-bold text-[#F1F5F9] text-[15px]">{audit.id}</div>
-                                                <div className="text-xs text-[#94A3B8] mt-1">{audit.objective}</div>
-                                            </td>
-                                            <td className="px-6 py-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={auditorAvatar}>
-                                                        <Shield className="h-5 w-5 text-[#94A3B8]" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-[#F1F5F9] text-[14px]">{audit.auditor}</div>
-                                                        <div className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">{audit.auditorRole}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-6 text-center">
-                                                <span className={audit.id === "AUD-2025-011" ? "inline-flex items-center rounded-lg px-4 py-2 text-[12px] font-medium bg-[#f97316]/10 text-[#f97316] ring-1 ring-[#f97316]/20" : riskPill}>
-                                                    {audit.risk}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-6 text-center">
-                                                <span className={audit.status === "EN CURSO" ? badgeActive : badgeSuccess}>
-                                                    {audit.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-6 text-right">
-                                                <div className="font-bold text-[#F1F5F9] text-[15px]">{audit.date}</div>
-                                                <div className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">{audit.dateLabel}</div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-
-                <div className={alertsRow}>
-                    <div className={`${card} ${cardPad} ${panelBlock}`}>
-                        <div className={panelHeader}>
-                            <div className={sectionInfo}>
-                                <div className={sectionTitle}>Alertas operativas</div>
-                                <div className={sectionHint}>Monitoreo de cambios y variaciones</div>
-                            </div>
-                            <button className={sectionAction}>Configurar</button>
-                        </div>
-                        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                            {alerts.map((alert) => (
-                                <div key={alert.title} className={`${card} ${cardPad} flex items-start gap-3`}>
-                                    <div className={statIconWrap}>
-                                        {alert.trend === "down" && <TrendingDown className={statIcon} />}
-                                        {alert.trend === "up" && <TrendingUp className={statIcon} />}
-                                        {alert.trend === "flat" && <Activity className={statIcon} />}
-                                    </div>
-                                    <div>
-                                        <div className={sectionTitle}>{alert.title}</div>
-                                        <div className={`${sectionHint} mt-1`}>{alert.detail}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+  return (
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <div>
+            <div className={styles.eyebrow}>
+              compliance risk engine
             </div>
+            <h1 className={styles.title}>Dashboard Score</h1>
+            <p className={styles.subtitle}>
+              Vista ejecutiva construida desde <span className={styles.subtitleStrong}>{source}</span>. Los controles
+              críticos se ordenan por impacto sistémico, fragilidad y severidad estructural.
+            </p>
+          </div>
+          <div className={styles.headerMeta}>
+            <span className={styles.metaPill}>
+              {totalRows} controles críticos
+            </span>
+            {avgSystemic !== null && (
+              <span className={styles.metaPill}>
+                Prom. impacto sistémico {avgSystemic.toFixed(2)}
+              </span>
+            )}
+            {avgFragility !== null && (
+              <span className={styles.metaPill}>
+                Prom. fragilidad {avgFragility.toFixed(2)}
+              </span>
+            )}
+          </div>
         </div>
-    );
+
+        <section className={styles.heroGrid}>
+          <div className={styles.heroCard}>
+            <div className={styles.cardEyebrow}>Score ejecutivo</div>
+            <div className={styles.heroRow}>
+              <div>
+                <div className={styles.heroValue}>
+                  {avgSystemic !== null ? avgSystemic.toFixed(2) : '—'}
+                </div>
+                <div className={styles.heroHint}>
+                  Impacto sistémico promedio de la vista
+                </div>
+              </div>
+              <div className={styles.heroOrb}>
+                <div className={styles.heroOrbInner} />
+              </div>
+            </div>
+            <div className={styles.heroStats}>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Fragilidad</div>
+                <div className={styles.heroStatValue}>
+                  {avgFragility !== null ? avgFragility.toFixed(2) : '—'}
+                </div>
+              </div>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Score estructural</div>
+                <div className={styles.heroStatValue}>
+                  {avgStructural !== null ? avgStructural.toFixed(2) : '—'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.metricCard}>
+            <div className={styles.cardEyebrow}>Dominio líder</div>
+            <div className={styles.metricValue}>
+              {domainCards[0]?.name || '—'}
+            </div>
+            <div className={styles.metricHint}>
+              {domainCards[0] ? `${domainCards[0].count} controles` : 'Sin datos'}
+            </div>
+            <div className={styles.metricBarTrack}>
+              <div
+                className={styles.metricBarFill}
+                style={{ width: domainCards[0] ? `${Math.min(100, domainCards[0].avgImpact * 100)}%` : '0%' }}
+              />
+            </div>
+          </div>
+
+          <div className={styles.metricCard}>
+            <div className={styles.cardEyebrow}>Observación</div>
+            <div className={styles.metricTitle}>Señal estructural dominante</div>
+            <div className={styles.metricHint}>
+              {keyMap.systemicScore ? 'Impacto sistémico' : 'Score estructural'} concentra la selección crítica.
+            </div>
+            <div className={styles.metricFooter}>
+              Fuente: {source}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <div className={styles.sectionTitle}>Top controles críticos</div>
+              <div className={styles.sectionSubtitle}>Ranking de impacto y fragilidad por control.</div>
+            </div>
+            <div className={styles.sectionMeta}>Actualizado en tiempo real</div>
+          </div>
+          <div className={styles.cardGrid}>
+            {topControls.map((row, idx) => {
+              const impact = safeNumber(row[keyMap.systemicScore]) ?? 0;
+              const width = maxSystemic > 0 ? (impact / maxSystemic) * 100 : 0;
+              return (
+                <div key={idx} className={styles.rankCard}>
+                  <div className={styles.rankHeader}>
+                    <div>
+                      <div className={styles.rankEyebrow}>
+                        {row[keyMap.controlType] || 'Control'}
+                      </div>
+                      <div className={styles.rankTitle}>
+                        {row[keyMap.controlName] || row[keyMap.controlCode] || '—'}
+                      </div>
+                      <div className={styles.rankMeta}>
+                        {row[keyMap.controlCode] || 'Sin código'} · {row[keyMap.domainName] || 'Sin dominio'}
+                      </div>
+                    </div>
+                    <div className={styles.rankBadge}>
+                      #{safeNumber(row[keyMap.rank]) ?? idx + 1}
+                    </div>
+                  </div>
+                  <div className={styles.rankMetricRow}>
+                    <span>Impacto sistémico</span>
+                    <span className={styles.rankMetricValue}>{impact ? impact.toFixed(2) : '—'}</span>
+                  </div>
+                  <div className={styles.rankBarTrack}>
+                    <div
+                      className={styles.rankBarFill}
+                      style={{ width: `${Math.max(6, Math.min(100, width))}%` }}
+                    />
+                  </div>
+                  <div className={styles.rankMetaGrid}>
+                    <div className={styles.rankMetaCard}>
+                      Obligaciones: {formatValue(row[keyMap.obligations])}
+                    </div>
+                    <div className={styles.rankMetaCard}>
+                      Riesgos: {formatValue(row[keyMap.risks])}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <div className={styles.sectionTitle}>Mapa por dominio</div>
+              <div className={styles.sectionSubtitle}>Dónde se concentra el riesgo estructural.</div>
+            </div>
+          </div>
+          <div className={styles.cardGrid}>
+            {domainCards.map((domain) => (
+              <div key={domain.name} className={styles.rankCard}>
+                <div className={styles.rankEyebrow}>Dominio</div>
+                <div className={styles.rankTitle}>{domain.name}</div>
+                <div className={styles.rankMeta}>{domain.count} controles críticos</div>
+                <div className={styles.rankBarTrack}>
+                  <div
+                    className={styles.domainBarFill}
+                    style={{ width: `${Math.min(100, domain.avgImpact * 100)}%` }}
+                  />
+                </div>
+                <div className={styles.rankMeta}>
+                  Impacto promedio {domain.avgImpact.toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <div className={styles.sectionTitle}>Detalle completo</div>
+              <div className={styles.sectionSubtitle}>Listado total de la vista operativa.</div>
+            </div>
+          </div>
+          <div className={styles.tableCard}>
+            <div className={styles.tableHeader}>
+              <div>
+                <div className={styles.tableTitle}>Controles estructurales</div>
+                <div className={styles.tableSubtitle}>Fuente {source}</div>
+              </div>
+            </div>
+            <div className={styles.tableWrap}>
+              {canEnhancedTable ? (
+                <table className={styles.table}>
+                  <thead className={styles.thead}>
+                    <tr>
+                      <th className={styles.th}>Control</th>
+                      <th className={styles.th}>Dominio</th>
+                      <th className={styles.th}>Cobertura</th>
+                      <th className={styles.th}>Score</th>
+                      <th className={styles.th}>Impacto</th>
+                      <th className={styles.th}>Rank</th>
+                    </tr>
+                  </thead>
+                  <tbody className={styles.tbody}>
+                    {rows.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className={styles.emptyCell}>
+                          No hay datos en la vista {source}.
+                        </td>
+                      </tr>
+                    )}
+                    {rows.map((row, idx) => {
+                      const controlName = keyMap.controlName ? row[keyMap.controlName] : row[keyMap.controlCode];
+                      const controlCode = keyMap.controlCode ? row[keyMap.controlCode] : '—';
+                      const controlType = keyMap.controlType ? row[keyMap.controlType] : null;
+                      const domainName = keyMap.domainName ? row[keyMap.domainName] : '—';
+                      const obligations = keyMap.obligations ? row[keyMap.obligations] : null;
+                      const risks = keyMap.risks ? row[keyMap.risks] : null;
+                      const structural = keyMap.structuralScore ? safeNumber(row[keyMap.structuralScore]) : null;
+                      const fragility = keyMap.fragilityScore ? safeNumber(row[keyMap.fragilityScore]) : null;
+                      const systemic = keyMap.systemicScore ? safeNumber(row[keyMap.systemicScore]) : null;
+                      const rank = keyMap.rank ? row[keyMap.rank] : idx + 1;
+
+                      const structuralWidth = structural !== null && maxStructural > 0
+                        ? (structural / maxStructural) * 100
+                        : 0;
+                      const fragilityWidth = fragility !== null && maxFragility > 0
+                        ? (fragility / maxFragility) * 100
+                        : 0;
+                      const systemicWidth = systemic !== null && maxSystemic > 0
+                        ? (systemic / maxSystemic) * 100
+                        : 0;
+
+                      return (
+                        <tr key={idx} className={styles.tr}>
+                          <td className={styles.td}>
+                            <div className={styles.controlCell}>
+                              <div className={styles.controlName}>{controlName || '—'}</div>
+                              <div className={styles.controlMeta}>
+                                <span className={styles.controlCode}>{controlCode}</span>
+                                {controlType && <span className={styles.controlType}>{controlType}</span>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className={styles.td}>
+                            <div className={styles.domainCell}>{formatValue(domainName)}</div>
+                          </td>
+                          <td className={styles.td}>
+                            <div className={styles.coverageCell}>
+                              <span className={styles.coveragePill}>Obligaciones: {formatValue(obligations)}</span>
+                              <span className={styles.coveragePill}>Riesgos: {formatValue(risks)}</span>
+                            </div>
+                          </td>
+                          <td className={styles.td}>
+                            <div className={styles.metricStack}>
+                              <div className={styles.metricRow}>
+                                <span>Structural</span>
+                                <span>{structural !== null ? structural.toFixed(2) : '—'}</span>
+                              </div>
+                              <div className={styles.metricBarTrackSmall}>
+                                <div className={styles.metricBarFillSmall} style={{ width: `${Math.max(4, Math.min(100, structuralWidth))}%` }} />
+                              </div>
+                              <div className={styles.metricRow}>
+                                <span>Fragility</span>
+                                <span>{fragility !== null ? fragility.toFixed(2) : '—'}</span>
+                              </div>
+                              <div className={styles.metricBarTrackSmall}>
+                                <div className={styles.metricBarAltSmall} style={{ width: `${Math.max(4, Math.min(100, fragilityWidth))}%` }} />
+                              </div>
+                            </div>
+                          </td>
+                          <td className={styles.td}>
+                            <div className={styles.metricStack}>
+                              <div className={styles.metricRow}>
+                                <span>Impacto</span>
+                                <span>{systemic !== null ? systemic.toFixed(2) : '—'}</span>
+                              </div>
+                              <div className={styles.metricBarTrackSmall}>
+                                <div className={styles.metricBarImpactSmall} style={{ width: `${Math.max(6, Math.min(100, systemicWidth))}%` }} />
+                              </div>
+                            </div>
+                          </td>
+                          <td className={styles.td}>
+                            <span className={styles.rankPill}>#{formatValue(rank)}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <table className={styles.table}>
+                  <thead className={styles.thead}>
+                    <tr>
+                      {displayColumns.map((column) => (
+                        <th key={column} className={styles.th}>
+                          {column.replace(/_/g, ' ')}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className={styles.tbody}>
+                    {rows.length === 0 && (
+                      <tr>
+                        <td colSpan={displayColumns.length || 1} className={styles.emptyCell}>
+                          No hay datos en la vista {source}.
+                        </td>
+                      </tr>
+                    )}
+                    {rows.map((row, idx) => (
+                      <tr key={idx} className={styles.tr}>
+                        {displayColumns.map((column) => (
+                          <td key={column} className={styles.td}>
+                            {formatValue(row[column])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
 }

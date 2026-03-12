@@ -53,6 +53,7 @@ export async function GET(
     const hasId = columnSet.has('id');
 
     let criteriaByDimension: Record<string, string[]> = {};
+    let dimensionTestCounts: Record<string, number> = {};
     const testSeen = new Set<string>();
 
     if (hasControlId && hasId) {
@@ -63,6 +64,7 @@ export async function GET(
           cdt.id AS control_dimension_test_id,
           tcat.code AS test_code,
           tcat.title AS test_title,
+          tcat.procedure_text,
           tre.required,
           tre.window_days,
           ec.name AS evidence_name
@@ -85,6 +87,7 @@ export async function GET(
       (criteriaRows as any[]).forEach((row) => {
         const dimension = String(row.dimension || '');
         if (!criteriaByDimension[dimension]) criteriaByDimension[dimension] = [];
+        dimensionTestCounts[dimension] = (dimensionTestCounts[dimension] || 0) + (row.control_dimension_test_id ? 1 : 0);
         if (row.evidence_min_spec) {
           const spec = String(row.evidence_min_spec);
           if (!criteriaByDimension[dimension].includes(spec)) {
@@ -99,9 +102,11 @@ export async function GET(
             if (row.required) meta.push('evidencia requerida');
             if (row.evidence_name) meta.push(String(row.evidence_name));
             if (row.window_days) meta.push(`ventana ${row.window_days} dias`);
-            const labelBase = row.test_title
-              ? `${row.test_code} — ${row.test_title}`
-              : `${row.test_code || 'Test'}`;
+            const labelBase = row.procedure_text
+              ? String(row.procedure_text)
+              : row.test_title
+                ? `${row.test_code} — ${row.test_title}`
+                : `${row.test_code || 'Test'}`;
             const line = meta.length ? `${labelBase} (${meta.join(', ')})` : labelBase;
             criteriaByDimension[dimension].push(line);
           }
@@ -145,6 +150,7 @@ export async function GET(
       results,
       evidence,
       criteriaByDimension,
+      dimensionTestCounts,
     });
   } catch (error: any) {
     console.error('Error loading control evaluation:', error);

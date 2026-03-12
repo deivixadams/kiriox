@@ -71,6 +71,12 @@ export default function ScoreControl4DStep({
     operacion: [],
   });
   const [criteriaLoading, setCriteriaLoading] = useState(false);
+  const [dimensionTestCounts, setDimensionTestCounts] = useState<Record<DimensionKey, number>>({
+    existencia: 0,
+    diseno: 0,
+    formalizacion: 0,
+    operacion: 0,
+  });
 
   useEffect(() => {
     if (!runId) return;
@@ -159,8 +165,23 @@ export default function ScoreControl4DStep({
             next[mapped] = Array.isArray(list) ? list.map((v) => String(v)) : [];
           });
         }
+        const counts: Record<DimensionKey, number> = {
+          existencia: 0,
+          diseno: 0,
+          formalizacion: 0,
+          operacion: 0,
+        };
+        const rawCounts = data?.dimensionTestCounts;
+        if (rawCounts && typeof rawCounts === 'object') {
+          Object.entries(rawCounts).forEach(([key, value]) => {
+            const mapped = DIMENSION_KEY_MAP[String(key).toUpperCase()];
+            if (!mapped) return;
+            counts[mapped] = Number(value) || 0;
+          });
+        }
         if (!alive) return;
         setCriteriaByDimension(next);
+        setDimensionTestCounts(counts);
       } catch {
         if (alive) {
           setCriteriaByDimension({
@@ -168,6 +189,12 @@ export default function ScoreControl4DStep({
             diseno: [],
             formalizacion: [],
             operacion: [],
+          });
+          setDimensionTestCounts({
+            existencia: 0,
+            diseno: 0,
+            formalizacion: 0,
+            operacion: 0,
           });
         }
       } finally {
@@ -376,72 +403,83 @@ export default function ScoreControl4DStep({
                 {DIMENSIONS.map((dimension) => {
                   const current = evalMap.get(activeControl.id)?.dimensions?.[dimension.key] || '';
                   const dimensionNotes = evalMap.get(activeControl.id)?.dimensionNotes?.[dimension.key] || '';
+                  const hasTests = dimension.key === 'operacion'
+                    ? (dimensionTestCounts[dimension.key] || 0) > 0
+                    : true;
                   return (
                     <div key={dimension.key} className={styles.dimensionRow}>
-                      <div className={styles.subCard}>
-                      <div className={styles.subCardTitle}>{dimension.label}</div>
-                      <div className={styles.subCardBody}>{dimension.helper}</div>
-                      <div className={styles.textBlock}>
-                        <textarea
-                          value={dimensionNotes}
-                          onChange={(e) => {
+                      <div
+                        className={`${styles.subCard} ${!hasTests ? styles.subCardDisabled : ''} ${dimension.key !== 'operacion' ? styles.subCardFull : ''}`}
+                      >
+                        <div className={styles.subCardTitle}>{dimension.label}</div>
+                        <div className={styles.subCardBody}>{dimension.helper}</div>
+                        <div className={styles.textBlock}>
+                          <textarea
+                            value={dimensionNotes}
+                            onChange={(e) => {
                             const existing = evalMap.get(activeControl.id);
                             const nextNotes = {
                               existencia: existing?.dimensionNotes?.existencia || '',
                               diseno: existing?.dimensionNotes?.diseno || '',
                               formalizacion: existing?.dimensionNotes?.formalizacion || '',
                               operacion: existing?.dimensionNotes?.operacion || '',
-                            };
-                            nextNotes[dimension.key] = e.target.value;
-                            updateEvaluation(activeControl.id, { dimensionNotes: nextNotes });
-                          }}
-                          className={styles.textarea}
-                          rows={4}
-                        />
-                      </div>
-                      <div className={styles.actionRow}>
-                        <button type="button" className={styles.evidenceButton}>
-                          Cargar evidencia
-                        </button>
-                        <button
-                          type="button"
-                          className={`${styles.statusButton} ${current === 'cumple' ? styles.statusActive : ''}`}
-                          onClick={() => updateDimension(activeControl.id, dimension.key, 'cumple')}
-                        >
-                          Cumple
-                        </button>
-                        {dimension.key !== 'existencia' && (
+                              };
+                              nextNotes[dimension.key] = e.target.value;
+                              updateEvaluation(activeControl.id, { dimensionNotes: nextNotes });
+                            }}
+                            className={styles.textarea}
+                            rows={4}
+                            disabled={!hasTests}
+                          />
+                        </div>
+                        <div className={styles.actionRow}>
+                          <button type="button" className={styles.evidenceButton} disabled={!hasTests}>
+                            Cargar evidencia
+                          </button>
                           <button
                             type="button"
-                            className={`${styles.statusButton} ${current === 'parcial' ? styles.statusActive : ''}`}
-                            onClick={() => updateDimension(activeControl.id, dimension.key, 'parcial')}
+                            className={`${styles.statusButton} ${current === 'cumple' ? styles.statusActive : ''}`}
+                            onClick={() => updateDimension(activeControl.id, dimension.key, 'cumple')}
+                            disabled={!hasTests}
                           >
-                            Cumple parcial
+                            Cumple
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          className={`${styles.statusButton} ${current === 'no_cumple' ? styles.statusActive : ''}`}
-                          onClick={() => updateDimension(activeControl.id, dimension.key, 'no_cumple')}
-                        >
-                          No cumple
-                        </button>
-                      </div>
-                      </div>
-                      <div className={styles.criteriaCard}>
-                        <div className={styles.criteriaTitle}>Como se evalua</div>
-                        <div className={styles.criteriaBody}>
-                          {criteriaLoading && (
-                            <div className={styles.criteriaLine}>Cargando criterios...</div>
+                          {dimension.key !== 'existencia' && (
+                            <button
+                              type="button"
+                              className={`${styles.statusButton} ${current === 'parcial' ? styles.statusActive : ''}`}
+                              onClick={() => updateDimension(activeControl.id, dimension.key, 'parcial')}
+                              disabled={!hasTests}
+                            >
+                              Cumple parcial
+                            </button>
                           )}
-                          {!criteriaLoading && criteriaByDimension[dimension.key].length === 0 && (
-                            <div className={styles.criteriaLine}>Sin criterios registrados.</div>
-                          )}
-                          {!criteriaLoading && criteriaByDimension[dimension.key].map((item) => (
-                            <div key={item} className={styles.criteriaLine}>{item}</div>
-                          ))}
+                          <button
+                            type="button"
+                            className={`${styles.statusButton} ${current === 'no_cumple' ? styles.statusActive : ''}`}
+                            onClick={() => updateDimension(activeControl.id, dimension.key, 'no_cumple')}
+                            disabled={!hasTests}
+                          >
+                            No cumple
+                          </button>
                         </div>
                       </div>
+                      {dimension.key === 'operacion' && (
+                        <div className={styles.criteriaCard}>
+                          <div className={styles.criteriaTitle}>Como se evalua</div>
+                          <div className={styles.criteriaBody}>
+                            {criteriaLoading && (
+                              <div className={styles.criteriaLine}>Cargando criterios...</div>
+                            )}
+                            {!criteriaLoading && criteriaByDimension[dimension.key].length === 0 && (
+                              <div className={styles.criteriaLine}>Sin criterios registrados.</div>
+                            )}
+                            {!criteriaLoading && criteriaByDimension[dimension.key].map((item) => (
+                              <div key={item} className={styles.criteriaLine}>{item}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

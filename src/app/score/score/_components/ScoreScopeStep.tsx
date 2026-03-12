@@ -53,11 +53,6 @@ export default function ScoreScopeStep({
 
   return (
     <div className={styles.root}>
-      <div className={styles.header}>
-        <h2 className={styles.title}>Alcance real (Top 20%)</h2>
-        <p className={styles.subtitle}>Selecciona el universo critico que entra al score.</p>
-      </div>
-
       <div className={styles.card}>
         <div className={styles.cardTitleSimple}>Seleccion critica</div>
         <div className={styles.helperText}>

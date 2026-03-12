@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import WizardShell from '@/app/validacion/auditorias/nueva/_components/WizardShell';
 import ScoreScopeStep from './_components/ScoreScopeStep';
@@ -77,6 +77,7 @@ export default function ScoreWizardClient() {
   const [engineProfile, setEngineProfile] = useState(
     ENGINE_PROFILE_BASE.map((item) => ({ ...item, value: '—' }))
   );
+  const autoSelectKeyRef = useRef<string>('');
 
   useEffect(() => {
     const today = new Date();
@@ -218,6 +219,9 @@ export default function ScoreWizardClient() {
   }, [step, controlStats]);
 
   const title = STEP_TITLES[step - 1] || 'Wizard';
+  const subtitle = step === 2
+    ? 'Selecciona el universo critico que entra al score.'
+    : 'Score';
 
   const handleSelection = async (mode: 'top20' | 'all') => {
     if (!selectedCompanyId || !startDate || !endDate) {
@@ -253,11 +257,21 @@ export default function ScoreWizardClient() {
     }
   };
 
+  useEffect(() => {
+    if (step !== 2) return;
+    if (selection || selectionLoading) return;
+    if (!selectedCompanyId || !startDate || !endDate || !frameworkSourceId) return;
+    const key = `${selectedCompanyId}:${frameworkSourceId}:${startDate}:${endDate}`;
+    if (autoSelectKeyRef.current === key) return;
+    autoSelectKeyRef.current = key;
+    handleSelection('top20');
+  }, [step, selection, selectionLoading, selectedCompanyId, startDate, endDate, frameworkSourceId]);
+
   return (
     <div className={styles.shellWrapper}>
       <WizardShell
         title={title}
-        subtitle="Score"
+        subtitle={subtitle}
         step={step}
         totalSteps={TOTAL_STEPS}
         headerItems={headerItems}
