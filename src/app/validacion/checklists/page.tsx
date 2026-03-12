@@ -3,18 +3,12 @@
 import React, { useState } from 'react';
 import {
     ClipboardCheck,
-    Book,
     Search,
     Plus,
-    ChevronRight,
-    FileText,
-    ShieldCheck,
-    Layers,
-    Clock,
-    CheckCircle2,
     Info,
     ArrowUpRight
 } from 'lucide-react';
+import styles from './Checklists.module.css';
 
 // Dummy data for Checklists
 const DUMMY_CHECKLISTS = [
@@ -170,74 +164,68 @@ export default function ChecklistsPage() {
             </div>
 
             {/* Book Grid */}
-            <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-                gap: '2.5rem',
-                perspective: '1000px'
-            }}>
+            <div className={styles.checklistGrid}>
                 {filteredChecklists.map((book) => (
                     <div 
                         key={book.id} 
-                        className="checklist-book"
-                        title={book.description} // Tooltip simple
+                        className={styles.checklistBook}
                     >
                         {/* Book Spine Shadow */}
-                        <div className="book-spine" />
+                        <div className={styles.bookSpine} />
                         
-                        <div className="book-content">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '1.5rem' }}>
+                        <div className={styles.bookContent}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '1.25rem' }}>
                                 <span style={{ 
-                                    fontSize: '0.65rem', 
+                                    fontSize: '0.6rem', 
                                     fontWeight: 800, 
                                     color: '#8b5cf6', 
                                     background: 'rgba(139, 92, 246, 0.1)',
-                                    padding: '0.2rem 0.5rem',
-                                    borderRadius: '0.4rem',
+                                    padding: '0.15rem 0.4rem',
+                                    borderRadius: '0.3rem',
                                     border: '1px solid rgba(139, 92, 246, 0.2)'
                                 }}>
                                     {book.id}
                                 </span>
-                                <span style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: 600 }}>{book.version}</span>
+                                <span style={{ fontSize: '0.6rem', color: '#71717a', fontWeight: 600 }}>{book.version}</span>
                             </div>
 
                             <div style={{ marginBottom: 'auto' }}>
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', lineHeight: 1.2, marginBottom: '0.5rem' }}>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', lineHeight: 1.2, marginBottom: '0.4rem' }}>
                                     {book.title}
                                 </h3>
-                                <p style={{ fontSize: '0.85rem', color: '#a1a1aa', fontWeight: 500 }}>
+                                <p style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 500 }}>
                                     {book.subtitle}
                                 </p>
                             </div>
 
-                            <div className="book-footer">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div className={styles.bookFooter}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '0.65rem', color: '#71717a', textTransform: 'uppercase', fontWeight: 800 }}>Items</span>
-                                        <span style={{ fontSize: '0.9rem', color: 'white', fontWeight: 800 }}>{book.items}</span>
+                                        <span style={{ fontSize: '0.55rem', color: '#71717a', textTransform: 'uppercase', fontWeight: 800 }}>Items</span>
+                                        <span style={{ fontSize: '0.8rem', color: 'white', fontWeight: 800 }}>{book.items}</span>
                                     </div>
-                                    <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.05)' }} />
+                                    <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.05)' }} />
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '0.65rem', color: '#71717a', textTransform: 'uppercase', fontWeight: 800 }}>Categoría</span>
-                                        <span style={{ fontSize: '0.9rem', color: '#8b5cf6', fontWeight: 800 }}>{book.category}</span>
+                                        <span style={{ fontSize: '0.55rem', color: '#71717a', textTransform: 'uppercase', fontWeight: 800 }}>Categoría</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#8b5cf6', fontWeight: 800 }}>{book.category}</span>
                                     </div>
                                 </div>
-                                <div className="open-icon">
-                                    <ArrowUpRight size={18} />
+                                <div className={styles.openIcon}>
+                                    <ArrowUpRight size={16} />
                                 </div>
                             </div>
                         </div>
 
                         {/* Tooltip Hover Overlay */}
-                        <div className="book-tooltip">
+                        <div className={styles.bookTooltip}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: '#8b5cf6' }}>
                                 <Info size={14} />
                                 <span style={{ fontWeight: 800, fontSize: '0.75rem' }}>DETALLES</span>
                             </div>
-                            <p style={{ fontSize: '0.8rem', color: '#e4e4e7', lineHeight: 1.4, margin: 0 }}>
+                            <p style={{ fontSize: '0.75rem', color: '#e4e4e7', lineHeight: 1.4, margin: 0 }}>
                                 {book.description}
                             </p>
-                            <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', color: '#71717a' }}>
+                            <div style={{ marginTop: '0.75rem', fontSize: '0.65rem', color: '#71717a' }}>
                                 Actualizado: {book.lastUpdated}<br/>
                                 Por: {book.author}
                             </div>
@@ -245,113 +233,6 @@ export default function ChecklistsPage() {
                     </div>
                 ))}
             </div>
-
-            <style jsx>{`
-                .checklist-book {
-                    position: relative;
-                    height: 380px;
-                    background: rgba(255, 255, 255, 0.03);
-                    border: 1px solid rgba(255, 255, 255, 0.08);
-                    border-radius: 0.5rem 1.5rem 1.5rem 0.5rem;
-                    display: flex;
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    cursor: pointer;
-                    transform-origin: left center;
-                }
-
-                .checklist-book:hover {
-                    transform: rotateY(-15deg) scale(1.05);
-                    border-color: rgba(139, 92, 246, 0.4);
-                    background: rgba(255, 255, 255, 0.05);
-                    box-shadow: 20px 20px 40px rgba(0, 0, 0, 0.4);
-                }
-
-                .book-spine {
-                    width: 30px;
-                    height: 100%;
-                    background: linear-gradient(90deg, 
-                        rgba(0,0,0,0.2) 0%, 
-                        rgba(255,255,255,0.05) 50%, 
-                        rgba(0,0,0,0.2) 100%
-                    );
-                    border-right: 1px solid rgba(255,255,255,0.05);
-                    border-radius: 0.5rem 0 0 0.5rem;
-                    position: relative;
-                }
-
-                .book-spine::after {
-                    content: '';
-                    position: absolute;
-                    top: 10%;
-                    left: 20%;
-                    right: 20%;
-                    height: 80%;
-                    background: repeating-linear-gradient(0deg, 
-                        rgba(139, 92, 246, 0.2) 0px, 
-                        rgba(139, 92, 246, 0.2) 2px, 
-                        transparent 2px, 
-                        transparent 15px
-                    );
-                }
-
-                .book-content {
-                    flex: 1;
-                    padding: 2rem 1.5rem 1.5rem 1.5rem;
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .book-footer {
-                    margin-top: 2rem;
-                    padding-top: 1.5rem;
-                    border-top: 1px solid rgba(255, 255, 255, 0.05);
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-end;
-                }
-
-                .open-icon {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 50%;
-                    background: rgba(139, 92, 246, 0.1);
-                    display: flex;
-                    alignItems: center;
-                    justifyContent: center;
-                    color: #8b5cf6;
-                    transition: all 0.3s ease;
-                }
-
-                .checklist-book:hover .open-icon {
-                    background: #8b5cf6;
-                    color: white;
-                    transform: rotate(45deg);
-                }
-
-                .book-tooltip {
-                    position: absolute;
-                    bottom: -10px;
-                    left: 50%;
-                    transform: translateX(-50%) translateY(20px);
-                    width: 240px;
-                    background: rgba(15, 15, 20, 0.95);
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(139, 92, 246, 0.3);
-                    padding: 1rem;
-                    border-radius: 1rem;
-                    opacity: 0;
-                    visibility: hidden;
-                    transition: all 0.3s ease;
-                    z-index: 10;
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-                }
-
-                .checklist-book:hover .book-tooltip {
-                    opacity: 1;
-                    visibility: visible;
-                    transform: translateX(-50%) translateY(0);
-                }
-            `}</style>
         </div>
     );
 }

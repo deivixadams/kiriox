@@ -1,0 +1,111 @@
+.checklistGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 2rem;
+    perspective: 1000px;
+}
+
+.checklistBook {
+    position: relative;
+    height: 300px; /* Reduced from 380px */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.5rem 1.5rem 1.5rem 0.5rem;
+    display: flex;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    transform-origin: left center;
+}
+
+.checklistBook:hover {
+    transform: rotateY(-15deg) scale(1.05);
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 15px 15px 30px rgba(0, 0, 0, 0.4);
+}
+
+.bookSpine {
+    width: 24px; /* Reduced from 30px */
+    height: 100%;
+    background: linear-gradient(90deg, 
+        rgba(0,0,0,0.2) 0%, 
+        rgba(255,255,255,0.05) 50%, 
+        rgba(0,0,0,0.2) 100%
+    );
+    border-right: 1px solid rgba(255,255,255,0.05);
+    border-radius: 0.5rem 0 0 0.5rem;
+    position: relative;
+}
+
+.bookSpine::after {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 20%;
+    right: 20%;
+    height: 80%;
+    background: repeating-linear-gradient(0deg, 
+        rgba(139, 92, 246, 0.2) 0px, 
+        rgba(139, 92, 246, 0.2) 2px, 
+        transparent 2px, 
+        transparent 12px
+    );
+}
+
+.bookContent {
+    flex: 1;
+    padding: 1.5rem 1.25rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.bookFooter {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.openIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(139, 92, 246, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8b5cf6;
+    transition: all 0.3s ease;
+}
+
+.checklistBook:hover .openIcon {
+    background: #8b5cf6;
+    color: white;
+    transform: rotate(45deg);
+}
+
+.bookTooltip {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    width: 220px;
+    background: rgba(15, 15, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 1rem;
+    border-radius: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 10;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.checklistBook:hover .bookTooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
