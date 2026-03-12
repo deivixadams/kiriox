@@ -15,12 +15,12 @@ import {
 } from 'lucide-react';
 import styles from './Auditados.module.css';
 
-// Dummy data for Audited Entities
+// Dummy data for Audited Entities (Areas)
 const DUMMY_AUDITADOS = [
     {
-        id: "ENT-001",
-        name: "Banco del Progreso S.A.",
-        code: "BPR-01",
+        id: "AREA-001",
+        name: "Tesorería e Inversiones",
+        code: "TES-01",
         lastAudit: "2025-12-15",
         status: "Cumplimiento Alto",
         openFindings: 2,
@@ -29,9 +29,9 @@ const DUMMY_AUDITADOS = [
         responseRate: 90
     },
     {
-        id: "ENT-002",
-        name: "Fiduciaria Nacional",
-        code: "FIN-04",
+        id: "AREA-002",
+        name: "Operaciones Internacionales",
+        code: "OPE-INT",
         lastAudit: "2026-01-20",
         status: "En Revisión",
         openFindings: 8,
@@ -40,9 +40,9 @@ const DUMMY_AUDITADOS = [
         responseRate: 60
     },
     {
-        id: "ENT-003",
-        name: "Seguros del Caribe",
-        code: "SEC-09",
+        id: "AREA-003",
+        name: "Tecnología y Ciberseguridad",
+        code: "IT-CYB",
         lastAudit: "2026-02-05",
         status: "Cumplimiento Óptimo",
         openFindings: 0,
@@ -51,9 +51,9 @@ const DUMMY_AUDITADOS = [
         responseRate: 100
     },
     {
-        id: "ENT-004",
-        name: "Cooperativa de Ahorros El Sol",
-        code: "COE-12",
+        id: "AREA-004",
+        name: "Recursos Humanos y Nómina",
+        code: "RRHH-02",
         lastAudit: "2026-03-01",
         status: "Atención Requerida",
         openFindings: 14,
@@ -62,9 +62,9 @@ const DUMMY_AUDITADOS = [
         responseRate: 30
     },
     {
-        id: "ENT-005",
-        name: "Financiera Global Tech",
-        code: "FGT-22",
+        id: "AREA-005",
+        name: "Comercial y Ventas Hub",
+        code: "COM-05",
         lastAudit: "2025-11-28",
         status: "Cumplimiento Medio",
         openFindings: 5,
@@ -73,9 +73,9 @@ const DUMMY_AUDITADOS = [
         responseRate: 75
     },
     {
-        id: "ENT-006",
-        name: "Caja de Préstamos San José",
-        code: "CPSJ-01",
+        id: "AREA-006",
+        name: "Legal y Contrataciones",
+        code: "LEG-01",
         lastAudit: "2026-01-10",
         status: "Cumplimiento Alto",
         openFindings: 1,
@@ -94,7 +94,7 @@ export default function AuditadosPage() {
     );
 
     const stats = [
-        { label: 'Total Entidades', value: '24', icon: Building2, color: '#3b82f6' },
+        { label: 'Total Áreas', value: '24', icon: Building2, color: '#3b82f6' },
         { label: 'Hallazgos Abiertos', value: '42', icon: AlertTriangle, color: '#ef4444' },
         { label: 'Tasa Respuesta', value: '78%', icon: BarChart3, color: '#10b981' },
         { label: 'Auditorías 2026', value: '9', icon: ClipboardList, color: '#8b5cf6' }
@@ -109,8 +109,8 @@ export default function AuditadosPage() {
                         <Building2 size={32} className="text-blue-500" />
                     </div>
                     <div>
-                        <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em', margin: 0 }}>Entidades Auditadas</h1>
-                        <p style={{ color: '#71717a', fontSize: '1rem', marginTop: '0.25rem' }}>Estatus de cumplimiento, hallazgos y gestión de planes de acción por entidad.</p>
+                        <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em', margin: 0 }}>Áreas Auditadas</h1>
+                        <p style={{ color: '#71717a', fontSize: '1rem', marginTop: '0.25rem' }}>Estatus de cumplimiento, hallazgos y gestión de planes de acción por área organizacional.</p>
                     </div>
                 </div>
 
@@ -119,7 +119,7 @@ export default function AuditadosPage() {
                         <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#71717a' }} />
                         <input
                             type="text"
-                            placeholder="Buscar por nombre o código..."
+                            placeholder="Buscar por área o código..."
                             className={styles.searchInput}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -148,11 +148,11 @@ export default function AuditadosPage() {
             <div className={styles.tableCard}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
                     <ClipboardList size={20} className="text-muted" />
-                    <h3 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Directorio de Auditados</h3>
+                    <h3 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Directorio de Áreas</h3>
                 </div>
 
                 <div className={styles.tableHeader}>
-                    <span>Entidad / Código</span>
+                    <span>Área / Código</span>
                     <span>Última Auditoría</span>
                     <span style={{ textAlign: 'center' }}>Hallazgos</span>
                     <span style={{ textAlign: 'center' }}>Respuesta</span>
