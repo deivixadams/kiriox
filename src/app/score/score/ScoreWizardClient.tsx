@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
@@ -11,16 +10,15 @@ import ScoreControlResultsStep from './_components/ScoreControlResultsStep';
 import ScoreResultStep from './_components/ScoreResultStep';
 import styles from './ScoreWizardClient.module.css';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 6;
 
 const STEP_TITLES = [
-  'Contexto y marco',
-  'Alcance real',
-  'Perfil de ponderacion',
-  'Evaluacion 4 dimensiones del control | Existencia, diseño, formalización y operación por control.',
-  'Score',
-  'Resultados de controles',
-  'Motor y resultado'
+  'Contexto y Marco',
+  'Alcance Normativo',
+  'Evaluación 4D del Control',
+  'Resultado del Score',
+  'Análisis de Controles',
+  'Motor y Reporte Final'
 ];
 
 const ENGINE_PROFILE_BASE = [
@@ -186,7 +184,7 @@ export default function ScoreWizardClient() {
   }, [selectedCompanyId]);
 
   const headerItems = useMemo(() => {
-    if (step !== 4) return [];
+    if (step !== 3) return [];
     const total = controlStats.total;
     const evaluated = controlStats.evaluated;
     return [
@@ -197,8 +195,8 @@ export default function ScoreWizardClient() {
 
   const title = STEP_TITLES[step - 1] || 'Wizard';
   const subtitle = step === 2
-    ? 'Selecciona el universo critico que entra al score.'
-    : 'Score';
+    ? 'Selecciona el universo crítico que entra al score.'
+    : 'Evaluación y Resultados';
 
   const handleSelection = async (mode: 'top20' | 'all') => {
     if (!selectedCompanyId || !startDate || !endDate) {
@@ -267,135 +265,117 @@ export default function ScoreWizardClient() {
           />
         ) : (
           <div className={styles.root}>
-          {step === 1 && (
-            <>
-              <div className={styles.header}>
-                <h2 className={styles.title}>Contexto y marco</h2>
-                <p className={styles.subtitle}>Define el universo normativo y la ventana de evaluacion.</p>
-              </div>
-              <div className={styles.grid}>
-                <div className={styles.card}>
-                  <div className={styles.field}>
-                    <span
-                      className={`${styles.label} ${styles.labelClickable}`}
-                      onDoubleClick={() => router.push('/admin/empresa/nuevo?return_to=/score/score')}
-                      title="Doble clic para crear empresa"
-                    >
-                      Empresa
-                    </span>
-                    <select
-                      className={styles.input}
-                      value={selectedCompanyId}
-                      onChange={(e) => setSelectedCompanyId(e.target.value)}
-                      disabled={!contextLoaded}
-                    >
-                      <option value="">{contextLoaded ? 'Seleccione empresa' : 'Cargando...'}</option>
-                      {companies.map((company) => (
-                        <option key={company.id} value={company.id}>{company.name}</option>
-                      ))}
-                    </select>
+            {step === 1 && (
+              <>
+                <div className={styles.header}>
+                  <h2 className={styles.title}>Contexto y Marco</h2>
+                  <p className={styles.subtitle}>Define el universo normativo y la ventana de evaluación.</p>
+                </div>
+                <div className={styles.grid}>
+                  <div className={styles.card}>
+                    <div className={styles.field}>
+                      <span
+                        className={`${styles.label} ${styles.labelClickable}`}
+                        onDoubleClick={() => router.push('/admin/empresa/nuevo?return_to=/score/score')}
+                        title="Doble clic para crear empresa"
+                      >
+                        Empresa
+                      </span>
+                      <select
+                        className={styles.input}
+                        value={selectedCompanyId}
+                        onChange={(e) => setSelectedCompanyId(e.target.value)}
+                        disabled={!contextLoaded}
+                      >
+                        <option value="">{contextLoaded ? 'Seleccione empresa' : 'Cargando...'}</option>
+                        {companies.map((company) => (
+                          <option key={company.id} value={company.id}>{company.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className={styles.card}>
+                    <div className={styles.field}>
+                      <span className={styles.label}>Periodo inicio</span>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        value={startDate}
+                        onChange={(e) => {
+                          setStartDate(e.target.value);
+                          setEndDateAuto(true);
+                        }}
+                        onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <span className={styles.label}>Periodo fin</span>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        value={endDate}
+                        onChange={(e) => {
+                          setEndDate(e.target.value);
+                          setEndDateAuto(false);
+                        }}
+                        onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className={styles.card}>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Periodo inicio</span>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value);
-                        setEndDateAuto(true);
-                      }}
-                      onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
-                    />
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Periodo fin</span>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      value={endDate}
-                      onChange={(e) => {
-                        setEndDate(e.target.value);
-                        setEndDateAuto(false);
-                      }}
-                      onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
-                    />
-                  </div>
+              </>
+            )}
+
+            {step === 3 && (
+              <ScoreControl4DStep
+                runId={draftId}
+                evaluations={controlEvaluations}
+                onChange={setControlEvaluations}
+                onStatsChange={setControlStats}
+                onBack={() => setStep((s) => Math.max(1, s - 1))}
+                onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+                onSave={() => {}}
+              />
+            )}
+
+            {step === 4 && (
+              <ScoreSummaryStep
+                runId={draftId}
+                onBack={() => setStep(3)}
+                onNext={() => setStep(5)}
+              />
+            )}
+
+            {step === 5 && (
+              <ScoreControlResultsStep
+                runId={draftId}
+                onBack={() => setStep(4)}
+                onNext={() => setStep(6)}
+              />
+            )}
+
+            {step === 6 && (
+              <ScoreResultStep
+                runId={draftId}
+                onBack={() => setStep(5)}
+              />
+            )}
+
+            {step <= 2 && (
+              <div className={styles.footer}>
+                <div className={styles.footerActions}>
+                  <button className={styles.backButton} onClick={() => setStep((s) => Math.max(1, s - 1))}>Volver</button>
+                  <button className={styles.ghostButton} onClick={() => {}}>Guardar</button>
+                  <button
+                    className={styles.primaryButton}
+                    onClick={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+                    disabled={step === TOTAL_STEPS}
+                  >
+                    Continuar
+                  </button>
                 </div>
               </div>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <div className={styles.header}>
-                <h2 className={styles.title}>Perfil de ponderacion</h2>
-                <p className={styles.subtitle}>Perfil vigente del motor CRE aplicado al resultado final.</p>
-              </div>
-              <div className={styles.grid}>
-                {engineProfile.map((item) => (
-                  <div key={item.label} className={styles.card}>
-                    <div className={styles.cardTitle}>{item.label}</div>
-                    <div className={styles.domainCode}>{item.value}</div>
-                    <div className={styles.cardSubtitle}>{item.detail}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {step === 4 && (
-            <ScoreControl4DStep
-              runId={draftId}
-              evaluations={controlEvaluations}
-              onChange={setControlEvaluations}
-              onStatsChange={setControlStats}
-              onBack={() => setStep((s) => Math.max(1, s - 1))}
-              onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
-              onSave={() => {}}
-            />
-          )}
-
-          {step === 5 && (
-            <ScoreSummaryStep
-              runId={draftId}
-              onBack={() => setStep(4)}
-              onNext={() => setStep(6)}
-            />
-          )}
-
-          {step === 6 && (
-            <ScoreControlResultsStep
-              runId={draftId}
-              onBack={() => setStep(5)}
-              onNext={() => setStep(7)}
-            />
-          )}
-
-          {step === 7 && (
-            <ScoreResultStep
-              runId={draftId}
-              onBack={() => setStep(6)}
-            />
-          )}
-
-          {step <= 3 && (
-            <div className={styles.footer}>
-              <div className={styles.footerActions}>
-                <button className={styles.backButton} onClick={() => setStep((s) => Math.max(1, s - 1))}>Volver</button>
-                <button className={styles.ghostButton} onClick={() => {}}>Guardar</button>
-                <button
-                  className={styles.primaryButton}
-                  onClick={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
-                  disabled={step === TOTAL_STEPS}
-                >
-                  Continuar
-                </button>
-              </div>
-            </div>
-          )}
+            )}
           </div>
         )}
       </WizardShell>
