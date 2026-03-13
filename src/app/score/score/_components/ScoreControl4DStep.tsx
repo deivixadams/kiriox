@@ -11,6 +11,11 @@ type ControlItem = {
   description?: string | null;
   control_type_code?: string | null;
   required_test?: boolean | null;
+  is_active?: boolean | null;
+  control_objective?: string | null;
+  systemic_effect?: string | null;
+  dependency_logic?: string | null;
+  failure_mode?: string | null;
   evaluation_4d?: {
     dimensions: Record<DimensionKey, DimensionStatus>;
     notes: string;
@@ -242,7 +247,7 @@ export default function ScoreControl4DStep({
     const existing = evalMap.get(controlId);
     const nextItem: ControlEvaluation = {
       controlId,
-      dimensions: existing?.dimensions || {
+      dimensions: (existing?.dimensions as Record<DimensionKey, DimensionStatus>) || {
         existencia: '',
         diseno: '',
         formalizacion: '',
@@ -273,7 +278,7 @@ export default function ScoreControl4DStep({
       operacion: existing?.dimensions?.operacion || '',
     };
     nextDims[key] = nextDims[key] === status ? '' : status;
-    updateEvaluation(controlId, { dimensions: nextDims });
+    updateEvaluation(controlId, { dimensions: nextDims as Record<DimensionKey, DimensionStatus> });
   };
 
   const evaluatedCount = useMemo(() => {
@@ -348,19 +353,19 @@ export default function ScoreControl4DStep({
             )}
             {activeControl.systemic_effect && (
               <div className={styles.controlRow}>
-                <span className={styles.controlLabel}>Systemic effect</span>
+                <span className={styles.controlLabel}>Efecto sistémico</span>
                 <span className={styles.controlValue}>{activeControl.systemic_effect}</span>
               </div>
             )}
             {activeControl.dependency_logic && (
               <div className={styles.controlRow}>
-                <span className={styles.controlLabel}>Dependency logic</span>
+                <span className={styles.controlLabel}>Dependencia</span>
                 <span className={styles.controlValue}>{activeControl.dependency_logic}</span>
               </div>
             )}
             {activeControl.failure_mode && (
               <div className={styles.controlRow}>
-                <span className={styles.controlLabel}>Failure mode</span>
+                <span className={styles.controlLabel}>Modo de falla</span>
                 <span className={`${styles.controlValue} ${styles.controlValueFailure}`}>
                   {activeControl.failure_mode}
                 </span>

@@ -249,6 +249,14 @@ export default function ScoreWizardClient() {
         step={step}
         totalSteps={TOTAL_STEPS}
         headerItems={headerItems}
+        centerContent={
+          controlStats.evaluated < controlStats.total && (
+            <div className={styles.incompleteBannerSmall}>
+              <div className={styles.incompleteBannerTitle}>EVALUACIÓN INCOMPLETA</div>
+              <div className={styles.incompleteBannerSub}>Score parcial basado en {controlStats.evaluated} de {controlStats.total} controles.</div>
+            </div>
+          )
+        }
       >
         {step === 2 ? (
           <ScoreScopeStep

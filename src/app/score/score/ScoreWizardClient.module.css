@@ -506,6 +506,36 @@
   cursor: not-allowed;
 }
 
+
+.incompleteBannerSmall {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  animation: blink 2.5s infinite ease-in-out;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.98); }
+}
+
+.incompleteBannerTitle {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #fde68a;
+}
+
+.incompleteBannerSub {
+  font-size: 10px;
+  color: #fcd34d;
+}
+
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;

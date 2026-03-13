@@ -11,6 +11,8 @@ export default function WizardShell({
   totalSteps,
   headerItems,
   onClose,
+  extraHeader,
+  centerContent,
   children
 }: {
   title: string;
@@ -19,19 +21,27 @@ export default function WizardShell({
   totalSteps: number;
   headerItems?: HeaderItem[];
   onClose?: () => void;
+  extraHeader?: React.ReactNode;
+  centerContent?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        <div>
+        <div className={styles.headerLeft}>
           <h1 className={styles.title}>{title}</h1>
           <div className={styles.meta}>
             <span className={styles.step}>Paso {step} de {totalSteps}</span>
             <span className={styles.subtitle}>{subtitle}</span>
           </div>
         </div>
+
+        <div className={styles.headerCenter}>
+          {centerContent}
+        </div>
+
         <div className={styles.headerRight}>
+          {extraHeader}
           {headerItems && headerItems.length > 0 && (
             <div className={styles.infoBar}>
               {headerItems.map((item) => (

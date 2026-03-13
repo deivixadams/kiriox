@@ -36,11 +36,24 @@
   gap: 12px;
 }
 
+.headerLeft {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.headerCenter {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .headerRight {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 16px;
-  flex: 1;
   justify-content: flex-end;
 }
 

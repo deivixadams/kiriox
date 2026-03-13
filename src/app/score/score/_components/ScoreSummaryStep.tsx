@@ -94,20 +94,12 @@ export default function ScoreSummaryStep({ runId, onBack, onNext }: Props) {
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        {/* Header content removed per user request */}
       </div>
 
       {loading && <div className={styles.helperText}>Calculando score...</div>}
       {error && <div className={styles.helperText}>{error}</div>}
 
-      {payload?.isIncomplete && (
-        <div className={styles.incompleteBanner}>
-          <div className={styles.incompleteTitle}>EVALUACIÓN INCOMPLETA</div>
-          <div className={styles.incompleteSubtitle}>
-            El score se calcula con los controles evaluados hasta el momento.
-          </div>
-        </div>
-      )}
+
 
       <div className={styles.summaryRow}>
         <span className={styles.pill}>Evaluados: {counts.evaluated}/{counts.total}</span>
