@@ -1,0 +1,227 @@
+.container {
+    padding: 2.5rem;
+    animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 3rem;
+}
+
+.titleArea {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.title {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: white;
+    letter-spacing: -0.02em;
+}
+
+.subtitle {
+    color: #a1a1aa;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+}
+
+/* ──── Glass Buttons ──── */
+.glassBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.5rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.primaryBtn {
+    background: rgba(37, 99, 235, 0.15);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    color: #60a5fa;
+}
+
+.primaryBtn:hover {
+    background: rgba(37, 99, 235, 0.25);
+    border-color: rgba(37, 99, 235, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.3);
+}
+
+.secondaryBtn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #d4d4d8;
+}
+
+.secondaryBtn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    color: white;
+}
+
+/* ──── List Section ──── */
+.listContainer {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1.5rem;
+    padding: 0.5rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.tableHeader {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr 0.5fr;
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.headerCol {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #52525b;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr 0.5fr;
+    padding: 1.5rem 2rem;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: all 0.2s ease;
+}
+
+.row:last-child {
+    border-bottom: none;
+}
+
+.row:hover {
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.idTitle {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.mainText {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f4f4f5;
+}
+
+.subText {
+    font-size: 0.75rem;
+    color: #71717a;
+}
+
+.severityDots {
+    display: flex;
+    gap: 4px;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #27272a;
+}
+
+.dotActive {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.valueText {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #f4f4f5;
+}
+
+.penaltyText {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ef4444;
+}
+
+.floorText {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #f59e0b;
+}
+
+.dateInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #a1a1aa;
+}
+
+/* ──── Badges ──── */
+.statusBadge {
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: fit-content;
+    border: 1px solid transparent;
+}
+
+.statusOpen {
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.statusDone {
+    background: rgba(34, 197, 94, 0.1);
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+.actionBtn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #71717a;
+    width: 32px;
+    height: 32px;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.actionBtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.15);
+}
