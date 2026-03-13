@@ -48,6 +48,7 @@ const institutionalMenu: MenuSection[] = [
             { icon: Activity, label: "Simulación", href: "/score/simulacion", tooltip: "Simulaciones del motor e escenarios." },
             { icon: ShieldCheck, label: "Auditoría Continua", href: "/validacion/pruebas", tooltip: "Ejecución de pruebas e resultados." },
             { icon: TrendingUp, label: "Benchmark", href: "/score/dashboard", tooltip: "Comparativos y referencias externas." },
+            { icon: Network, label: "Corpus", href: "/modelo/corpus", tooltip: "Corpus regulatorio estructurado." },
         ]
     },
     {
@@ -82,7 +83,7 @@ const institutionalMenu: MenuSection[] = [
         id: "modelo",
         title: "MODELO",
         items: [
-            { icon: Network, label: "Corpus", href: "/modelo/corpus", tooltip: "Corpus regulatorio estructurado." },
+
             { icon: Shield, label: "Parametros", href: "/modelo/parametros", tooltip: "Riesgos y controles del modelo." },
             { icon: Calculator, label: "Versionado", href: "/modelo/versionado", tooltip: "Versiones y perfiles del modelo." },
             { icon: PlayCircle, label: "Motor", href: "/score/motor", tooltip: "Motor de calculo y ejecucion de corridas." },

@@ -3,19 +3,25 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const domainIds = searchParams.getAll('domain_id');
-    if (domainIds.length === 0) {
-      return NextResponse.json([]);
-    }
 
     const prisma = (await import('@/lib/prisma')).default;
-    const obligations = await prisma.$queryRaw<
-      { id: string; title: string; code: string | null; domain_id: string }[]
-    >`
-      SELECT id, title, code, domain_id
-      FROM corpus.obligation
-      WHERE domain_id = ANY(${domainIds}::uuid[])
-      ORDER BY title ASC
-    `;
+
+    const obligations = domainIds.length > 0
+      ? await prisma.$queryRaw<
+          { id: string; title: string; code: string | null; domain_id: string }[]
+        >`
+          SELECT id, title, code, domain_id
+          FROM corpus.obligation
+          WHERE domain_id = ANY(${domainIds}::uuid[])
+          ORDER BY title ASC
+        `
+      : await prisma.$queryRaw<
+          { id: string; title: string; code: string | null; domain_id: string }[]
+        >`
+          SELECT id, title, code, domain_id
+          FROM corpus.obligation
+          ORDER BY title ASC
+        `;
 
     const normalized = (obligations || []).map((o) => ({
       id: o.id,

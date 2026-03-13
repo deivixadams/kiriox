@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 
-type ControlRow = {
-  risk_id: string;
-  control_id: string;
-  name: string;
-  description: string | null;
-  coverage_notes: string | null;
-};
-
 type Payload = {
   riskIds?: string[];
 };
@@ -27,6 +19,8 @@ export async function POST(request: Request) {
         c.id AS control_id,
         c.name,
         c.description,
+        c.control_objective,
+        c.rationale,
         mrc.coverage_notes
       FROM corpus.map_risk_control mrc
       JOIN corpus.control c ON c.id = mrc.control_id
@@ -34,15 +28,45 @@ export async function POST(request: Request) {
       ORDER BY mrc.risk_id, c.name ASC
     `);
 
-    const byRisk: Record<string, { id: string; name: string; description?: string | null; coverageNotes?: string | null }[]> = {};
+    const byRisk: Record<string, {
+      id: string;
+      name: string;
+      description?: string | null;
+      controlObjective?: string | null;
+      failureMode?: string | null;
+      designIntent?: string | null;
+      coverageNotes?: string | null;
+    }[]> = {};
+
     (rows || []).forEach((row: any) => {
       if (!byRisk[row.risk_id]) {
         byRisk[row.risk_id] = [];
       }
+
+      // rationale can be a JSON object or a string
+      let failureMode: string | null = null;
+      let designIntent: string | null = null;
+      const rat = row.rationale;
+      if (rat && typeof rat === 'object') {
+        failureMode = rat.failure_mode ?? null;
+        designIntent = rat.design_intent ?? null;
+      } else if (typeof rat === 'string') {
+        try {
+          const parsed = JSON.parse(rat);
+          failureMode = parsed.failure_mode ?? null;
+          designIntent = parsed.design_intent ?? null;
+        } catch {
+          failureMode = rat; // plain string
+        }
+      }
+
       byRisk[row.risk_id].push({
         id: row.control_id,
         name: row.name,
         description: row.description,
+        controlObjective: row.control_objective,
+        failureMode,
+        designIntent,
         coverageNotes: row.coverage_notes
       });
     });
