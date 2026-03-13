@@ -150,7 +150,7 @@ export function runCreScoreEngine(input: CreScoreEngineInput): CreScoreEngineOut
 
   const propagationExposure = 0;
   const finalExposure = concentratedExposure + propagationExposure;
-  const finalScore = 100 * (1 - Math.exp(-0.8 * finalExposure));
+  const finalScore = 100 * Math.exp(-0.06 * finalExposure);
 
   return {
     control_effectiveness: controlEffectiveness,

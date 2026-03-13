@@ -91,15 +91,63 @@ export default function ScoreSummaryStep({ runId, onBack, onNext }: Props) {
     failed: payload?.controls.failed.length ?? 0,
   }), [payload]);
 
+  const lanes = useMemo(() => ([
+    {
+      title: 'Controles que cumplen',
+      badge: 'Cumple',
+      count: counts.passed,
+      empty: 'Sin controles completos.',
+      items: payload?.controls.passed ?? [],
+    },
+    {
+      title: 'Cumplen parcial',
+      badge: 'Parcial',
+      count: counts.partial,
+      empty: 'Sin parciales.',
+      items: payload?.controls.partial ?? [],
+    },
+    {
+      title: 'No cumplen',
+      badge: 'No cumple',
+      count: counts.failed,
+      empty: 'Sin controles fallidos.',
+      items: payload?.controls.failed ?? [],
+    },
+  ]), [payload, counts.passed, counts.partial, counts.failed]);
+
   return (
     <div className={styles.root}>
       <div className={styles.header}>
+        <div className={styles.heroCard}>
+          <div className={styles.heroHeader}>
+            <div>
+              <div className={styles.heroEyebrow}>Paso 4 · Panorama del score</div>
+              <div className={styles.title}>Lectura ejecutiva del resultado</div>
+            </div>
+            <div className={styles.heroBadges}>
+              <span className={`${styles.statusBadge} ${styles.badgeInfo}`}>Evaluados {counts.evaluated}/{counts.total}</span>
+              <span className={`${styles.statusBadge} ${styles.badgeSuccess}`}>Cumplen {counts.passed}</span>
+              <span className={`${styles.statusBadge} ${styles.badgeWarning}`}>Parciales {counts.partial}</span>
+              <span className={`${styles.statusBadge} ${styles.badgeDanger}`}>No cumplen {counts.failed}</span>
+            </div>
+          </div>
+          <div className={styles.heroText}>
+            El panel resume el estado real de los controles evaluados y te permite enfocar rápido los grupos con mejor y peor desempeño.
+          </div>
+        </div>
       </div>
 
       {loading && <div className={styles.helperText}>Calculando score...</div>}
       {error && <div className={styles.helperText}>{error}</div>}
 
-
+      {payload?.isIncomplete && (
+        <div className={styles.incompleteBanner}>
+          <div className={styles.incompleteTitle}>Evaluación incompleta</div>
+          <div className={styles.incompleteSubtitle}>
+            El score actual refleja {counts.evaluated} de {counts.total} controles. Completar la evaluación mejora la lectura sistémica.
+          </div>
+        </div>
+      )}
 
       <div className={styles.summaryRow}>
         <span className={styles.pill}>Evaluados: {counts.evaluated}/{counts.total}</span>
@@ -158,93 +206,71 @@ export default function ScoreSummaryStep({ runId, onBack, onNext }: Props) {
         </div>
       </div>
 
-      <div className={styles.listGrid}>
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>Controles que cumplen</div>
-          <div className={styles.list}>
-            {payload?.controls.passed.map((item) => (
-              <div key={item.control_id} className={styles.listItem}>
-                <span>{item.code} · {item.name}</span>
-                <span className={styles.listValue}>{item.effectiveness.toFixed(2)}</span>
+      <div className={styles.laneGrid}>
+        {lanes.map((lane) => (
+          <div key={lane.title} className={styles.laneCard}>
+            <div className={styles.laneHeader}>
+              <div>
+                <div className={styles.cardTitle}>{lane.title}</div>
+                <div className={styles.cardSubtitle}>{lane.count} controles en esta banda</div>
               </div>
-            ))}
-            {payload && payload.controls.passed.length === 0 && (
-              <div className={styles.emptyItem}>Sin controles completos.</div>
-            )}
-          </div>
-        </div>
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>Cumplen parcial</div>
-          <div className={styles.list}>
-            {payload?.controls.partial.map((item) => (
-              <div key={item.control_id} className={styles.listItem}>
-                <span>{item.code} · {item.name}</span>
-                <span className={styles.listValue}>{item.effectiveness.toFixed(2)}</span>
+              <div className={styles.laneHeaderActions}>
+                <span
+                  className={`${styles.statusBadge} ${
+                    lane.badge === 'Cumple'
+                      ? styles.badgeSuccess
+                      : lane.badge === 'Parcial'
+                        ? styles.badgeWarning
+                        : styles.badgeDanger
+                  }`}
+                >
+                  {lane.badge}
+                </span>
               </div>
-            ))}
-            {payload && payload.controls.partial.length === 0 && (
-              <div className={styles.emptyItem}>Sin parciales.</div>
-            )}
-          </div>
-        </div>
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>No cumplen</div>
-          <div className={styles.list}>
-            {payload?.controls.failed.map((item) => (
-              <div key={item.control_id} className={styles.failedItem}>
-                <div className={styles.failedHeader}>
-                  <span>{item.code} · {item.name}</span>
-                  <span className={styles.listValue}>{item.effectiveness.toFixed(2)}</span>
-                </div>
-                <div className={styles.riskList}>
-                  {(item.risks || []).map((risk) => (
-                    <span key={risk.risk_id} className={styles.riskPill}>
-                      {risk.risk_code} · {risk.risk_name}
+            </div>
+            <div className={styles.list}>
+              {lane.items.map((item) => (
+                <div
+                  key={item.control_id}
+                  className={lane.badge === 'No cumple' ? styles.failedItem : styles.listItem}
+                >
+                  <div className={styles.itemHeader}>
+                    <span className={styles.itemText}>{item.code} · {item.name}</span>
+                    <span className={styles.listValue}>{item.effectiveness.toFixed(2)}</span>
+                  </div>
+                  <div className={styles.itemMeta}>
+                    <span
+                      className={`${styles.statusBadge} ${
+                        item.status === 'cumple'
+                          ? styles.badgeSuccess
+                          : item.status === 'parcial'
+                            ? styles.badgeWarning
+                            : styles.badgeDanger
+                      }`}
+                    >
+                      {item.status === 'cumple' ? 'Cumple' : item.status === 'parcial' ? 'Parcial' : 'No cumple'}
                     </span>
-                  ))}
-                  {(item.risks || []).length === 0 && (
-                    <span className={styles.riskEmpty}>Sin riesgos asociados.</span>
+                  </div>
+                  {lane.badge === 'No cumple' && (
+                    <div className={styles.riskList}>
+                      {(item.risks || []).map((risk) => (
+                        <span key={risk.risk_id} className={styles.riskPill}>
+                          {risk.risk_code} · {risk.risk_name}
+                        </span>
+                      ))}
+                      {(item.risks || []).length === 0 && (
+                        <span className={styles.riskEmpty}>Sin riesgos asociados.</span>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
-            {payload && payload.controls.failed.length === 0 && (
-              <div className={styles.emptyItem}>Sin controles fallidos.</div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.tableCard}>
-        <div className={styles.tableHeader}>
-          <div className={styles.tableTitle}>Score por control</div>
-          <div className={styles.tableSubtitle}>Se listan controles evaluados.</div>
-        </div>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead className={styles.thead}>
-              <tr>
-                <th className={styles.th}>Código</th>
-                <th className={styles.th}>Control</th>
-                <th className={styles.th}>Effectiveness</th>
-              </tr>
-            </thead>
-            <tbody className={styles.tbody}>
-              {payload?.control_scores.map((row) => (
-                <tr key={row.control_id} className={styles.tr}>
-                  <td className={styles.td}>{row.control_code}</td>
-                  <td className={styles.td}>{row.control_name}</td>
-                  <td className={styles.td}>{row.effectiveness.toFixed(2)}</td>
-                </tr>
               ))}
-              {payload && payload.control_scores.length === 0 && (
-                <tr>
-                  <td className={styles.emptyCell} colSpan={3}>Sin controles evaluados.</td>
-                </tr>
+              {payload && lane.items.length === 0 && (
+                <div className={styles.emptyItem}>{lane.empty}</div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className={styles.footer}>

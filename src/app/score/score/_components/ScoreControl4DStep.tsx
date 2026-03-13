@@ -22,7 +22,7 @@ type ControlItem = {
   } | null;
 };
 
-type DimensionKey = 'existencia' | 'diseno' | 'formalizacion' | 'operacion';
+type DimensionKey = 'existencia' | 'formalizacion' | 'operacion';
 type DimensionStatus = 'cumple' | 'parcial' | 'no_cumple' | '';
 
 type ControlEvaluation = {
@@ -50,9 +50,6 @@ const DIMENSIONS: { key: DimensionKey; label: string; helper: string }[] = [
 
 const DIMENSION_KEY_MAP: Record<string, DimensionKey> = {
   EXISTENCE: 'existencia',
-  DESIGN: 'diseno',
-  DISENO: 'diseno',
-  'DISEÑO': 'diseno',
   FORMALIZATION: 'formalizacion',
   OPERATION: 'operacion',
 };
@@ -68,18 +65,17 @@ export default function ScoreControl4DStep({
 }: Props) {
   const [controls, setControls] = useState<ControlItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bulkApplying, setBulkApplying] = useState(false);
   const [query, setQuery] = useState('');
   const [activeControlId, setActiveControlId] = useState<string | null>(null);
   const [criteriaByDimension, setCriteriaByDimension] = useState<Record<DimensionKey, string[]>>({
     existencia: [],
-    diseno: [],
     formalizacion: [],
     operacion: [],
   });
   const [criteriaLoading, setCriteriaLoading] = useState(false);
   const [dimensionTestCounts, setDimensionTestCounts] = useState<Record<DimensionKey, number>>({
     existencia: 0,
-    diseno: 0,
     formalizacion: 0,
     operacion: 0,
   });
@@ -165,7 +161,6 @@ export default function ScoreControl4DStep({
     if (!runId || !activeControlId) {
       setCriteriaByDimension({
         existencia: [],
-        diseno: [],
         formalizacion: [],
         operacion: [],
       });
@@ -180,7 +175,6 @@ export default function ScoreControl4DStep({
         if (!res.ok) throw new Error(data?.error || 'No se pudo cargar criterios');
         const next: Record<DimensionKey, string[]> = {
           existencia: [],
-          diseno: [],
           formalizacion: [],
           operacion: [],
         };
@@ -194,7 +188,6 @@ export default function ScoreControl4DStep({
         }
         const counts: Record<DimensionKey, number> = {
           existencia: 0,
-          diseno: 0,
           formalizacion: 0,
           operacion: 0,
         };
@@ -213,13 +206,11 @@ export default function ScoreControl4DStep({
         if (alive) {
           setCriteriaByDimension({
             existencia: [],
-            diseno: [],
             formalizacion: [],
             operacion: [],
           });
           setDimensionTestCounts({
             existencia: 0,
-            diseno: 0,
             formalizacion: 0,
             operacion: 0,
           });
@@ -236,12 +227,31 @@ export default function ScoreControl4DStep({
 
   const saveEvaluation = async (controlId: string, evaluation: ControlEvaluation) => {
     if (!runId) return;
-    await fetch(`/api/score/runs/${runId}/controls/${controlId}/evaluation`, {
+    const res = await fetch(`/api/score/runs/${runId}/controls/${controlId}/evaluation`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ evaluation }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `No se pudo guardar la evaluacion del control ${controlId}`);
+    }
   };
+
+  const buildPassingEvaluation = (control: ControlItem, existing?: ControlEvaluation): ControlEvaluation => ({
+    controlId: control.id,
+    dimensions: {
+      existencia: 'cumple',
+      formalizacion: 'cumple',
+      operacion: control.required_test !== false ? 'cumple' : '',
+    },
+    notes: existing?.notes || '',
+    dimensionNotes: {
+      existencia: existing?.dimensionNotes?.existencia || '',
+      formalizacion: existing?.dimensionNotes?.formalizacion || '',
+      operacion: existing?.dimensionNotes?.operacion || '',
+    },
+  });
 
   const updateEvaluation = (controlId: string, patch: Partial<ControlEvaluation>) => {
     const existing = evalMap.get(controlId);
@@ -249,14 +259,12 @@ export default function ScoreControl4DStep({
       controlId,
       dimensions: (existing?.dimensions as Record<DimensionKey, DimensionStatus>) || {
         existencia: '',
-        diseno: '',
         formalizacion: '',
         operacion: '',
       },
       notes: existing?.notes || '',
       dimensionNotes: existing?.dimensionNotes || {
         existencia: '',
-        diseno: '',
         formalizacion: '',
         operacion: '',
       },
@@ -273,7 +281,6 @@ export default function ScoreControl4DStep({
     const existing = evalMap.get(controlId);
     const nextDims = {
       existencia: existing?.dimensions?.existencia || '',
-      diseno: existing?.dimensions?.diseno || '',
       formalizacion: existing?.dimensions?.formalizacion || '',
       operacion: existing?.dimensions?.operacion || '',
     };
@@ -282,14 +289,24 @@ export default function ScoreControl4DStep({
   };
 
   const handleCumpleTodo = () => {
-    if (!activeControl) return;
-    const nextDims: Record<DimensionKey, DimensionStatus> = {
-      existencia: 'cumple',
-      diseno: evalMap.get(activeControl.id)?.dimensions?.diseno || '',
-      formalizacion: 'cumple',
-      operacion: activeControl.required_test !== false ? 'cumple' : '',
-    };
-    updateEvaluation(activeControl.id, { dimensions: nextDims });
+    if (!runId || controls.length === 0 || bulkApplying) return;
+
+    const nextEvaluations = controls.map((control) =>
+      buildPassingEvaluation(control, evalMap.get(control.id))
+    );
+
+    onChange(nextEvaluations);
+    setBulkApplying(true);
+
+    Promise.all(
+      nextEvaluations.map((evaluation) => saveEvaluation(evaluation.controlId, evaluation))
+    )
+      .catch((error) => {
+        console.error('Error applying passing evaluation to all controls:', error);
+      })
+      .finally(() => {
+        setBulkApplying(false);
+      });
   };
 
   const evaluatedCount = useMemo(() => {
@@ -423,7 +440,6 @@ export default function ScoreControl4DStep({
                             const existing = evalMap.get(activeControl.id);
                             const nextNotes = {
                               existencia: existing?.dimensionNotes?.existencia || '',
-                              diseno: existing?.dimensionNotes?.diseno || '',
                               formalizacion: existing?.dimensionNotes?.formalizacion || '',
                               operacion: existing?.dimensionNotes?.operacion || '',
                               };
@@ -516,9 +532,9 @@ export default function ScoreControl4DStep({
               type="button"
               className={styles.cumpleTodoButton}
               onClick={handleCumpleTodo}
-              disabled={!activeControl}
+              disabled={!activeControl || bulkApplying}
             >
-              Cumple todo
+              {bulkApplying ? 'Aplicando...' : 'Cumple todo'}
             </button>
           </div>
           <div className={styles.footerRight}>
