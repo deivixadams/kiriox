@@ -10,15 +10,14 @@ import ScoreControlResultsStep from './_components/ScoreControlResultsStep';
 import ScoreResultStep from './_components/ScoreResultStep';
 import styles from './ScoreWizardClient.module.css';
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
 
 const STEP_TITLES = [
   'Contexto y Marco',
   'Alcance Normativo',
   'Evaluación 4D del Control',
   'Resultado del Score',
-  'Análisis de Controles',
-  'Motor y Reporte Final'
+  'Análisis de Controles'
 ];
 
 const ENGINE_PROFILE_BASE = [
@@ -350,14 +349,7 @@ export default function ScoreWizardClient() {
               <ScoreControlResultsStep
                 runId={draftId}
                 onBack={() => setStep(4)}
-                onNext={() => setStep(6)}
-              />
-            )}
-
-            {step === 6 && (
-              <ScoreResultStep
-                runId={draftId}
-                onBack={() => setStep(5)}
+                onNext={() => {}}
               />
             )}
 
