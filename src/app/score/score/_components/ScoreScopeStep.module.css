@@ -273,6 +273,8 @@
 .tableWrap {
   width: 100%;
   overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
 }
 
 .table {
@@ -287,6 +289,9 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 11px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .th {
