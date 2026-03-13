@@ -94,10 +94,7 @@ export default function ScoreSummaryStep({ runId, onBack, onNext }: Props) {
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        <div>
-          <h2 className={styles.title}>Score</h2>
-          <p className={styles.subtitle}>Resultado de la evaluación del núcleo estructural.</p>
-        </div>
+        {/* Header content removed per user request */}
       </div>
 
       {loading && <div className={styles.helperText}>Calculando score...</div>}
