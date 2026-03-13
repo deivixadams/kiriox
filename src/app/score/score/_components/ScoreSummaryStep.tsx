@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import styles from './ScoreSummaryStep.module.css';
 
 type ParameterValue = {
@@ -203,6 +204,11 @@ export default function ScoreSummaryStep({ runId, onBack, onNext }: Props) {
               (dominó) entre procesos interdependientes.
             </span>
           </div>
+          {runId && (
+            <Link href={`/score/explicacion/${runId}`} className={styles.detailButton}>
+              Ver detalle
+            </Link>
+          )}
         </div>
       </div>
 
