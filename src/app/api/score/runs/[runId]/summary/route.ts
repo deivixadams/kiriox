@@ -7,7 +7,7 @@ const DEFAULT_WF = 0.14;
 const DEFAULT_WO = 0.26;
 const DEFAULT_ALPHA = 0.35;
 const DEFAULT_BETA = 0.1;
-const DEFAULT_GAMMA = 0.8;
+const DEFAULT_GAMMA = 0.06;
 
 function toNumber(value: Prisma.Decimal | number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
@@ -58,27 +58,23 @@ export async function GET(
       return NextResponse.json({ error: 'Run not found' }, { status: 404 });
     }
 
-    const profileRows = await prisma.$queryRaw<
-      Array<{ id: string; code: string; name: string | null }>
-    >(Prisma.sql`
+    const profileRows = (await prisma.$queryRaw(Prisma.sql`
       SELECT id, code, name
       FROM params.profile
       WHERE is_active = true
       LIMIT 1
-    `);
+    `)) as Array<{ id: string; code: string; name: string | null }>;
     const profile = profileRows[0] || null;
 
     const parameterRows = profile
-      ? await prisma.$queryRaw<
-          Array<{ code: string; name: string | null; numeric_value: number | null }>
-        >(Prisma.sql`
+      ? ((await prisma.$queryRaw(Prisma.sql`
           SELECT pd.code, pd.name, ppv.numeric_value
           FROM params.profile_parameter_value ppv
           JOIN params.parameter_definition pd
             ON pd.id = ppv.parameter_definition_id
           WHERE ppv.profile_id = ${profile.id}::uuid
           ORDER BY pd.sort_order NULLS LAST, pd.code
-        `)
+        `)) as Array<{ code: string; name: string | null; numeric_value: number | null }>)
       : [];
 
     const paramMap = new Map<string, number>();
@@ -93,22 +89,14 @@ export async function GET(
     const wO = paramMap.get('w_o') ?? DEFAULT_WO;
     const alpha = paramMap.get('alpha') ?? DEFAULT_ALPHA;
     const beta = paramMap.get('beta') ?? DEFAULT_BETA;
-    const gamma = paramMap.get('gamma') ?? DEFAULT_GAMMA;
+    const gamma = 0.06; // FORCE 0.06 per CRE V1 technical documentation. DB values like 0.8 are too aggressive.
     const trigger =
       paramMap.get('t_trigger') ??
       paramMap.get('trigger') ??
       paramMap.get('t_trigger_value') ??
       0;
 
-    const controls = await prisma.$queryRaw<
-      Array<{
-        control_id: string;
-        code: string;
-        name: string;
-        required_test: boolean | null;
-        reasons: any;
-      }>
-    >(Prisma.sql`
+    const controls = (await prisma.$queryRaw(Prisma.sql`
       SELECT
         rcd.control_id,
         c.code,
@@ -120,7 +108,13 @@ export async function GET(
         ON c.id = rcd.control_id
       WHERE rcd.run_id = ${runId}::uuid
       ORDER BY c.code
-    `);
+    `)) as Array<{
+      control_id: string;
+      code: string;
+      name: string;
+      required_test: boolean | null;
+      reasons: any;
+    }>;
 
     const totalCount = controls.length;
     const evaluated: Array<{
@@ -153,24 +147,21 @@ export async function GET(
       }
 
       const E = statusToValue(existencia) ?? 0;
-      let F = statusToValue(formalizacion) ?? 0;
-      let O = requireOperation ? statusToValue(operacion) ?? 0 : 0;
+      const F = statusToValue(formalizacion) ?? 0;
+      const O = statusToValue(operacion) ?? 0;
 
       let effectiveness = 0;
       if (E === 0) {
-        F = 0;
-        O = 0;
         effectiveness = 0;
-      } else if (!requireOperation) {
-        effectiveness = clamp01(E * F);
       } else {
-        const denom = wF + wO;
-        effectiveness = denom > 0 ? clamp01(E * ((wF * F) + (wO * O)) / denom) : 0;
+        const numer = (wF * F) + (wO * O);
+        const denom = 0.40; // Fixed denominator as per doc
+        effectiveness = clamp01(E * numer / denom);
       }
 
       const hasNo = requiredStatuses.some((status) => status === 'no_cumple');
       const hasPartial = requiredStatuses.some((status) => status === 'parcial');
-      const status = hasNo ? 'no_cumple' : hasPartial ? 'parcial' : 'cumple';
+      const status = (hasNo ? 'no_cumple' : hasPartial ? 'parcial' : 'cumple') as DimensionStatus;
 
       const item = {
         control_id: control.control_id,
@@ -352,11 +343,7 @@ export async function GET(
 
     const domainIds = domainEntries.map((row) => row.domain_id);
     const dependencyRows = domainIds.length
-      ? await prisma.$queryRaw<Array<{
-          from_domain_id: string;
-          to_domain_id: string;
-          influence_weight: Prisma.Decimal | number | null;
-        }>>(Prisma.sql`
+      ? ((await prisma.$queryRaw(Prisma.sql`
           SELECT
             from_domain_id,
             to_domain_id,
@@ -365,7 +352,11 @@ export async function GET(
           WHERE is_active = true
             AND from_domain_id IN (${Prisma.join(domainIds.map((id) => Prisma.sql`${id}::uuid`))})
             AND to_domain_id IN (${Prisma.join(domainIds.map((id) => Prisma.sql`${id}::uuid`))})
-        `)
+        `)) as Array<{
+          from_domain_id: string;
+          to_domain_id: string;
+          influence_weight: Prisma.Decimal | number | null;
+        }>)
       : [];
 
     const vMap = new Map(domainEntries.map((row) => [row.domain_id, row.v_d]));
@@ -376,7 +367,7 @@ export async function GET(
     }, 0);
     const propagationExposure = beta * depSum;
     const finalExposure = Math.max(concentratedExposure + propagationExposure, trigger);
-    const finalScore = 100 * (1 - Math.exp(-gamma * finalExposure));
+    const finalScore = 100 * Math.exp(-gamma * finalExposure);
 
     const evaluatedCount = evaluated.length;
     const isIncomplete = evaluatedCount < totalCount;
@@ -418,6 +409,13 @@ export async function GET(
         propagation_exposure: propagationExposure,
         final_exposure: finalExposure,
       },
+      debug: {
+        gamma,
+        trigger,
+        uncontrolled_obligations: obligationResults
+          .filter(o => o.exposure > 0)
+          .map(o => ({ code: o.obligation_code, exposure: o.exposure })),
+      }
     });
   } catch (error: any) {
     console.error('Error building score summary:', error);

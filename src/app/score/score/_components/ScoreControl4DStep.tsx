@@ -281,6 +281,17 @@ export default function ScoreControl4DStep({
     updateEvaluation(controlId, { dimensions: nextDims as Record<DimensionKey, DimensionStatus> });
   };
 
+  const handleCumpleTodo = () => {
+    if (!activeControl) return;
+    const nextDims: Record<DimensionKey, DimensionStatus> = {
+      existencia: 'cumple',
+      diseno: evalMap.get(activeControl.id)?.dimensions?.diseno || '',
+      formalizacion: 'cumple',
+      operacion: activeControl.required_test !== false ? 'cumple' : '',
+    };
+    updateEvaluation(activeControl.id, { dimensions: nextDims });
+  };
+
   const evaluatedCount = useMemo(() => {
     return evaluations.filter((ev) => Object.values(ev.dimensions || {}).some((v) => v)).length;
   }, [evaluations]);
@@ -500,6 +511,14 @@ export default function ScoreControl4DStep({
               disabled={!nextControl}
             >
               Control siguiente
+            </button>
+            <button
+              type="button"
+              className={styles.cumpleTodoButton}
+              onClick={handleCumpleTodo}
+              disabled={!activeControl}
+            >
+              Cumple todo
             </button>
           </div>
           <div className={styles.footerRight}>

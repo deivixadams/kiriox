@@ -207,6 +207,29 @@
   cursor: not-allowed;
 }
 
+.cumpleTodoButton {
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.2);
+  color: #bbf7d0;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 8px 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cumpleTodoButton:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.3);
+}
+
+.cumpleTodoButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .content {
   display: flex;
   flex-direction: column;

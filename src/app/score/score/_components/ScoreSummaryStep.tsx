@@ -131,11 +131,29 @@ export default function ScoreSummaryStep({ runId, onBack, onNext }: Props) {
           <div className={styles.scoreValue}>
             {payload?.score?.final_score?.toFixed?.(2) ?? '—'}
           </div>
-          <div className={styles.scoreMeta}>
-            Exposición base: {payload?.score?.base_exposure?.toFixed?.(3) ?? '—'}
+          <div className={styles.valueDescription}>
+            Representa el estado general de salud de cumplimiento normativo en una escala de 0 a 100. 
+            Un valor cercano a 100 indica que los controles implementados están mitigando efectivamente 
+            los riesgos identificados, mientras que un valor bajo señala una fragilidad crítica 
+            que requiere intervención.
           </div>
+          
           <div className={styles.scoreMeta}>
-            Exposición final: {payload?.score?.final_exposure?.toFixed?.(3) ?? '—'}
+            <span>Exposición base: {payload?.score?.base_exposure?.toFixed?.(3) ?? '—'}</span>
+            <span className={styles.valueDescription}>
+              Nivel de riesgo inherente total detectado antes de ajustes sistémicos. Se calcula 
+              sumando la carga de riesgo de las obligaciones con fallas en sus controles, 
+              considerando criticidad y fortaleza de evidencia.
+            </span>
+          </div>
+          
+          <div className={styles.scoreMeta}>
+            <span>Exposición final: {payload?.score?.final_exposure?.toFixed?.(3) ?? '—'}</span>
+            <span className={styles.valueDescription}>
+              Riesgo real proyectado tras considerar la estructura de red. Ajusta la exposición 
+              base mediante factores de concentración en dominios y el efecto de propagación 
+              (dominó) entre procesos interdependientes.
+            </span>
           </div>
         </div>
       </div>
