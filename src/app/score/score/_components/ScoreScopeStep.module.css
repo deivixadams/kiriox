@@ -273,7 +273,7 @@
 .tableWrap {
   width: 100%;
   overflow-x: auto;
-  max-height: 420px;
+  max-height: 340px;
   overflow-y: auto;
 }
 
