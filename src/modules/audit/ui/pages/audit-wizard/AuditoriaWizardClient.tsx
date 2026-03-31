@@ -592,7 +592,7 @@ export default function AuditoriaWizardClient() {
   };
 
   const handleClose = () => {
-    router.push('/validacion/auditorias');
+    router.push('/validacion/riesgo-lineal');
   };
 
   const stepTitle = useMemo(() => {
@@ -621,7 +621,7 @@ export default function AuditoriaWizardClient() {
   }
 
   return (
-    <WizardShell title={stepTitle} subtitle="Auditoria" step={step} totalSteps={TOTAL_STEPS} headerItems={headerItems} onClose={handleClose}>
+    <WizardShell title={stepTitle} subtitle="Riesgo" step={step} totalSteps={TOTAL_STEPS} headerItems={headerItems} onClose={handleClose}>
       {step === 1 && (
         <ActaStep
           acta={acta}

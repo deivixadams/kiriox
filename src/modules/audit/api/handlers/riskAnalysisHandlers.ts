@@ -892,6 +892,71 @@ export async function getAuditDraftRiskAnalysisHandler(
       }
     }
 
+    if (savedRows.length === 0) {
+      for (const baseline of baselineRows) {
+        const probability = baseline.probability == null ? null : round4(toNumber(baseline.probability));
+        const impact = baseline.impact == null ? null : round4(toNumber(baseline.impact));
+        const connectivity = baseline.connectivity == null ? null : Math.round(toNumber(baseline.connectivity));
+        const cascade = baseline.cascade == null ? null : round4(toNumber(baseline.cascade));
+        const kFactor = baseline.k_factor == null ? 1 : round4(toNumber(baseline.k_factor, 1));
+
+        const fallbackControl = bestRiskControlMap.get(baseline.risk_id);
+        const selectedControlId = baseline.mitigating_control_id ?? fallbackControl?.control_id ?? null;
+        const selectedControlMeta = selectedControlId ? controlOptionMap.get(selectedControlId) : null;
+        const selectedStrength = selectedControlId
+          ? (riskControlStrengthMap.get(`${baseline.risk_id}::${selectedControlId}`)
+            ?? (baseline.mitigation_strength == null ? 1 : Math.max(1, Math.round(toNumber(baseline.mitigation_strength, 1)))))
+          : null;
+        const selectedLevel = selectedStrength == null
+          ? baseline.mitigation_level
+          : (selectedStrength >= 4 ? 'TOTAL' : 'PARCIAL');
+
+        const hasRealData = Boolean(
+          baseline.has_real_data ||
+          (isPresentNumber(probability) && isPresentNumber(impact) && isPresentNumber(connectivity) && isPresentNumber(cascade))
+        );
+
+        const mitigated = isPresentNumber(probability) && isPresentNumber(impact)
+          ? computeMitigatedScores(probability, impact, selectedStrength)
+          : null;
+
+        rows.push({
+          rowId: `baseline:${baseline.risk_id}:${baseline.element_id}`,
+          rowMode: 'SYSTEM',
+          domainId: baseline.domain_id ?? primaryDomainId ?? '',
+          riskId: baseline.risk_id,
+          riskCode: baseline.risk_code ?? riskOptionMap.get(baseline.risk_id)?.code ?? null,
+          riskName: baseline.risk_name ?? riskOptionMap.get(baseline.risk_id)?.name ?? null,
+          riskOrigen: baseline.risk_origen,
+          elementId: baseline.element_id,
+          elementCode: baseline.element_code,
+          elementName: baseline.element_name ?? elementOptionMap.get(baseline.element_id)?.name ?? null,
+          customElementName: null,
+          probability,
+          impact,
+          connectivity,
+          cascade,
+          kFactor,
+          baseScore: mitigated?.inherent ?? null,
+          riskScore: mitigated?.residual ?? null,
+          deltaScore: mitigated?.reduction ?? null,
+          mitigatingControlId: selectedControlId,
+          mitigatingControlCode: selectedControlMeta?.code ?? baseline.mitigating_control_code,
+          mitigatingControlName: selectedControlMeta?.name ?? baseline.mitigating_control_name,
+          mitigatingControlDescription: baseline.mitigating_control_description,
+          mitigatingControlHowToEvaluate: selectedControlId ? (controlHowToMap.get(selectedControlId) ?? null) : null,
+          mitigationStrength: selectedStrength,
+          mitigationLevel: selectedLevel,
+          scenario: baseline.scenario ?? null,
+          source: baseline.source ?? null,
+          analysisNotes: baseline.analysis_notes ?? null,
+          hasRealData,
+          isMissingRequiredData: baseline.is_missing_required_data || !hasRealData,
+          isOverridden: false
+        });
+      }
+    }
+
     return NextResponse.json({
       domainId: primaryDomainId,
       reinoId: selection.selectedReinoId,

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/auth-server';
 import { requireCsrf } from '@/lib/csrf';
@@ -17,10 +18,18 @@ export async function GET() {
     }
 
     try {
-        const companies = await prisma.corpusCompany.findMany({
-            select: { id: true, name: true, code: true, statusId: true, createdAt: true, updatedAt: true },
-            orderBy: { name: 'asc' }
-        });
+        const companies = await prisma.$queryRaw<Array<{
+            id: string;
+            name: string;
+            code: string;
+            is_active: boolean;
+            created_at: Date;
+            updated_at: Date;
+        }>>(Prisma.sql`
+            SELECT id, name, code, is_active, created_at, updated_at
+            FROM security.company
+            ORDER BY name ASC
+        `);
         return NextResponse.json(companies);
     } catch (error: any) {
         console.error('Error fetching companies:', error);
@@ -42,27 +51,29 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { name, code, legalName, statusId } = body;
+        const { name, code } = body;
 
         if (!name || !code) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const existing = await prisma.corpusCompany.findUnique({ where: { code } });
-        if (existing) {
-            return NextResponse.json({ error: 'Company code already exists', companyId: existing.id }, { status: 409 });
+        const existing = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+            SELECT id
+            FROM security.company
+            WHERE code = ${code}
+            LIMIT 1
+        `);
+        if (existing.length > 0) {
+            return NextResponse.json({ error: 'Company code already exists', companyId: existing[0].id }, { status: 409 });
         }
 
-        const company = await prisma.corpusCompany.create({
-            data: {
-                name,
-                code,
-                legalName: legalName || null,
-                statusId: typeof statusId === 'number' ? statusId : 1
-            }
-        });
+        const inserted = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+            INSERT INTO security.company (name, code, is_active)
+            VALUES (${name}, ${code}, true)
+            RETURNING id
+        `);
 
-        return NextResponse.json({ success: true, companyId: company.id });
+        return NextResponse.json({ success: true, companyId: inserted[0].id });
     } catch (error: any) {
         console.error('Error creating company:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

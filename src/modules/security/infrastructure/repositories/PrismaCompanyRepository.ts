@@ -12,8 +12,9 @@ export class PrismaCompanyRepository {
     const rows = await prisma.$queryRaw<CompanyRow[]>(
       Prisma.sql`
         SELECT c.id, c.code, c.name
-        FROM corpus.company c
+        FROM security.company c
         WHERE c.code = ${code}
+          AND COALESCE(c.is_active, true) = true
         LIMIT 1
       `
     );
@@ -24,8 +25,9 @@ export class PrismaCompanyRepository {
     const rows = await prisma.$queryRaw<CompanyRow[]>(
       Prisma.sql`
         SELECT c.id, c.code, c.name
-        FROM corpus.company c
+        FROM security.company c
         WHERE c.id = ${id}::uuid
+          AND COALESCE(c.is_active, true) = true
         LIMIT 1
       `
     );
@@ -40,12 +42,11 @@ export class PrismaCompanyRepository {
   }): Promise<CompanyRow> {
     const rows = await prisma.$queryRaw<CompanyRow[]>(
       Prisma.sql`
-        INSERT INTO corpus.company (code, name, legal_name, status_id)
+        INSERT INTO security.company (code, name, is_active)
         VALUES (
           ${input.code},
           ${input.name},
-          ${input.legalName ?? null},
-          ${input.statusId ?? 1}
+          true
         )
         RETURNING id, code, name
       `
@@ -84,4 +85,3 @@ export class PrismaCompanyRepository {
     );
   }
 }
-

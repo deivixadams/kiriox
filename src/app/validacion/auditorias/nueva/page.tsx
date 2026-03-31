@@ -1,7 +1,7 @@
-import AuditWizardNewPage from '@/modules/audit/ui/pages/AuditWizardNewPage';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default function AuditoriaWizardPage() {
-  return <AuditWizardNewPage />;
+  redirect('/validacion/riesgo-lineal/nueva');
 }

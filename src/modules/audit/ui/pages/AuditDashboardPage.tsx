@@ -92,13 +92,13 @@ export default function AuditDashboard() {
                         <ClipboardList size={32} className="text-blue-500" />
                     </div>
                     <div>
-                        <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em', margin: 0 }}>Auditorías</h1>
-                        <p style={{ color: '#71717a', fontSize: '1rem', marginTop: '0.25rem' }}>Gestión centralizada de auditorías y hallazgos materiales.</p>
+                        <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em', margin: 0 }}>Riesgo</h1>
+                        <p style={{ color: '#71717a', fontSize: '1rem', marginTop: '0.25rem' }}>Gestión centralizada de análisis y hallazgos materiales.</p>
                     </div>
                 </div>
 
                 <Link
-                    href="/validacion/auditorias/nueva"
+                    href="/validacion/riesgo-lineal/nueva"
                     className="btn-primary"
                     style={{
                         padding: '0.85rem 1.75rem',
@@ -112,14 +112,14 @@ export default function AuditDashboard() {
                         fontSize: '0.95rem'
                     }}
                 >
-                    <Plus size={20} /> Nueva Auditoría
+                    <Plus size={20} /> Nuevo Análisis
                 </Link>
             </div>
 
             {/* Stats Overview */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '3rem' }}>
                 {[
-                    { label: 'Auditorías Activas', value: '4', icon: PlayCircle, color: '#3b82f6' },
+                    { label: 'Riesgos Activos', value: '4', icon: PlayCircle, color: '#3b82f6' },
                     { label: 'Hallazgos Open', value: '28', icon: ClipboardList, color: '#ef4444' },
                     { label: 'Readiness Promedio', value: '82%', icon: ShieldCheck, color: '#10b981' },
                     { label: 'Empresas Cubiertas', value: '12', icon: Building2, color: '#f59e0b' }
@@ -139,7 +139,7 @@ export default function AuditDashboard() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <LayoutGrid size={20} className="text-muted" />
-                        <h3 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Inventario de Auditorías</h3>
+                        <h3 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Inventario de Riesgos</h3>
                     </div>
                     <div style={{ position: 'relative', width: '350px' }}>
                         <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#71717a' }} />
@@ -157,7 +157,7 @@ export default function AuditDashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {filteredAssessments.map((audit: any) => (
                         <Link
-                            href={`/validacion/auditorias/${audit.id}`}
+                            href={`/validacion/riesgo-lineal/${audit.id}`}
                             key={audit.id}
                             style={{ textDecoration: 'none' }}
                         >
@@ -205,7 +205,7 @@ export default function AuditDashboard() {
                 {filteredAssessments.length === 0 && (
                     <div style={{ padding: '6rem 0', textAlign: 'center', opacity: 0.5 }}>
                         <ClipboardList size={64} style={{ margin: '0 auto 1.5rem auto', display: 'block' }} />
-                        <p style={{ fontSize: '1.1rem' }}>No se encontraron auditorías registradas.</p>
+                        <p style={{ fontSize: '1.1rem' }}>No se encontraron riesgos registrados.</p>
                         <button className="btn-secondary" style={{ marginTop: '1rem' }}>Configurar Mi Primera Evaluación</button>
                     </div>
                 )}
@@ -230,4 +230,3 @@ export default function AuditDashboard() {
         </div>
     );
 }
-

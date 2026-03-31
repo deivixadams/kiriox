@@ -66,7 +66,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   {
     key: 'audit',
     label: 'Auditoría',
-    href: '/validacion/auditorias',
+    href: '/validacion/riesgo-lineal',
     icon: 'ClipboardCheck',
     module: 'audit',
     permission: 'audit.read',
@@ -194,7 +194,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
       {
         key: 'history-audit',
         label: 'Auditoría',
-        href: '/validacion/auditorias',
+        href: '/validacion/riesgo-lineal',
         icon: 'Archive',
         module: 'audit',
         permission: 'audit.history.read',

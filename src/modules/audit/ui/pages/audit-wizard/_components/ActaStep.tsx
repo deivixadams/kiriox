@@ -101,7 +101,7 @@ export default function ActaStep({
           <div className={styles.divider} />
 
           <div className={styles.gridTwo}>
-            <FormField label="Entidad a Auditar" icon={Info}>
+            <FormField label="Entidad a evaluar" icon={Info}>
               <input
                 type="text"
                 value={acta.entidad_nombre}
@@ -109,7 +109,7 @@ export default function ActaStep({
                 className={styles.input}
               />
             </FormField>
-            <FormField label="Periodo de Auditoria (Anual)" icon={Calendar}>
+            <FormField label="Periodo de evaluación (Anual)" icon={Calendar}>
               <div className={styles.dateRow}>
                 <input
                   type="date"
@@ -152,7 +152,7 @@ export default function ActaStep({
             />
 
             <TextSection
-              title="Alcance de la Auditoria"
+              title="Alcance de la evaluación"
               description="Detalla los procesos, areas y periodos especificos."
               value={acta.alcance}
               onChange={(val: string) => onChangeActa({ ...acta, alcance: val })}
@@ -207,7 +207,7 @@ export default function ActaStep({
                 Hitos Iniciales
               </h3>
               <div className={styles.fieldStack}>
-                <FormField label="Inicio Auditoria">
+                <FormField label="Inicio de evaluación">
                   <input
                     type="date"
                     value={getCronoDate('Inicio Auditoria')}

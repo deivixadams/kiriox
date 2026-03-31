@@ -1,5 +1,5 @@
-import AuditDashboardPage from '@/modules/audit/ui/pages/AuditDashboardPage';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <AuditDashboardPage />;
+  redirect('/validacion/riesgo-lineal');
 }

@@ -57,6 +57,29 @@ export async function GET(request: Request) {
         }))
       : [];
 
+    const loadCompanies = async () => {
+      const securityCompanies = await queryOrEmpty(prisma.$queryRaw`
+        SELECT id, name, code
+        FROM security.company
+        WHERE is_active = true
+        ORDER BY name ASC
+      `) as any[];
+      return Array.isArray(securityCompanies) ? securityCompanies : [];
+    };
+
+    const loadCompanyById = async (id: string) => {
+      const securityRows = await queryOrEmpty(prisma.$queryRaw`
+        SELECT id, NULL::uuid AS jurisdiction_id
+        FROM security.company
+        WHERE id = ${id}::uuid
+          AND is_active = true
+        LIMIT 1
+      `);
+      if (Array.isArray(securityRows) && securityRows.length > 0) return securityRows[0];
+
+      return null;
+    };
+
     if (companyId) {
       const generalJurisdictionRows = await queryOrEmpty(prisma.$queryRaw`
         SELECT id
@@ -66,13 +89,7 @@ export async function GET(request: Request) {
       `);
       const generalJurisdiction = Array.isArray(generalJurisdictionRows) ? generalJurisdictionRows[0] ?? null : null;
 
-      const companyRows = await queryOrEmpty(prisma.$queryRaw`
-        SELECT id, jurisdiction_id
-        FROM corpus.company
-        WHERE id = ${companyId}::uuid
-        LIMIT 1
-      `);
-      const company = Array.isArray(companyRows) ? companyRows[0] ?? null : null;
+      const company = await loadCompanyById(companyId);
       if (!company) {
         return NextResponse.json({ found: false });
       }
@@ -114,11 +131,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const companies = await queryOrEmpty(prisma.$queryRaw`
-      SELECT id, name, code
-      FROM corpus.company
-      ORDER BY name ASC
-    `) as any[];
+    const companies = await loadCompanies();
 
     return NextResponse.json({
       companies,

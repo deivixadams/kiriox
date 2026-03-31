@@ -134,40 +134,19 @@ export class PrismaAccessContextRepository implements AccessContextRepository {
   }
 
   private async loadCompany(companyId: string) {
-    const queries = [
-      Prisma.sql`
-        SELECT c.id, c.code, c.name
-        FROM security.company c
-        WHERE c.id = ${companyId}::uuid
-        LIMIT 1
-      `,
-      Prisma.sql`
-        SELECT c.id, c.code, c.name
-        FROM corpus.company c
-        WHERE c.id = ${companyId}::uuid
-        LIMIT 1
-      `,
-      Prisma.sql`
-        SELECT c.id, c.code, c.name
-        FROM core.company c
-        WHERE c.id = ${companyId}::uuid
-        LIMIT 1
-      `,
-    ];
-
     let rows: { id: string; code: string | null; name: string | null }[] = [];
-    for (const query of queries) {
-      try {
-        rows = await prisma.$queryRaw<{ id: string; code: string | null; name: string | null }[]>(query);
-        // Stop at first existing schema even if the company id is unknown.
-        break;
-      } catch (error) {
-        const isKnownMissing =
-          isMissingRelationError(error, 'security.company') ||
-          isMissingRelationError(error, 'corpus.company') ||
-          isMissingRelationError(error, 'core.company');
-        if (!isKnownMissing) throw error;
-      }
+    try {
+      rows = await prisma.$queryRaw<{ id: string; code: string | null; name: string | null }[]>(
+        Prisma.sql`
+          SELECT c.id, c.code, c.name
+          FROM security.company c
+          WHERE c.id = ${companyId}::uuid
+            AND COALESCE(c.is_active, true) = true
+          LIMIT 1
+        `
+      );
+    } catch (error) {
+      if (!isMissingRelationError(error, 'security.company')) throw error;
     }
 
     const row = rows[0];

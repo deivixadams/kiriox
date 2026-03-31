@@ -33,7 +33,6 @@ function createPrismaClient(): PrismaCompatClient {
     corpusAssessmentDraft: "audit_assessment_draft",
     corpusEvaluation: "audit_evaluation",
     corpusAuditLog: "audit_log",
-    corpusCompany: "company",
     corpusDomain: "domain",
     corpusFramework: "corpus_framework",
     corpusFrameworkVersion: "framework_version",
