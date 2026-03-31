@@ -1,54 +1,6 @@
-import { NextResponse } from 'next/server';
-type Payload = {
-  domainIds?: string[];
-  obligationIds?: string[];
-};
+import { postAuditDeriveScopeHandler } from '@/modules/audit/api/handlers';
+import { nextHandler, withModuleAccess } from '@/shared/http';
 
-export async function POST(request: Request) {
-  try {
-    const { domainIds = [], obligationIds = [] } = (await request.json()) as Payload;
-
-    let resolvedObligationIds = obligationIds;
-    if (resolvedObligationIds.length === 0 && domainIds.length > 0) {
-      const prisma = (await import('@/lib/prisma')).default;
-      const obligations = await prisma.$queryRaw<{ id: string }[]>`
-        SELECT id
-        FROM corpus.obligation
-        WHERE domain_id = ANY(${domainIds}::uuid[])
-      `;
-      resolvedObligationIds = (obligations || []).map((o) => o.id);
-    }
-
-    const obligationCount = resolvedObligationIds.length;
-
-    let riskCount = 0;
-    let controlCount = 0;
-    if (resolvedObligationIds.length > 0) {
-      const prisma = (await import('@/lib/prisma')).default;
-      const risks = await prisma.$queryRaw<{ risk_id: string }[]>`
-        SELECT DISTINCT mrc.risk_id
-        FROM corpus.map_obligation_control moc
-        JOIN corpus.map_risk_control mrc ON mrc.control_id = moc.control_id
-        WHERE moc.obligation_id = ANY(${resolvedObligationIds}::uuid[])
-      `;
-      riskCount = (risks || []).length;
-
-      const controls = await prisma.$queryRaw<{ control_id: string }[]>`
-        SELECT control_id
-        FROM pendiente.corpus_control_obligation
-        WHERE obligation_id = ANY(${resolvedObligationIds}::uuid[])
-      `;
-      controlCount = new Set((controls || []).map((c) => c.control_id)).size;
-    }
-
-    return NextResponse.json({
-      obligationCount,
-      riskCount,
-      controlCount,
-      testCount: 0,
-    });
-  } catch (error: any) {
-    console.error('Error deriving scope:', error);
-    return NextResponse.json({ error: 'Failed to derive scope' }, { status: 500 });
-  }
-}
+export const POST = nextHandler(
+  withModuleAccess('audit', 'write', (request) => postAuditDeriveScopeHandler(request))
+);

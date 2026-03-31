@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/auth-server';
+import { nextHandler, withModuleAccess } from '@/shared/http';
 
 function isAdmin(roleCode: string) {
   return roleCode === 'ADMIN';
 }
 
-export async function GET(request: Request) {
+const teamUsersHandler = async (request: Request) => {
   const auth = await getAuthContext();
-  if (!auth) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
   const { searchParams } = new URL(request.url);
   const companyId = searchParams.get('company_id');
@@ -18,7 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'company_id is required' }, { status: 400 });
   }
 
-  if (!isAdmin(auth.roleCode) && auth.tenantId !== companyId) {
+  if (!isAdmin(auth!.roleCode) && auth!.tenantId !== companyId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -52,4 +50,8 @@ export async function GET(request: Request) {
     console.error('Error fetching team users:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+};
+
+export const GET = nextHandler(
+  withModuleAccess('audit', 'read', teamUsersHandler)
+);

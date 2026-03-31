@@ -94,7 +94,7 @@ export async function buildReportData(auth: AuthContext, draftId: string) {
   const controlIds = Array.from(new Set(evaluations.map((ev) => ev.controlId).filter(Boolean)));
 
   const rows = riskIds.length && controlIds.length
-    ? await prisma.$queryRaw(Prisma.sql`
+    ? await prisma.$queryRaw<RiskControlRow[]>(Prisma.sql`
         SELECT
           r.id AS risk_id,
           r.name AS risk_name,
@@ -105,9 +105,9 @@ export async function buildReportData(auth: AuthContext, draftId: string) {
           c.name AS control_name,
           c.description AS control_description,
           mrc.coverage_notes AS coverage_notes
-        FROM corpus.map_risk_control mrc
-        JOIN corpus.control c ON c.id = mrc.control_id
-        JOIN corpus.risk r ON r.id = mrc.risk_id
+        FROM graph.map_risk_control mrc
+        JOIN graph.control c ON c.id = mrc.control_id
+        JOIN graph.risk r ON r.id = mrc.risk_id
         LEFT JOIN catalogos.corpus_catalog_risk_type rt ON rt.id = r.risk_type_id
         LEFT JOIN catalogos.corpus_catalog_risk_layer rl ON rl.id = r.risk_layer_id
         WHERE mrc.risk_id = ANY(${riskIds}::uuid[])
@@ -323,3 +323,4 @@ export async function renderReportDocx(data: Record<string, any>) {
 
   return doc.getZip().generate({ type: 'nodebuffer' });
 }
+

@@ -1,5 +1,5 @@
-import ScoreWizardClient from './ScoreWizardClient';
+import LinearRiskScoreWizardPage from '@/modules/linear-risk/ui/pages/LinearRiskScoreWizardPage';
 
 export default function ScorePage() {
-  return <ScoreWizardClient />;
+  return <LinearRiskScoreWizardPage />;
 }

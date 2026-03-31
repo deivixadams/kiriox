@@ -5,8 +5,9 @@ import { useTheme } from "./ThemeContext";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { AccessContext } from "@/modules/security";
 
-export default function Topbar() {
+export default function Topbar({ access }: { access?: AccessContext | null }) {
     const { theme, toggleTheme } = useTheme();
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
@@ -91,8 +92,12 @@ export default function Topbar() {
                     style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '1rem', borderLeft: '1px solid var(--glass-border)', position: 'relative' }}
                 >
                     <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '0.85rem', fontWeight: '600' }}>Admin User</p>
-                        <p style={{ fontSize: '0.75rem', opacity: 0.6 }}>Auditor Mode</p>
+                        <p style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                            {access?.user?.name || 'Usuario'}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', opacity: 0.6 }}>
+                            {access?.company?.name || 'Empresa activa'}
+                        </p>
                     </div>
                     <button
                         onClick={() => setMenuOpen((open) => !open)}

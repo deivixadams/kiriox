@@ -1,38 +1,14 @@
-import { NextResponse } from 'next/server';
+import { postAuditDraftReportHandler } from '@/modules/audit/api/handlers';
 import { getAuthContext } from '@/lib/auth-server';
-import { buildReportData, materializeDraft, renderReportDocx } from '@/lib/audit-report';
+import { nextHandler, withModuleAccess } from '@/shared/http';
 
 export const runtime = 'nodejs';
 
-export async function POST(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+export const POST = nextHandler(
+  withModuleAccess('audit', 'write', async (_request, context) => {
     const auth = await getAuthContext();
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const params = context?.params as Promise<{ id: string }>;
     const { id } = await params;
-    const data = await buildReportData(auth, id);
-    if (!data) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    }
-    try {
-      await materializeDraft(auth, id);
-    } catch (error: any) {
-      return NextResponse.json({ error: error?.message || 'Failed to materialize draft' }, { status: 400 });
-    }
-    const buffer = await renderReportDocx(data);
-    return new Response(new Uint8Array(buffer), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename="Informe_Auditoria_${id}.docx"`
-      }
-    });
-  } catch (error: any) {
-    console.error('Error generating audit report:', error);
-    return NextResponse.json({ error: 'Failed to generate report' }, { status: 500 });
-  }
-}
+    return postAuditDraftReportHandler(auth!, id);
+  })
+);

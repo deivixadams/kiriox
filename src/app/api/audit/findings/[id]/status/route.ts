@@ -1,57 +1,10 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { patchAuditFindingStatusHandler } from '@/modules/audit/api/handlers';
+import { nextHandler, withModuleAccess } from '@/shared/http';
 
-// PATCH /api/audit/findings/[id]/status
-export async function PATCH(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = nextHandler(
+  withModuleAccess('audit', 'write', async (request, context) => {
+    const params = context?.params as Promise<{ id: string }>;
     const { id } = await params;
-    try {
-        const body = await req.json();
-        const { status, resolution, userId, userRole } = body;
-
-        // 1. RBAC Check
-        const allowedRoles = ['AUDITOR', 'AUDIT_MANAGER'];
-        if (!allowedRoles.includes(userRole)) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        // 2. Validate status
-        if (!['open', 'closed', 'suppressed'].includes(status)) {
-            return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-        }
-
-        // 3. Update Finding
-        const updateData: any = { status, updatedBy: userId };
-
-        if (status === 'closed') {
-            updateData.closedAt = new Date();
-            updateData.closedBy = userId;
-            updateData.metadata = { resolution };
-        }
-
-        const finding = await (prisma as any).corpusAuditFinding.update({
-            where: { id },
-            data: updateData
-        });
-
-        // 4. Log
-        await (prisma as any).corpusAuditLog.create({
-            data: {
-                tenantId: finding.tenantId,
-                entityName: 'corpus.audit_finding',
-                entityId: finding.id,
-                action: `SET_STATUS_${status.toUpperCase()}`,
-                newData: finding as any,
-                changedBy: userId,
-                ipAddress: '127.0.0.1'
-            }
-        });
-
-        return NextResponse.json(finding);
-    } catch (error) {
-        console.error('Audit Finding PATCH Error:', error);
-        return NextResponse.json({ error: 'Failed' }, { status: 500 });
-    }
-}
+    return patchAuditFindingStatusHandler(id, request);
+  })
+);

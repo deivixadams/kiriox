@@ -1,12 +1,7 @@
-import { Suspense } from 'react';
-import AuditoriaWizardClient from './AuditoriaWizardClient';
+import AuditWizardNewPage from '@/modules/audit/ui/pages/AuditWizardNewPage';
 
 export const dynamic = 'force-dynamic';
 
 export default function AuditoriaWizardPage() {
-  return (
-    <Suspense fallback={null}>
-      <AuditoriaWizardClient />
-    </Suspense>
-  );
+  return <AuditWizardNewPage />;
 }

@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import SimulationGraphPage from '@/modules/simulation/ui/pages/SimulationGraphPage';
 
 export default function ScoreSimulacionPage() {
-  redirect('/score/motor');
+  return <SimulationGraphPage />;
 }

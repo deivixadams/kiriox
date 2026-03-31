@@ -13,11 +13,31 @@ const FIELD_PROMPTS: Record<string, string> = {
   metodologia: 'Redacta la metodologia de trabajo en tono profesional y conciso.',
 };
 
+const OUTPUT_GUARDRAILS =
+  'Reglas de salida: responde solo con el texto final solicitado. ' +
+  'No incluyas notas, aclaraciones, introducciones, conclusiones, advertencias ni metacomentarios. ' +
+  'No escribas frases como "Nota:", "Aclaracion:", "Esta respuesta..." ni texto entre parentesis sobre instrucciones.';
+
 function normalizeText(input: string) {
   const trimmed = input.replace(/\s+/g, ' ').trim();
   if (!trimmed) return '';
   const withCap = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
   return /[.!?]$/.test(withCap) ? withCap : `${withCap}.`;
+}
+
+function sanitizeModelOutput(input: string) {
+  const text = String(input ?? '').trim();
+  if (!text) return '';
+
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^\(?\s*nota\s*:?/i.test(line))
+    .filter((line) => !/^\(?\s*aclaraci[oó]n\s*:?/i.test(line))
+    .filter((line) => !/^\(?\s*esta respuesta/i.test(line));
+
+  return lines.join(' ').trim();
 }
 
 export async function POST(req: Request) {
@@ -50,8 +70,8 @@ export async function POST(req: Request) {
   const envSystemPrompt =
     process.env.SYSTEM_PROMPT || process.env.GUIAS_REVISION_SYSTEM_PROMPT || '';
   const corePrompt = baseText
-    ? `${baseInstruction}\n\nTexto:\n${baseText}`
-    : `${baseInstruction}\n\nGenera un texto profesional para: ${contextLabel}.`;
+    ? `${baseInstruction}\n\n${OUTPUT_GUARDRAILS}\n\nTexto:\n${baseText}`
+    : `${baseInstruction}\n\n${OUTPUT_GUARDRAILS}\n\nGenera un texto profesional para: ${contextLabel}.`;
   const userPrompt = envSystemPrompt ? `${envSystemPrompt}\n\n${corePrompt}` : corePrompt;
 
   try {
@@ -68,7 +88,8 @@ export async function POST(req: Request) {
       const data = await chatRes.json();
       const content = data?.choices?.[0]?.message?.content;
       if (typeof content === 'string' && content.trim()) {
-        return NextResponse.json({ refinedText: content.trim() });
+        const sanitized = sanitizeModelOutput(content);
+        return NextResponse.json({ refinedText: sanitized || normalizeText(content) });
       }
     }
   } catch (error) {

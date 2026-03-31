@@ -1,17 +1,10 @@
-import { NextResponse } from 'next/server';
+import { postCreateAuditDraftHandler } from '@/modules/audit/api/handlers';
 import { getAuthContext } from '@/lib/auth-server';
-import { createDraft } from './store';
+import { nextHandler, withModuleAccess } from '@/shared/http';
 
-export async function POST() {
-  try {
+export const POST = nextHandler(
+  withModuleAccess('audit', 'write', async () => {
     const auth = await getAuthContext();
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const draft = await createDraft(auth);
-    return NextResponse.json(draft);
-  } catch (error: any) {
-    console.error('Error creating draft:', error);
-    return NextResponse.json({ error: 'Failed to create draft' }, { status: 500 });
-  }
-}
+    return postCreateAuditDraftHandler(auth!);
+  })
+);

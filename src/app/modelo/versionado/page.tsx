@@ -1,10 +1,5 @@
-import React from 'react';
-import ParamManager from './components/ParamManager';
+import GovernanceVersioningPage from '@/modules/governance/ui/pages/GovernanceVersioningPage';
 
 export default function ParametrosGobernanzaPage() {
-    return (
-        <main className="p-4">
-            <ParamManager />
-        </main>
-    );
+  return <GovernanceVersioningPage />;
 }

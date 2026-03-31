@@ -27,7 +27,20 @@
       "@/*": [
         "./src/*"
       ],
+      "@/modules/*": [
+        "./src/modules/*"
+      ],
+      "@/shared/*": [
+        "./src/shared/*"
+      ],
+      "@/infrastructure/*": [
+        "./src/infrastructure/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
       "@shared/*": [
+        "./src/shared/*",
         "./lib/*"
       ],
       "@dashboard/*": [

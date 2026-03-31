@@ -1,46 +1,21 @@
-import { NextResponse } from 'next/server';
+import { getAuditDraftHandler, patchAuditDraftHandler } from '@/modules/audit/api/handlers';
 import { getAuthContext } from '@/lib/auth-server';
-import { getDraft, updateDraft } from '../store';
+import { nextHandler, withModuleAccess } from '@/shared/http';
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+export const GET = nextHandler(
+  withModuleAccess('audit', 'read', async (_request, context) => {
     const auth = await getAuthContext();
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const params = context?.params as Promise<{ id: string }>;
     const { id } = await params;
-    const draft = await getDraft(auth, id);
-    if (!draft) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    }
-    return NextResponse.json(draft);
-  } catch (error: any) {
-    console.error('Error loading draft:', error);
-    return NextResponse.json({ error: 'Failed to load draft' }, { status: 500 });
-  }
-}
+    return getAuditDraftHandler(auth!, id);
+  })
+);
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+export const PATCH = nextHandler(
+  withModuleAccess('audit', 'write', async (request, context) => {
     const auth = await getAuthContext();
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const params = context?.params as Promise<{ id: string }>;
     const { id } = await params;
-    const patch = await request.json();
-    const draft = await updateDraft(auth, id, patch);
-    if (!draft) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    }
-    return NextResponse.json(draft);
-  } catch (error: any) {
-    console.error('Error updating draft:', error);
-    return NextResponse.json({ error: 'Failed to update draft' }, { status: 500 });
-  }
-}
+    return patchAuditDraftHandler(auth!, id, request);
+  })
+);

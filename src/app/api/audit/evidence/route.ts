@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
+import { nextHandler, withModuleAccess } from '@/shared/http';
 
-const EVIDENCE_DIR = 'C:\\\\_CRE\\\\evidencias';
-
+const EVIDENCE_DIR = 'C:\\_CRE\\evidencias';
 const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '');
 
-export async function POST(request: Request) {
+const evidenceHandler = async (request: Request) => {
   try {
     const form = await request.formData();
     const file = form.get('file');
@@ -42,4 +42,8 @@ export async function POST(request: Request) {
     console.error('Error saving evidence:', error);
     return NextResponse.json({ error: 'Failed to save evidence' }, { status: 500 });
   }
-}
+};
+
+export const POST = nextHandler(
+  withModuleAccess('audit', 'write', evidenceHandler)
+);
