@@ -39,14 +39,21 @@ async function loadDashboardRows() {
   const prisma = (await import('@/lib/prisma')).default;
   try {
     const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
-      SELECT * FROM dashboard_top_control
+      SELECT * FROM "views-schema".dashboard_top_control
     `);
-    return { rows, source: 'dashboard_top_control' };
+    return { rows, source: '"views-schema".dashboard_top_control' };
   } catch {
-    const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
-      SELECT * FROM corpus.dashboard_top_control
-    `);
-    return { rows, source: 'corpus.dashboard_top_control' };
+    try {
+      const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
+        SELECT * FROM corpus.dashboard_top_control
+      `);
+      return { rows, source: 'corpus.dashboard_top_control' };
+    } catch {
+      const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
+        SELECT * FROM dashboard_top_control
+      `);
+      return { rows, source: 'dashboard_top_control' };
+    }
   }
 }
 

@@ -42,6 +42,8 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
       "governance.parameters.write",
       "governance.versioning.read",
       "governance.engine.read",
+      "governance.license.read",
+      "governance.license.write",
     ],
   },
   {
@@ -123,4 +125,3 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
 export const MODULE_REGISTRY_MAP = new Map<string, ModuleDefinition>(
   MODULE_REGISTRY.map((moduleDef) => [moduleDef.code, moduleDef])
 );
-

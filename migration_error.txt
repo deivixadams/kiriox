@@ -1,9 +1,0 @@
-Loaded Prisma config from prisma.config.ts.
-
-Prisma schema loaded from prisma\schema.prisma.
-Datasource "db": PostgreSQL database "cre_db", schemas "catalogos, corpus, params, pendiente, score, security" at "localhost:5432"
-
-Error: P4002
-
-The schema of the introspected database was inconsistent: The schema of the introspected database was inconsistent: Cross schema references are only allowed when the target schema is listed in the schemas property of your datasource. `catalogos.framework_version` points to `_DONOTUSE_.corpus_framework` in constraint `corpus_framework_version_framework_id_fkey`. Please add `_DONOTUSE_` to your `schemas` property and run this command again.
-

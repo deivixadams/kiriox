@@ -1,6 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import prisma from '@/lib/prisma';
 
 const JWT_COOKIE = 'cre_auth';
 const CSRF_COOKIE = 'csrf_token';
@@ -14,8 +13,8 @@ export type AuthContext = {
 
 function getDevBypassFallback(): AuthContext {
     return {
-        userId: process.env.DEV_AUTH_USER_ID || '00000000-0000-0000-0000-000000000001',
-        tenantId: process.env.DEV_AUTH_TENANT_ID || '00000000-0000-0000-0000-000000000001',
+        userId: process.env.DEV_AUTH_USER_ID || '11111111-1111-1111-1111-111111111111',
+        tenantId: process.env.DEV_AUTH_TENANT_ID || '22222222-2222-2222-2222-222222222222',
         roleCode: process.env.DEV_AUTH_ROLE_CODE || 'ADMIN',
         email: process.env.DEV_AUTH_EMAIL || 'dev@local'
     };
@@ -48,33 +47,6 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     const token = cookieStore.get(JWT_COOKIE)?.value;
     if (!token) {
         if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
-            try {
-                const adminUser = await prisma.securityUser.findFirst({
-                    where: {
-                        is_active: true,
-                        user_x_rbac: { some: { security_rbac: { role_code: 'ADMIN', is_active: true } } }
-                    },
-                    include: { user_x_rbac: { include: { security_rbac: true } } },
-                    orderBy: { created_at: 'asc' }
-                });
-                const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
-                    where: { is_active: true },
-                    include: { user_x_rbac: { include: { security_rbac: true } } },
-                    orderBy: { created_at: 'asc' }
-                });
-                if (fallbackUser) {
-                    const rbac = fallbackUser.user_x_rbac?.find((r: any) => r.security_rbac?.role_code)?.security_rbac;
-                    return {
-                        userId: fallbackUser.id,
-                        tenantId: fallbackUser.tenant_id,
-                        roleCode: rbac?.role_code || 'ADMIN',
-                        email: fallbackUser.email
-                    };
-                }
-            } catch (error) {
-                console.warn('DEV_AUTH_BYPASS fallback used due to auth lookup error:', error);
-                return getDevBypassFallback();
-            }
             return getDevBypassFallback();
         }
         return null;
@@ -96,33 +68,6 @@ export async function getAuthContext(): Promise<AuthContext | null> {
         };
     } catch {
         if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
-            try {
-                const adminUser = await prisma.securityUser.findFirst({
-                    where: {
-                        is_active: true,
-                        user_x_rbac: { some: { security_rbac: { role_code: 'ADMIN', is_active: true } } }
-                    },
-                    include: { user_x_rbac: { include: { security_rbac: true } } },
-                    orderBy: { created_at: 'asc' }
-                });
-                const fallbackUser = adminUser ?? await prisma.securityUser.findFirst({
-                    where: { is_active: true },
-                    include: { user_x_rbac: { include: { security_rbac: true } } },
-                    orderBy: { created_at: 'asc' }
-                });
-                if (fallbackUser) {
-                    const rbac = fallbackUser.user_x_rbac?.find((r: any) => r.security_rbac?.role_code)?.security_rbac;
-                    return {
-                        userId: fallbackUser.id,
-                        tenantId: fallbackUser.tenant_id,
-                        roleCode: rbac?.role_code || 'ADMIN',
-                        email: fallbackUser.email
-                    };
-                }
-            } catch (error) {
-                console.warn('DEV_AUTH_BYPASS fallback used due to auth lookup error:', error);
-                return getDevBypassFallback();
-            }
             return getDevBypassFallback();
         }
         return null;

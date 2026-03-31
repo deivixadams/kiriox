@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/auth-server';
 import { requireCsrf } from '@/lib/csrf';
@@ -28,11 +29,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     try {
-        const user = await prisma.securityUser.findFirst({
-            where: { id: id, tenantId: auth.tenantId }
-        });
+        const userRows = await prisma.$queryRaw<{ id: string }[]>(
+            Prisma.sql`
+              SELECT u.id
+              FROM security.security_users u
+              JOIN security.company_user cu ON cu.user_id = u.id
+              WHERE u.id = ${id}::uuid
+                AND cu.company_id = ${auth.tenantId}::uuid
+                AND COALESCE(u.is_active, true) = true
+                AND COALESCE(cu.is_active, true) = true
+              LIMIT 1
+            `
+        );
 
-        if (!user) {
+        if (userRows.length === 0) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 

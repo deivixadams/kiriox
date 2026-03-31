@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { AuditFinding } from './engine-v3';
-
-const prisma = new PrismaClient();
+import prisma from './prisma';
 
 /**
  * Audit Service

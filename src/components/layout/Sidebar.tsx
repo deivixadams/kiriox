@@ -153,53 +153,57 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
             const hasChildren = Boolean(item.children && item.children.length > 0);
             const sectionExpanded = expandedSections[item.key] ?? true;
             const parentActive = isActivePath(pathname, item.href) || Boolean(item.children?.some((c) => isActivePath(pathname, c.href)));
+            const dividerStyle = hasChildren
+              ? { borderBottom: "1px solid rgba(220, 220, 220, 0.22)", paddingBottom: "0.35rem", marginBottom: "0.35rem" }
+              : undefined;
 
             if (!hasChildren) {
               return (
-                <Link
-                  key={item.key}
-                  href={item.href || "#"}
-                  className={`sidebar-link ${parentActive ? "active" : ""}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "1rem",
-                    padding: "0.7rem 0.75rem",
-                    borderRadius: "10px",
-                    color: parentActive ? "white" : "var(--foreground)",
-                    textDecoration: "none",
-                    transition: "all 0.2s ease",
-                    fontSize: "0.85rem",
-                    background: parentActive ? "var(--primary-glow)" : "transparent",
-                    position: "relative",
-                  }}
-                >
-                  <Icon size={18} color={parentActive ? "white" : "var(--primary)"} />
-                  {!collapsed && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
-                      {item.label}
-                      {item.badge && (
-                        <span
-                          style={{
-                            borderRadius: "999px",
-                            padding: "0.1rem 0.45rem",
-                            fontSize: "0.62rem",
-                            textTransform: "uppercase",
-                            border: "1px solid var(--glass-border)",
-                            color: "var(--primary)",
-                          }}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </Link>
+                <div key={item.key} style={dividerStyle}>
+                  <Link
+                    href={item.href || "#"}
+                    className={`sidebar-link ${parentActive ? "active" : ""}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "1rem",
+                      padding: "0.7rem 0.75rem",
+                      borderRadius: "10px",
+                      color: parentActive ? "white" : "var(--foreground)",
+                      textDecoration: "none",
+                      transition: "all 0.2s ease",
+                      fontSize: "0.85rem",
+                      background: parentActive ? "var(--primary-glow)" : "transparent",
+                      position: "relative",
+                    }}
+                  >
+                    <Icon size={18} color="var(--primary)" />
+                    {!collapsed && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+                        {item.label}
+                        {item.badge && (
+                          <span
+                            style={{
+                              borderRadius: "999px",
+                              padding: "0.1rem 0.45rem",
+                              fontSize: "0.62rem",
+                              textTransform: "uppercase",
+                              border: "1px solid var(--glass-border)",
+                              color: "var(--primary)",
+                            }}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </Link>
+                </div>
               );
             }
 
             return (
-              <div key={item.key} style={{ marginBottom: "0.25rem" }}>
+              <div key={item.key} style={{ marginBottom: "0.25rem", ...dividerStyle }}>
                 {!collapsed ? (
                   <button
                     onClick={() => toggleSection(item.key)}
@@ -218,7 +222,7 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
                     }}
                   >
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "0.65rem", fontWeight: 600 }}>
-                      <Icon size={16} />
+                      <Icon size={16} color="var(--primary)" />
                       {item.label}
                     </span>
                     <ChevronDown
@@ -254,7 +258,8 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
                           display: "flex",
                           alignItems: "center",
                           gap: "1rem",
-                          padding: "0.65rem 0.75rem",
+                          padding: "0.65rem 0.75rem 0.65rem 1.15rem",
+                          marginLeft: collapsed ? "0" : "0.8rem",
                           borderRadius: "10px",
                           color: active ? "white" : "var(--foreground)",
                           textDecoration: "none",
@@ -263,7 +268,7 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
                           background: active ? "var(--primary-glow)" : "transparent",
                         }}
                       >
-                        <ChildIcon size={16} color={active ? "white" : "var(--primary)"} />
+                        <ChildIcon size={16} color="var(--primary)" />
                         {!collapsed && <span>{child.label}</span>}
                       </Link>
                     );
@@ -276,4 +281,3 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
     </aside>
   );
 }
-

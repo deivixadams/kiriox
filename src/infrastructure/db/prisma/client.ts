@@ -1,3 +1,4 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 type PrismaCompatClient = PrismaClient & Record<string, any>;
@@ -7,7 +8,18 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaCompatClient {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is required to initialize Prisma client");
+  }
+
+  const adapter = new PrismaPg({
+    connectionString,
+  });
+
   const base = new PrismaClient({
+    adapter,
     log: ["error", "warn"],
   });
 
@@ -15,7 +27,6 @@ function createPrismaClient(): PrismaCompatClient {
   // the modular migration is in progress.
   const aliasMap: Record<string, string> = {
     securityUser: "security_users",
-    securityRbac: "security_rbac",
     securityUserScope: "security_user_scope",
     securityUserToken: "security_user_token",
     corpusAssessment: "audit_assessment",

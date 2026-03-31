@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/auth-server';
@@ -21,37 +22,66 @@ const teamUsersHandler = async (request: Request) => {
   }
 
   try {
-    const users = await prisma.securityUser.findMany({
-      where: { tenant_id: companyId, is_active: true },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        last_name: true,
-        user_x_rbac: {
-          select: {
-            security_rbac: { select: { role_code: true } }
-          }
-        }
-      },
-      orderBy: { name: 'asc' },
-    });
+    const rows = await prisma.$queryRaw<
+      {
+        id: string;
+        email: string;
+        name: string | null;
+        last_name: string | null;
+        role_code: string | null;
+      }[]
+    >(Prisma.sql`
+      SELECT
+        u.id,
+        u.email,
+        u.name,
+        u.last_name,
+        r.code AS role_code
+      FROM security.company_user cu
+      JOIN security.security_users u
+        ON u.id = cu.user_id
+       AND COALESCE(u.is_active, true) = true
+      LEFT JOIN security.company_user_role cur
+        ON cur.company_id = cu.company_id
+       AND cur.user_id = cu.user_id
+       AND COALESCE(cur.is_active, true) = true
+      LEFT JOIN security.role r
+        ON r.id = cur.role_id
+       AND COALESCE(r.is_active, true) = true
+      WHERE cu.company_id = ${companyId}::uuid
+        AND COALESCE(cu.is_active, true) = true
+      ORDER BY u.name ASC NULLS LAST
+    `);
 
-    const shaped = users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      name: u.name,
-      lastName: u.last_name,
-      role: u.user_x_rbac?.[0]?.security_rbac?.role_code ? { roleCode: u.user_x_rbac[0].security_rbac.role_code } : null
-    }));
+    const shapedMap = new Map<
+      string,
+      {
+        id: string;
+        email: string;
+        name: string | null;
+        lastName: string | null;
+        role: { roleCode: string } | null;
+      }
+    >();
 
-    return NextResponse.json(shaped);
+    for (const row of rows) {
+      if (!shapedMap.has(row.id)) {
+        shapedMap.set(row.id, {
+          id: row.id,
+          email: row.email,
+          name: row.name,
+          lastName: row.last_name,
+          role: row.role_code ? { roleCode: row.role_code } : null,
+        });
+      }
+    }
+
+    return NextResponse.json(Array.from(shapedMap.values()));
   } catch (error: any) {
     console.error('Error fetching team users:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 };
 
-export const GET = nextHandler(
-  withModuleAccess('audit', 'read', teamUsersHandler)
-);
+export const GET = nextHandler(withModuleAccess('audit', 'read', teamUsersHandler));
+
