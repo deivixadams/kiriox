@@ -1,4 +1,4 @@
-import EnterpriseDashboard from "@dashboard/EnterpriseDashboard";
+import { EnterpriseDashboard } from "@/modules/core";
 
 export default function EnterprisePage({ params }: { params: { id: string } }) {
     // In a real app, fetch data based on params.id

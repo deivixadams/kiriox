@@ -1,4 +1,4 @@
-import AssessmentWizard from "@dashboard/AssessmentWizard";
+import { AssessmentWizard } from "@/modules/core";
 
 export default function AssessmentPage({ params }: { params: { id: string } }) {
     // In a real app, fetch obligation context based on params.id
