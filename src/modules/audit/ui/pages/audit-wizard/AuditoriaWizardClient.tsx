@@ -16,6 +16,11 @@ type Option = { id: string; name: string; code?: string; frameworkId?: string; j
 type UserOption = { id: string; label: string; email?: string };
 
 type ActaData = {
+  title: string;
+  assessment_period_label: string;
+  scope_description: string;
+  business_context: string;
+  model_of_business: string;
   entidad_nombre: string;
   periodo_inicio: string;
   periodo_fin: string;
@@ -105,6 +110,11 @@ function buildDefaultActa(): ActaData {
   const today = new Date();
   const yyyy = today.getFullYear();
   return {
+    title: '',
+    assessment_period_label: `${yyyy}-01-01 a ${yyyy}-12-31`,
+    scope_description: '',
+    business_context: '',
+    model_of_business: '',
     entidad_nombre: '',
     periodo_inicio: `${yyyy}-01-01`,
     periodo_fin: `${yyyy}-12-31`,
@@ -440,11 +450,15 @@ export default function AuditoriaWizardClient() {
   useEffect(() => {
     if (!context.companyId) return;
     const selected = options.companies.find((c) => c.id === context.companyId);
-    if (selected && (!acta.entidad_nombre || acta.entidad_nombre === autoEntidad)) {
+    if (selected && (!acta.model_of_business || acta.model_of_business === autoEntidad)) {
       setAutoEntidad(selected.name);
-      setActa((prev) => ({ ...prev, entidad_nombre: selected.name }));
+      setActa((prev) => ({
+        ...prev,
+        model_of_business: selected.name,
+        entidad_nombre: selected.name,
+      }));
     }
-  }, [context.companyId, options.companies, acta.entidad_nombre, autoEntidad]);
+  }, [context.companyId, options.companies, acta.model_of_business, autoEntidad]);
 
   useEffect(() => {
     if (!context.companyId) {
@@ -522,6 +536,20 @@ export default function AuditoriaWizardClient() {
     }
   }, [context.frameworkId, context.frameworkVersionId, options.frameworks, options.versions, acta.marco_normativo, autoMarco]);
 
+  useEffect(() => {
+    const inicio = acta.cronograma.find((item) => item.hito === 'Inicio Auditoria')?.fecha || acta.periodo_inicio || '';
+    const cierre = acta.cronograma.find((item) => item.hito === 'Cierre Formal')?.fecha || acta.periodo_fin || '';
+    const nextLabel = inicio && cierre ? `${inicio} a ${cierre}` : (inicio || cierre);
+    if (!nextLabel) return;
+    if (acta.assessment_period_label === nextLabel && acta.periodo_inicio === inicio && acta.periodo_fin === cierre) return;
+    setActa((prev) => ({
+      ...prev,
+      assessment_period_label: nextLabel,
+      periodo_inicio: inicio,
+      periodo_fin: cierre,
+    }));
+  }, [acta.cronograma, acta.periodo_inicio, acta.periodo_fin, acta.assessment_period_label]);
+
   const handleAI = async (field: string, promptCode: string) => {
     setAiLoadingFields((prev) => ({ ...prev, [field]: true }));
     try {
@@ -537,25 +565,6 @@ export default function AuditoriaWizardClient() {
     } finally {
       setAiLoadingFields((prev) => ({ ...prev, [field]: false }));
     }
-  };
-
-  const handleGenerateActa = async () => {
-    const res = await fetch('/api/acta-inicio/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(acta)
-    });
-
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Acta_Inicio_${context.companyId || 'auditoria'}.docx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const handleNext = () => {
@@ -605,46 +614,28 @@ export default function AuditoriaWizardClient() {
     return 'Wizard';
   }, [step]);
 
-  const headerItems = useMemo(() => {
-    const jurisdiction = options.jurisdictions.find((j) => j.id === context.jurisdictionId)?.name || 'Sin definir';
-    const framework = options.frameworks.find((f) => f.id === context.frameworkId)?.name || 'Sin definir';
-    const version = options.versions.find((v) => v.id === context.frameworkVersionId)?.version || 'Sin definir';
-    return [
-      { label: 'Jurisdiccion', value: jurisdiction },
-      { label: 'Marco', value: framework },
-      { label: 'Version', value: version }
-    ];
-  }, [options.jurisdictions, options.frameworks, options.versions, context.jurisdictionId, context.frameworkId, context.frameworkVersionId]);
-
   if (loading) {
     return <div className="p-6 text-sm text-slate-500">Cargando wizard...</div>;
   }
 
   return (
-    <WizardShell title={stepTitle} subtitle="Riesgo" step={step} totalSteps={TOTAL_STEPS} headerItems={headerItems} onClose={handleClose}>
+    <WizardShell title={stepTitle} subtitle="Riesgo" step={step} totalSteps={TOTAL_STEPS} onClose={handleClose}>
       {step === 1 && (
         <ActaStep
           acta={acta}
           context={{
-            companyId: context.companyId,
-            selectedReinoId: scopeState.selectedReinoId || ''
+            companyId: context.companyId
           }}
           companies={options.companies}
-          reinos={reinoCatalog}
           onChangeActa={setActa}
           onChangeContext={(next) => {
             if (Object.prototype.hasOwnProperty.call(next, 'companyId')) {
               setContext((prev) => ({ ...prev, companyId: next.companyId ?? '' }));
             }
-            if (Object.prototype.hasOwnProperty.call(next, 'selectedReinoId')) {
-              const nextReino = (next as any).selectedReinoId || '';
-              void applyReinoSelection(nextReino);
-            }
           }}
           onAI={handleAI}
           aiLoadingFields={aiLoadingFields}
           onSave={handleSave}
-          onGenerateActa={handleGenerateActa}
           onNext={handleNext}
         />
       )}

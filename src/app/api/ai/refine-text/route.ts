@@ -11,6 +11,7 @@ const FIELD_PROMPTS: Record<string, string> = {
   objetivo: 'Redacta un objetivo general claro y formal para un acta de auditoria.',
   alcance: 'Describe el alcance de la auditoria con lenguaje tecnico y especifico.',
   metodologia: 'Redacta la metodologia de trabajo en tono profesional y conciso.',
+  model_of_business: 'Redacta una descripcion clara y ejecutiva del modelo de negocio evaluado.',
 };
 
 const OUTPUT_GUARDRAILS =
@@ -40,24 +41,47 @@ function sanitizeModelOutput(input: string) {
   return lines.join(' ').trim();
 }
 
+let promptCatalogAvailable: boolean | null = null;
+
+async function hasPromptCatalogTable(prisma: any) {
+  if (promptCatalogAvailable !== null) return promptCatalogAvailable;
+  try {
+    const rows = await prisma.$queryRaw<{ exists: string | null }[]>`
+      SELECT to_regclass('corpus.llm_master_prompts')::text AS exists
+    `;
+    promptCatalogAvailable = Boolean(rows?.[0]?.exists);
+    return promptCatalogAvailable;
+  } catch {
+    promptCatalogAvailable = false;
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   const { text = '', field = '', promptCode = '' } = (await req.json()) as Payload;
   const baseText = String(text ?? '').trim();
 
   const prisma = (await import('@/lib/prisma')).default;
   let dbPrompt: { prompt: string; name: string; text_area: string | null } | null = null;
-  if (promptCode) {
-    const rows = await prisma.$queryRaw<
-      { prompt: string; name: string; text_area: string | null }[]
-    >`
-      SELECT prompt, name, text_area
-      FROM corpus.llm_master_prompts
-      WHERE code = ${promptCode}
-        AND is_active = true
-      ORDER BY version DESC
-      LIMIT 1
-    `;
-    dbPrompt = rows?.[0] ?? null;
+  if (promptCode && (await hasPromptCatalogTable(prisma))) {
+    try {
+      const rows = await prisma.$queryRaw<
+        { prompt: string; name: string; text_area: string | null }[]
+      >`
+        SELECT prompt, name, text_area
+        FROM corpus.llm_master_prompts
+        WHERE code = ${promptCode}
+          AND is_active = true
+        ORDER BY version DESC
+        LIMIT 1
+      `;
+      dbPrompt = rows?.[0] ?? null;
+    } catch (error) {
+      // If this fails once (e.g. missing relation), avoid hitting DB catalog again in this runtime.
+      promptCatalogAvailable = false;
+      console.warn('refine-text prompt catalog unavailable, using fallback.');
+      dbPrompt = null;
+    }
   }
 
   const fallbackPrompt =

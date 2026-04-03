@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import prisma from '@/infrastructure/db/prisma/client';
+import { isDevAuthBypassEnabled } from '@/lib/auth-server';
 import type { AccessContextRepository } from '../../domain/contracts';
 import type { AccessContext, ModuleCode } from '../../domain/types';
 import { MODULE_REGISTRY } from '@/shared/modules';
@@ -41,6 +42,10 @@ export class PrismaAccessContextRepository implements AccessContextRepository {
   }
 
   async getEnabledModules(companyId: string): Promise<ModuleCode[]> {
+    if (isDevAuthBypassEnabled()) {
+      return MODULE_REGISTRY.map((moduleDef) => moduleDef.code as ModuleCode);
+    }
+
     try {
       const rows = await prisma.$queryRaw<{ module_code: string }[]>(
         Prisma.sql`
@@ -71,6 +76,10 @@ export class PrismaAccessContextRepository implements AccessContextRepository {
   }
 
   async getPermissions(userId: string, companyId: string): Promise<string[]> {
+    if (isDevAuthBypassEnabled()) {
+      return ['*'];
+    }
+
     const rows = await prisma.$queryRaw<{ code: string }[]>(
       Prisma.sql`
         SELECT DISTINCT p.code

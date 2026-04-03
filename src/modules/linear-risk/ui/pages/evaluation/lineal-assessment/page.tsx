@@ -49,7 +49,7 @@ export default function LinealAssessmentWarningPage() {
           <Link href="/score/evaluacion/inicio" className={styles.secondaryButton}>
             Revisar asistente
           </Link>
-          <Link href="/validacion/riesgo-lineal" className={styles.primaryButton}>
+          <Link href="/validacion/riesgo-lineal/nueva" className={styles.primaryButton}>
             <CheckCircle2 size={16} />
             Continuar
           </Link>

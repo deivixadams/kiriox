@@ -1,37 +1,44 @@
 import prisma from '@/infrastructure/db/prisma/client';
 import type { AuditOpsRepository } from '@/modules/audit/domain/contracts/AuditOpsRepository';
 import type { AuditAssessmentListItem, AuditScopeSummary, AuditStatItem, DraftRecord } from '@/modules/audit/domain/types/AuditOpsTypes';
+import { getCanonicalAuditDraftById, upsertCanonicalAuditDraft } from './linearRiskDraftStore';
 
 function isAdmin(roleCode: string) {
   return roleCode === 'ADMIN';
 }
 
-const normalizeDate = (value: unknown) => {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  const parsed = new Date(String(value));
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
+function buildDefaultDraftRecord(id: string): DraftRecord {
+  const nowIso = new Date().toISOString();
+  return {
+    id,
+    step: 1,
+    jurisdictionId: null,
+    frameworkId: null,
+    frameworkVersionId: null,
+    companyId: null,
+    acta: null,
+    scopeConfig: null,
+    objectives: null,
+    team: null,
+    questionnaire: null,
+    guide: null,
+    manualExtensions: null,
+    windowStart: null,
+    windowEnd: null,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+}
 
-const mapDraft = (draft: any): DraftRecord => ({
-  id: draft.id,
-  step: draft.step ?? 1,
-  jurisdictionId: draft.jurisdiction_id ?? null,
-  frameworkId: draft.framework_id ?? null,
-  frameworkVersionId: draft.framework_version_id ?? null,
-  companyId: draft.company_id ?? null,
-  acta: draft.acta ?? null,
-  scopeConfig: draft.scope_config ?? null,
-  objectives: draft.objectives ?? null,
-  team: draft.team ?? null,
-  questionnaire: draft.questionnaire ?? null,
-  guide: draft.guide ?? null,
-  manualExtensions: draft.manual_extensions ?? null,
-  windowStart: draft.window_start ? new Date(draft.window_start).toISOString() : null,
-  windowEnd: draft.window_end ? new Date(draft.window_end).toISOString() : null,
-  createdAt: draft.created_at ? new Date(draft.created_at).toISOString() : new Date().toISOString(),
-  updatedAt: draft.updated_at ? new Date(draft.updated_at).toISOString() : new Date().toISOString(),
-});
+function mergeDraft(current: DraftRecord, patch: Partial<DraftRecord>): DraftRecord {
+  return {
+    ...current,
+    ...patch,
+    id: current.id,
+    createdAt: current.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 export class PrismaAuditOpsRepository implements AuditOpsRepository {
   async listAssessments(auth: { roleCode: string; tenantId: string }): Promise<AuditAssessmentListItem[]> {
@@ -135,7 +142,7 @@ export class PrismaAuditOpsRepository implements AuditOpsRepository {
   }
 
   async createDraft(auth: { tenantId: string; userId: string }): Promise<DraftRecord> {
-    const draft = await prisma.corpus.assessment_draft.create({
+    const bridge = await prisma.corpus.assessment_draft.create({
       data: {
         tenant_id: auth.tenantId,
         created_by: auth.userId,
@@ -143,44 +150,59 @@ export class PrismaAuditOpsRepository implements AuditOpsRepository {
         step: 1,
       },
     });
-    return mapDraft(draft);
+    const canonicalDraft = buildDefaultDraftRecord(bridge.id);
+    await upsertCanonicalAuditDraft({
+      auditDraftId: bridge.id,
+      tenantId: auth.tenantId,
+      draft: canonicalDraft,
+    });
+    return canonicalDraft;
   }
 
   async getDraft(auth: { tenantId: string }, id: string): Promise<DraftRecord | null> {
-    const draft = await prisma.corpus.assessment_draft.findFirst({
+    const bridge = await prisma.corpus.assessment_draft.findFirst({
       where: { id, tenant_id: auth.tenantId },
+      select: { id: true },
     });
-    return draft ? mapDraft(draft) : null;
+    if (!bridge) return null;
+
+    const canonical = await getCanonicalAuditDraftById(id, auth.tenantId);
+    if (canonical) return canonical;
+
+    const fallback = buildDefaultDraftRecord(id);
+    await upsertCanonicalAuditDraft({
+      auditDraftId: id,
+      tenantId: auth.tenantId,
+      draft: fallback,
+    });
+    return fallback;
   }
 
   async updateDraft(auth: { tenantId: string }, id: string, patch: Partial<DraftRecord>): Promise<DraftRecord | null> {
-    const existing = await prisma.corpus.assessment_draft.findFirst({
+    const bridge = await prisma.corpus.assessment_draft.findFirst({
       where: { id, tenant_id: auth.tenantId },
+      select: { id: true },
     });
-    if (!existing) return null;
+    if (!bridge) return null;
 
-    const data: Record<string, any> = { updated_at: new Date() };
+    const current = (await getCanonicalAuditDraftById(id, auth.tenantId)) ?? buildDefaultDraftRecord(id);
+    const next = mergeDraft(current, patch);
 
-    if (patch.step !== undefined) {
-      const nextStep = Number(patch.step);
-      data.step = Number.isFinite(nextStep) ? nextStep : 1;
-    }
-    if (patch.jurisdictionId !== undefined) data.jurisdiction_id = patch.jurisdictionId;
-    if (patch.frameworkId !== undefined) data.framework_id = patch.frameworkId;
-    if (patch.frameworkVersionId !== undefined) data.framework_version_id = patch.frameworkVersionId;
-    if (patch.companyId !== undefined) data.company_id = patch.companyId;
-    if (patch.acta !== undefined) data.acta = patch.acta;
-    if (patch.scopeConfig !== undefined) data.scope_config = patch.scopeConfig;
-    if (patch.objectives !== undefined) data.objectives = patch.objectives;
-    if (patch.team !== undefined) data.team = patch.team;
-    if (patch.questionnaire !== undefined) data.questionnaire = patch.questionnaire;
-    if (patch.guide !== undefined) data.guide = patch.guide;
-    if (patch.manualExtensions !== undefined) data.manual_extensions = patch.manualExtensions;
-    if (patch.windowStart !== undefined) data.window_start = normalizeDate(patch.windowStart);
-    if (patch.windowEnd !== undefined) data.window_end = normalizeDate(patch.windowEnd);
+    await upsertCanonicalAuditDraft({
+      auditDraftId: id,
+      tenantId: auth.tenantId,
+      draft: next,
+    });
 
-    const draft = await prisma.corpus.assessment_draft.update({ where: { id }, data });
-    return mapDraft(draft);
+    await prisma.corpus.assessment_draft.update({
+      where: { id },
+      data: {
+        step: Number.isFinite(Number(next.step)) ? Number(next.step) : 1,
+        updated_at: new Date(),
+      },
+    });
+
+    return next;
   }
 }
 

@@ -1,5 +1,5 @@
-import AuditDashboardPage from '@/modules/audit/ui/pages/AuditDashboardPage';
+import LinearRiskDashboardPage from '@/modules/linear-risk/ui/pages/LinearRiskDashboardPage';
 
 export default function Page() {
-  return <AuditDashboardPage />;
+  return <LinearRiskDashboardPage />;
 }

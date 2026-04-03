@@ -7,7 +7,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccessContext } from "@/modules/security";
 
-export default function Topbar({ access }: { access?: AccessContext | null }) {
+type TopbarProps = {
+    access?: AccessContext | null;
+    showScopeSelectors?: boolean;
+};
+
+export default function Topbar({ access, showScopeSelectors = false }: TopbarProps) {
     const { theme, toggleTheme } = useTheme();
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
@@ -71,10 +76,12 @@ export default function Topbar({ access }: { access?: AccessContext | null }) {
                     />
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <ScopeSelector label="Jurisdiccion" value="Republica Dominicana" />
-                    <ScopeSelector label="Empresa" value="Todas" />
-                </div>
+                {showScopeSelectors ? (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <ScopeSelector label="Jurisdiccion" value="Republica Dominicana" />
+                        <ScopeSelector label="Empresa" value="Todas" />
+                    </div>
+                ) : null}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>

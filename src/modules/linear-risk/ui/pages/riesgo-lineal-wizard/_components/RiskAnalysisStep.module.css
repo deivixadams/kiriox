@@ -1,0 +1,226 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #e2e8f0;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px 14px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subtitle {
+  margin: 0;
+  color: #93a7c2;
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.loading {
+  padding: 20px 0;
+  color: #93a7c2;
+  font-size: 14px;
+}
+
+.error {
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.42);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.tableWrap {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 16px;
+  overflow: auto;
+  background: rgba(2, 6, 23, 0.72);
+  margin-top: 4px;
+  flex: 1;
+  min-height: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1100px;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(15, 23, 42, 0.96);
+  color: #cfe0ff;
+  font-size: 11px;
+  text-align: center;
+  font-weight: 700;
+  padding: 11px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  vertical-align: middle;
+  text-align: center;
+}
+
+.table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.33);
+}
+
+.cellMain {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cellSub {
+  color: #7f93b0;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.selectInput,
+.numberInput {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  padding: 8px 10px;
+  font-size: 13px;
+  outline: none;
+}
+
+.selectInput:focus,
+.numberInput:focus {
+  border-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
+}
+
+.numberInput {
+  width: 98px;
+  min-width: 98px;
+  text-align: center;
+}
+
+.scoreCell {
+  min-width: 100px;
+  font-weight: 800;
+  color: #38bdf8;
+  font-size: 14px;
+}
+
+.empty {
+  text-align: center;
+  color: #9fb0ca;
+  padding: 24px 14px;
+}
+
+.table tfoot td {
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+  padding: 11px 12px;
+}
+
+.totalRow {
+  background: rgba(15, 23, 42, 0.92);
+}
+
+.totalLabel {
+  text-align: right;
+  color: #cfe0ff;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.totalValue {
+  text-align: center;
+  color: #38bdf8;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.backButton,
+.ghostButton,
+.primaryButton {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(15, 23, 42, 0.76);
+  color: #e2e8f0;
+  padding: 10px 16px;
+  min-height: 41px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.heatmapButton {
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.65);
+  background: rgba(251, 191, 36, 0.2);
+  color: #fde68a;
+  padding: 11px 20px;
+  min-height: 46px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+}
+
+.heatmapButton:hover {
+  background: rgba(251, 191, 36, 0.3);
+}
+
+.backButton:hover,
+.ghostButton:hover {
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.primaryButton {
+  border-color: rgba(59, 130, 246, 0.75);
+  background: rgba(37, 99, 235, 0.3);
+  color: #dbeafe;
+}
+
+.primaryButton:hover {
+  background: rgba(37, 99, 235, 0.46);
+}
+
+.backButton:disabled,
+.ghostButton:disabled,
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

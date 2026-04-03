@@ -5,3 +5,4 @@ export { default as LinearRiskEvaluationInicioPage } from './LinearRiskEvaluatio
 export { default as LinearRiskEvaluationLinealPage } from './LinearRiskEvaluationLinealPage';
 export { default as LinearRiskEvaluationSeguimientoPage } from './LinearRiskEvaluationSeguimientoPage';
 export { default as LinearRiskEvaluationStructuralPage } from './LinearRiskEvaluationStructuralPage';
+export { default as RiesgoLinealWizardNewPage } from './RiesgoLinealWizardNewPage';

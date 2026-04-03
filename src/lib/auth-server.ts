@@ -11,6 +11,10 @@ export type AuthContext = {
     email?: string;
 };
 
+export function isDevAuthBypassEnabled(): boolean {
+    return process.env.DEV_AUTH_BYPASS === '1';
+}
+
 function getDevBypassFallback(): AuthContext {
     return {
         userId: process.env.DEV_AUTH_USER_ID || '11111111-1111-1111-1111-111111111111',
@@ -46,7 +50,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     const cookieStore = await cookies();
     const token = cookieStore.get(JWT_COOKIE)?.value;
     if (!token) {
-        if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
+        if (isDevAuthBypassEnabled()) {
             return getDevBypassFallback();
         }
         return null;
@@ -67,7 +71,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
             email: payload.email ? String(payload.email) : undefined
         };
     } catch {
-        if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === '1') {
+        if (isDevAuthBypassEnabled()) {
             return getDevBypassFallback();
         }
         return null;

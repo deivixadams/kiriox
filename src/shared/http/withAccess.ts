@@ -1,4 +1,4 @@
-import { getAuthContext, type AuthContext } from '@/lib/auth-server';
+import { getAuthContext, isDevAuthBypassEnabled, type AuthContext } from '@/lib/auth-server';
 import {
   AuthorizeUserUseCase,
   CheckCompanyMembershipUseCase,
@@ -53,6 +53,15 @@ export function withAccess(requirement: AccessRequirement, handler: AccessRouteH
     const companyId = resolveCompanyId(request, auth);
     const moduleCode = normalizeModule(requirement.module);
 
+    if (isDevAuthBypassEnabled()) {
+      return handler(request, context, {
+        auth,
+        user: { id: auth.userId, roleCode: auth.roleCode, email: auth.email },
+        company: { id: companyId },
+        access: { module: moduleCode, permission: requirement.permission },
+      });
+    }
+
     const repository = new PrismaAccessControlRepository();
     const useCase = new AuthorizeUserUseCase(
       new CheckCompanyMembershipUseCase(repository),
@@ -85,4 +94,3 @@ export function withAccess(requirement: AccessRequirement, handler: AccessRouteH
     });
   };
 }
-

@@ -250,7 +250,7 @@ export default function DecisionWizardClient() {
     registerDecision(selectedMethod);
 
     const routes: Record<Method, string> = {
-      matrix: "/validacion/riesgo-lineal",
+      matrix: "/score/evaluacion/lineal-assessment",
       graph: "/score/score?step=1",
       dual: "/score/preguntasClaves?enfoque=dual",
     };

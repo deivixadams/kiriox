@@ -5,6 +5,7 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import prisma from '@/lib/prisma';
 import type { AuthContext } from '@/lib/auth-server';
+import { getCanonicalAuditDraftById } from '@/modules/audit/infrastructure/repositories/linearRiskDraftStore';
 
 type ControlEvaluation = {
   riskId: string;
@@ -73,20 +74,23 @@ const conclude = (counts: { hallazgos: number; positivos: number }) => {
 };
 
 export async function buildReportData(auth: AuthContext, draftId: string) {
-  const draft = await prisma.corpus.assessment_draft.findFirst({
+  const bridgeDraft = await prisma.corpus.assessment_draft.findFirst({
     where: { id: draftId, tenant_id: auth.tenantId }
   });
+  if (!bridgeDraft) return null;
+
+  const draft = await getCanonicalAuditDraftById(draftId, auth.tenantId);
   if (!draft) return null;
 
   const payload: DraftPayload = {
     id: draft.id,
     acta: draft.acta ?? {},
-    scopeConfig: draft.scope_config ?? {},
+    scopeConfig: draft.scopeConfig ?? {},
     objectives: draft.objectives ?? {},
     questionnaire: Array.isArray(draft.questionnaire) ? (draft.questionnaire as ControlEvaluation[]) : [],
-    manualExtensions: Array.isArray(draft.manual_extensions) ? (draft.manual_extensions as ExtensionItem[]) : [],
-    windowStart: draft.window_start ? new Date(draft.window_start).toISOString() : null,
-    windowEnd: draft.window_end ? new Date(draft.window_end).toISOString() : null
+    manualExtensions: Array.isArray(draft.manualExtensions) ? (draft.manualExtensions as ExtensionItem[]) : [],
+    windowStart: draft.windowStart ?? null,
+    windowEnd: draft.windowEnd ?? null
   };
 
   const evaluations = payload.questionnaire ?? [];
@@ -188,20 +192,26 @@ export async function buildReportData(auth: AuthContext, draftId: string) {
   };
 
   const acta = payload.acta || {};
+  const scopeDescription = acta.scope_description || acta.alcance || '';
+  const businessContext = acta.business_context || acta.objetivo || '';
+  const modelOfBusiness = acta.model_of_business || acta.entidad_nombre || '';
   const objetivos = typeof payload.objectives === 'string'
     ? payload.objectives
-    : payload.objectives?.narrative || acta.objetivo || '';
-  const periodoInicio = formatDate(acta.periodo_inicio || payload.windowStart);
-  const periodoFin = formatDate(acta.periodo_fin || payload.windowEnd);
+    : payload.objectives?.narrative || businessContext;
+  const periodLabel = String(acta.assessment_period_label || '').trim();
+  const periodFromLabel = periodLabel.includes(' a ') ? periodLabel.split(' a ')[0] : '';
+  const periodToLabel = periodLabel.includes(' a ') ? periodLabel.split(' a ')[1] : '';
+  const periodoInicio = formatDate(acta.periodo_inicio || periodFromLabel || payload.windowStart);
+  const periodoFin = formatDate(acta.periodo_fin || periodToLabel || payload.windowEnd);
 
   return {
-    empresa: acta.entidad_nombre || '',
+    empresa: modelOfBusiness,
     periodo_inicio: periodoInicio,
     periodo_fin: periodoFin,
     fecha_emision: formatDate(new Date().toISOString()),
     resumen_ejecutivo: summarize(acta, counts),
     objetivos,
-    alcance: acta.alcance || '',
+    alcance: scopeDescription,
     metodologia: acta.metodologia || '',
     hallazgos,
     aspectos_positivos: aspectosPositivos,
@@ -232,27 +242,37 @@ async function resolveStatusId(preferredCodes: string[]) {
 }
 
 export async function materializeDraft(auth: AuthContext, draftId: string) {
-  const draft = await prisma.corpus.assessment_draft.findFirst({
+  const bridgeDraft = await prisma.corpus.assessment_draft.findFirst({
     where: { id: draftId, tenant_id: auth.tenantId }
   });
+  if (!bridgeDraft) return null;
+
+  const draft = await getCanonicalAuditDraftById(draftId, auth.tenantId);
   if (!draft) return null;
 
-  const companyId = draft.company_id;
-  const frameworkVersionId = draft.framework_version_id;
+  const companyId = draft.companyId;
+  const frameworkVersionId = draft.frameworkVersionId;
   if (!companyId || !frameworkVersionId) {
     throw new Error('Draft missing company/framework');
   }
 
   const marker = `CRE_DRAFT_ID:${draftId}`;
-  const acta = draft.acta ?? {};
-  const periodStartRaw = acta.periodo_inicio || draft.window_start || new Date().toISOString().slice(0, 10);
-  const periodEndRaw = acta.periodo_fin || draft.window_end || new Date().toISOString().slice(0, 10);
+  const acta = (draft.acta ?? {}) as any;
+  const periodLabel = String(acta.assessment_period_label || '').trim();
+  const periodFromLabel = periodLabel.includes(' a ') ? periodLabel.split(' a ')[0] : '';
+  const periodToLabel = periodLabel.includes(' a ') ? periodLabel.split(' a ')[1] : '';
+  const periodStartRaw = acta.periodo_inicio || periodFromLabel || draft.windowStart || new Date().toISOString().slice(0, 10);
+  const periodEndRaw = acta.periodo_fin || periodToLabel || draft.windowEnd || new Date().toISOString().slice(0, 10);
   const periodStart = new Date(periodStartRaw);
   const periodEnd = new Date(periodEndRaw);
   const year = Number.isNaN(periodStart.getTime()) ? new Date().getFullYear() : periodStart.getFullYear();
 
-  const assessmentName = acta.entidad_nombre
-    ? `Auditoría AML - ${acta.entidad_nombre}`
+  const modelOfBusiness = acta.model_of_business || acta.entidad_nombre;
+  const assessmentTitle = acta.title;
+  const assessmentName = assessmentTitle
+    ? String(assessmentTitle)
+    : modelOfBusiness
+    ? `Auditoría AML - ${modelOfBusiness}`
     : `Auditoría AML ${year}`;
 
   let assessment = await prisma.corpusAssessment.findFirst({

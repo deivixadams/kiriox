@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-server';
 import prisma from '@/infrastructure/db/prisma/client';
+import { getCanonicalAuditDraftById } from '@/modules/audit/infrastructure/repositories/linearRiskDraftStore';
 
 type DraftRecord = {
   id: string;
@@ -221,11 +222,17 @@ function extractScopeSelection(draft: DraftRecord | null): ScopeSelection {
 }
 
 async function getAuthorizedDraft(draftId: string, tenantId: string): Promise<DraftRecord | null> {
-  const draft = await prisma.corpus.assessment_draft.findFirst({
+  const bridgeDraft = await prisma.corpus.assessment_draft.findFirst({
     where: { id: draftId, tenant_id: tenantId },
-    select: { id: true, scope_config: true }
+    select: { id: true }
   });
-  return draft as DraftRecord | null;
+  if (!bridgeDraft) return null;
+
+  const canonical = await getCanonicalAuditDraftById(draftId, tenantId);
+  return {
+    id: draftId,
+    scope_config: (canonical?.scopeConfig as DraftRecord['scope_config']) ?? null,
+  };
 }
 
 function mapCatalog(rows: CatalogRow[]): RiskCatalogOption[] {

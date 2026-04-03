@@ -11,6 +11,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLogin = pathname === '/login';
   const isImmersiveSimulation = pathname.startsWith('/score/simulacion');
+  const showTopbarScopeSelectors = pathname === '/score/dashboard' || pathname.startsWith('/score/dashboard/');
 
   const [access, setAccess] = useState<AccessContext | null>(null);
   const [navigation, setNavigation] = useState<ResolvedNavigationItem[]>([]);
@@ -65,7 +66,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="layout-wrapper">
       <Sidebar items={navigation} loading={loadingAccess} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-        <Topbar access={access} />
+        <Topbar access={access} showScopeSelectors={showTopbarScopeSelectors} />
         <main className="main-content">
           <div className="content-inner">{children}</div>
         </main>
@@ -73,4 +74,3 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
