@@ -135,35 +135,19 @@ const formatDate = (value?: string | null) => {
   return parsed.toLocaleDateString('es-DO', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-async function renderLinearRiskReportDocx(data: Record<string, any>, heatmapBase64?: string | null) {
+async function renderLinearRiskReportDocx(data: Record<string, any>) {
   const templatePath = path.resolve('C:\\_CRE\\PLANTILLA_INFORME.docx');
   const content = await fs.readFile(templatePath, 'binary');
   const zip = new PizZip(content);
-
-  let imageModule: any = null;
-  if (heatmapBase64) {
-    try {
-      const mod = await import('docxtemplater-image-module-free');
-      imageModule = new mod.default({
-        getImage: (tagValue: string) => {
-          const clean = String(tagValue || '').replace(/^data:image\/\w+;base64,/, '');
-          return Buffer.from(clean, 'base64');
-        },
-        getSize: () => [700, 420],
-      });
-    } catch {
-      imageModule = null;
-    }
-  }
 
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
     linebreaks: true,
     delimiters: { start: '{{', end: '}}' },
-    modules: imageModule ? [imageModule] : []
+    modules: []
   });
 
-  doc.render({ ...data, heatmap: heatmapBase64 || '' });
+  doc.render({ ...data });
   return doc.getZip().generate({ type: 'nodebuffer' });
 }
 
@@ -261,17 +245,36 @@ async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: st
     }));
 
   return {
-    empresa: companyName,
-    periodo_inicio: formatDate(acta.periodo_inicio || periodFromLabel || null),
-    periodo_fin: formatDate(acta.periodo_fin || periodToLabel || null),
-    fecha_emision: formatDate(new Date().toISOString()),
-    resumen_ejecutivo: acta.scope_description || '',
-    objetivos: acta.objetivo || businessContext,
-    alcance: scopeDescription,
-    metodologia: acta.metodologia || '',
-    actividades: activities,
-    mitigaciones,
-    hallazgos
+    empresa: companyName || '',
+    periodo_inicio: formatDate(acta.periodo_inicio || periodFromLabel || null) || '',
+    periodo_fin: formatDate(acta.periodo_fin || periodToLabel || null) || '',
+    fecha_emision: formatDate(new Date().toISOString()) || '',
+    resumen_ejecutivo: String(acta.scope_description || '').trim(),
+    objetivos: String(acta.objetivo || businessContext || '').trim(),
+    alcance: String(scopeDescription || '').trim(),
+    metodologia: String(acta.metodologia || '').trim(),
+    actividades: (activities || []).map((item) => ({
+      numero: item.numero ?? '',
+      actividad: item.actividad || '',
+      codigo: item.codigo || '',
+      riesgo: item.riesgo || '',
+      descripcion_riesgo: item.descripcion_riesgo || '',
+      probabilidad: item.probabilidad || '',
+      impacto: item.impacto || '',
+      riesgo_inherente: item.riesgo_inherente ?? ''
+    })),
+    mitigaciones: (mitigaciones || []).map((item) => ({
+      numero: item.numero ?? '',
+      control: item.control || '',
+      cobertura: item.cobertura ?? '',
+      riesgo_residual: item.riesgo_residual ?? ''
+    })),
+    hallazgos: (hallazgos || []).map((item) => ({
+      numero: item.numero ?? '',
+      titulo: item.titulo || '',
+      condicion: item.condicion || '',
+      evidencias: item.evidencias || ''
+    }))
   };
 }
 
@@ -1612,12 +1615,11 @@ export async function postLinearRiskDraftReportHandler(request: Request, { param
     const draft = await findDraft(id, auth.tenantId);
     if (!draft) return NextResponse.json({ error: 'Draft no encontrado' }, { status: 404 });
 
-    const body = await request.json().catch(() => ({}));
-    const heatmap = typeof body?.heatmap === 'string' ? body.heatmap : null;
+    await request.json().catch(() => ({}));
 
     await ensureLinearRiskFinal(auth, draft);
     const data = await buildLinearRiskReportData(auth, id, draft);
-    const buffer = await renderLinearRiskReportDocx(data, heatmap);
+    const buffer = await renderLinearRiskReportDocx(data);
 
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {

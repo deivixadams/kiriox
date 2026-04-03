@@ -35,7 +35,7 @@ type ExtensionsStepProps = {
   onChange: (next: ExtensionItem[]) => void;
   onBack: () => void;
   onFinalize: () => void;
-  onGenerateReport: (heatmapBase64?: string | null) => void;
+  onGenerateReport: () => void;
   onSave: () => void;
   finalizing?: boolean;
 };
@@ -152,113 +152,11 @@ export default function ExtensionsStep({
     }
   };
 
-  const buildHeatmapImage = async (): Promise<string | null> => {
-    if (!draftId) return null;
-    try {
-      const res = await fetch(`/api/linear-risk/drafts/${draftId}/risk-analysis`, { cache: 'no-store' });
-      if (!res.ok) return null;
-      const payload = await res.json();
-      const rows = Array.isArray(payload?.rows) ? payload.rows : [];
-      if (!rows.length) return null;
-
-      const echarts = await import('echarts');
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-10000px';
-      container.style.top = '-10000px';
-      container.style.width = '1200px';
-      container.style.height = '820px';
-      document.body.appendChild(container);
-
-      const chart = echarts.init(container, undefined, { renderer: 'canvas' });
-      const points = rows
-        .map((row: any) => {
-          const probability = Number(row?.probability ?? NaN);
-          const impact = Number(row?.impact ?? NaN);
-          if (!Number.isFinite(probability) || !Number.isFinite(impact)) return null;
-          const residual = Number(row?.residualScore ?? NaN);
-          return {
-            name: row?.riskName || row?.riskCode || 'Riesgo',
-            value: [impact, probability, Number.isFinite(residual) ? residual : 0]
-          };
-        })
-        .filter(Boolean);
-
-      chart.setOption({
-        animation: false,
-        backgroundColor: 'transparent',
-        grid: {
-          left: 120,
-          right: 32,
-          top: 42,
-          bottom: 56,
-          containLabel: true,
-          show: true,
-          borderWidth: 0,
-          backgroundColor: new echarts.graphic.RadialGradient(1.0, -0.02, 1.58, [
-            { offset: 0.0, color: '#ff2f38' },
-            { offset: 0.24, color: '#ff7a1f' },
-            { offset: 0.5, color: '#b8a300' },
-            { offset: 0.74, color: '#f4c300' },
-            { offset: 1.0, color: '#08b052' }
-          ])
-        },
-        xAxis: {
-          type: 'value',
-          min: 1,
-          max: 5,
-          interval: 1,
-          name: 'Impacto',
-          nameLocation: 'middle',
-          nameGap: 34,
-          axisLabel: { color: 'rgba(255,255,255,0.88)', fontSize: 11 },
-          nameTextStyle: { color: '#93a7c2', fontWeight: 700, fontSize: 12 },
-          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.22)' } },
-          splitLine: { show: true, lineStyle: { color: 'rgba(255,255,255,0.42)', width: 1 } }
-        },
-        yAxis: {
-          type: 'value',
-          min: 1,
-          max: 5,
-          interval: 1,
-          name: 'Probabilidad',
-          nameLocation: 'middle',
-          nameGap: 72,
-          axisLabel: { color: 'rgba(255,255,255,0.88)', fontSize: 11 },
-          nameTextStyle: { color: '#93a7c2', fontWeight: 700, fontSize: 12 },
-          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.22)' } },
-          splitLine: { show: true, lineStyle: { color: 'rgba(255,255,255,0.42)', width: 1 } }
-        },
-        series: [
-          {
-            type: 'scatter',
-            data: points,
-            symbol: 'circle',
-            symbolSize: 16,
-            itemStyle: {
-              color: 'rgba(255,255,255,0.1)',
-              borderColor: '#ffffff',
-              borderWidth: 2
-            }
-          }
-        ]
-      });
-
-      const dataUrl = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: 'transparent' });
-      chart.dispose();
-      container.remove();
-      return dataUrl;
-    } catch {
-      return null;
-    }
-  };
-
   const handleGenerateReport = async () => {
     if (!draftId || reporting) return;
     setReporting(true);
     try {
-      const heatmap = await buildHeatmapImage();
-      onGenerateReport(heatmap);
+      onGenerateReport();
     } finally {
       setReporting(false);
     }

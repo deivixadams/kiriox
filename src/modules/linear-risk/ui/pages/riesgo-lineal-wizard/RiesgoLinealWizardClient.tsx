@@ -465,7 +465,7 @@ export default function RiesgoLinealWizardClient() {
     }
   };
 
-  const generateReport = async (heatmapBase64?: string | null) => {
+  const generateReport = async () => {
     if (!draftId) return;
     setFinalizing(true);
     try {
@@ -477,7 +477,7 @@ export default function RiesgoLinealWizardClient() {
       const res = await fetch(`/api/linear-risk/drafts/${draftId}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ heatmap: heatmapBase64 || null })
+        body: JSON.stringify({})
       });
       if (!res.ok) return;
       const blob = await res.blob();
