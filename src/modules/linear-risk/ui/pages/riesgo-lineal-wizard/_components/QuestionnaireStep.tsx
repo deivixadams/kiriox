@@ -383,30 +383,6 @@ export default function QuestionnaireStep({ draftId, riskIds, evaluations, onCha
     }
   };
 
-  const handleAssistHowTo = async (riskId: string, control: ControlItem, text: string) => {
-    const key = `${riskId}::${control.id}`;
-    setAiLoadingKey(key);
-    try {
-      const res = await fetch('/api/ai/control-evaluation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          controlName: control.name,
-          controlDescription: control.description || '',
-          coverageNotes: control.coverageNotes || '',
-          text
-        })
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data?.text) {
-        updateEvaluation(riskId, control.id, { howToEvaluate: data.text });
-      }
-    } finally {
-      setAiLoadingKey(null);
-    }
-  };
-
   const activePair = controlSequence[sequenceIndex] || null;
   const activeControl = activePair?.control || null;
   const activeKey = activePair && activeControl ? `${activePair.riskId}::${activeControl.id}` : null;
@@ -531,36 +507,6 @@ export default function QuestionnaireStep({ draftId, riskIds, evaluations, onCha
                           <div className={styles.controlDescription}>
                             {activeControl.description || 'Sin descripcion registrada.'}
                           </div>
-                        </div>
-                        <div className={styles.howToInline}>
-                          <div className={styles.howToInlineHeader}>
-                            <div className={styles.howToInlineTitle}>Como evaluar</div>
-                            <button
-                              type="button"
-                              className={styles.aiButton}
-                              onClick={() => handleAssistHowTo(
-                                activePair!.riskId,
-                                activeControl,
-                                activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''
-                              )}
-                              disabled={aiLoadingKey === activeKey}
-                            >
-                              {aiLoadingKey === activeKey ? (
-                                <span className={styles.aiSpinner} />
-                              ) : (
-                                <Sparkles className={styles.aiIcon} />
-                              )}
-                              IA
-                            </button>
-                          </div>
-                          <p className={styles.howToInlineHint}>Aqui se describe como evaluar el control.</p>
-                          <textarea
-                            value={activeEvaluation?.howToEvaluate || activeControl.coverageNotes || ''}
-                            onChange={(e) => updateEvaluation(activePair!.riskId, activeControl.id, { howToEvaluate: e.target.value })}
-                            placeholder="Describe como evaluar este control..."
-                            className={styles.howToInlineTextarea}
-                            rows={4}
-                          />
                         </div>
                       </div>
                       <div className={styles.statusGroup}>

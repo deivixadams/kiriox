@@ -11,9 +11,7 @@ import SignificantActivitiesStep, {
 import RiskAnalysisStep from './_components/RiskAnalysisStep';
 import QuestionnaireStep from './_components/QuestionnaireStep';
 import ExtensionsStep from './_components/ExtensionsStep';
-import ConsolidationStep from './_components/ConsolidationStep';
-
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
 
 type Option = { id: string; name: string; code?: string; frameworkId?: string; jurisdictionId?: string; version?: string };
 type ScaleOption = { id: number; code: string; name: string; description: string | null; baseValue: number; sortOrder: number };
@@ -431,7 +429,10 @@ export default function RiesgoLinealWizardClient() {
     }
     if (step === 4) {
       const ok = await persistControls();
-      if (!ok) return;
+      if (!ok) {
+        // No bloquear el avance; el guardado se puede reintentar en el siguiente paso.
+        console.error('No se pudo guardar controles en Paso 4, avanzando de todas formas.');
+      }
     }
     if (step === 5) {
       const ok = await persistFindingsActions();
@@ -464,6 +465,36 @@ export default function RiesgoLinealWizardClient() {
     }
   };
 
+  const generateReport = async (heatmapBase64?: string | null) => {
+    if (!draftId) return;
+    setFinalizing(true);
+    try {
+      await saveDraft();
+      await persistActivities();
+      await persistControls();
+      await persistFindingsActions();
+      await fetch('/api/auth/csrf');
+      const res = await fetch(`/api/linear-risk/drafts/${draftId}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ heatmap: heatmapBase64 || null })
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Informe_Riesgo_Lineal_${draftId}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      router.push('/validacion/riesgo-lineal');
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
   const handleClose = () => {
     router.push('/validacion/riesgo-lineal');
   };
@@ -474,21 +505,8 @@ export default function RiesgoLinealWizardClient() {
     if (step === 3) return 'Mitigación y riesgo residual';
     if (step === 4) return 'Gestión y controles';
     if (step === 5) return 'Hallazgos y acciones';
-    if (step === 6) return 'Consolidación y cierre';
     return 'Wizard';
   }, [step]);
-
-  const summary = useMemo(() => {
-    const controls = questionnaire.length;
-    const evaluatedRisks = new Set(questionnaire.map((q) => q.riskId).filter(Boolean)).size;
-    return {
-      activities: activities.length,
-      evaluatedRisks,
-      controls,
-      findings: extensions.length,
-      actions: extensions.length,
-    };
-  }, [activities.length, questionnaire, extensions.length]);
 
   if (loading) {
     return <div className="p-6 text-sm text-slate-500">Cargando wizard...</div>;
@@ -583,20 +601,12 @@ export default function RiesgoLinealWizardClient() {
           extensions={extensions}
           onChange={setExtensions}
           onBack={prevStep}
-          onFinish={nextStep}
+          onFinalize={finalize}
+          onGenerateReport={generateReport}
           onSave={async () => {
             await persistFindingsActions();
             await saveDraft();
           }}
-        />
-      )}
-
-      {step === 6 && (
-        <ConsolidationStep
-          summary={summary}
-          onBack={prevStep}
-          onSave={() => saveDraft()}
-          onFinalize={finalize}
           finalizing={finalizing}
         />
       )}

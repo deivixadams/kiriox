@@ -2,6 +2,10 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import prisma from '@/infrastructure/db/prisma/client';
+import fs from 'fs/promises';
+import path from 'path';
+import PizZip from 'pizzip';
+import Docxtemplater from 'docxtemplater';
 import { getAuthContext } from '@/lib/auth-server';
 import { getCanonicalAuditDraftById, upsertCanonicalAuditDraft } from '@/modules/audit/infrastructure/repositories/linearRiskDraftStore';
 
@@ -122,6 +126,153 @@ function mapRiskLevel(score: number) {
   if (score >= 16) return 'alto';
   if (score >= 9) return 'medio';
   return 'bajo';
+}
+
+const formatDate = (value?: string | null) => {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleDateString('es-DO', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+async function renderLinearRiskReportDocx(data: Record<string, any>, heatmapBase64?: string | null) {
+  const templatePath = path.resolve('C:\\_CRE\\PLANTILLA_INFORME.docx');
+  const content = await fs.readFile(templatePath, 'binary');
+  const zip = new PizZip(content);
+
+  let imageModule: any = null;
+  if (heatmapBase64) {
+    try {
+      const mod = await import('docxtemplater-image-module-free');
+      imageModule = new mod.default({
+        getImage: (tagValue: string) => {
+          const clean = String(tagValue || '').replace(/^data:image\/\w+;base64,/, '');
+          return Buffer.from(clean, 'base64');
+        },
+        getSize: () => [700, 420],
+      });
+    } catch {
+      imageModule = null;
+    }
+  }
+
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: '{{', end: '}}' },
+    modules: imageModule ? [imageModule] : []
+  });
+
+  doc.render({ ...data, heatmap: heatmapBase64 || '' });
+  return doc.getZip().generate({ type: 'nodebuffer' });
+}
+
+async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: string, draft: LinearDraftRow) {
+  const canonical = await getCanonicalAuditDraftById(draftId, auth.tenantId);
+  const acta = (canonical?.acta ?? {}) as any;
+  const scopeDescription = acta.scope_description || acta.alcance || '';
+  const businessContext = acta.business_context || acta.objetivo || '';
+  const modelOfBusiness = acta.model_of_business || acta.entidad_nombre || '';
+  const periodLabel = String(acta.assessment_period_label || '').trim();
+  const periodFromLabel = periodLabel.includes(' a ') ? periodLabel.split(' a ')[0] : '';
+  const periodToLabel = periodLabel.includes(' a ') ? periodLabel.split(' a ')[1] : '';
+
+  const companyId = String(draft.company_id || '').trim();
+  const companyRows = UUID_REGEX.test(companyId)
+    ? await prisma.$queryRaw<Array<{ name: string }>>(Prisma.sql`
+        SELECT name FROM security.company WHERE id = ${companyId}::uuid LIMIT 1
+      `)
+    : [];
+  const companyName = companyRows[0]?.name || modelOfBusiness || '';
+
+  const itemRows = await prisma.$queryRaw<Array<{
+    activity_name: string;
+    activity_code: string | null;
+    risk_name: string | null;
+    risk_description: string | null;
+    probability_name: string | null;
+    probability_value: number | null;
+    impact_name: string | null;
+    impact_value: number | null;
+    inherent_risk_score: number | null;
+  }>>(Prisma.sql`
+    SELECT
+      sa.activity_name,
+      sa.activity_code,
+      rc.risk_name,
+      rc.risk_description,
+      cp.name AS probability_name,
+      cp.numeric_value AS probability_value,
+      ci.name AS impact_name,
+      ci.numeric_value AS impact_value,
+      dir.inherent_risk_score
+    FROM linear_risk.risk_assessment_draft_item di
+    JOIN linear_risk.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
+    LEFT JOIN linear_risk.risk_assessment_draft_item_risk dir ON dir.risk_assessment_draft_item_id = di.risk_assessment_draft_item_id
+    LEFT JOIN linear_risk.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
+    LEFT JOIN linear_risk.catalog_probability cp ON cp.catalog_probability_id = dir.catalog_probability_id
+    LEFT JOIN linear_risk.catalog_impact ci ON ci.catalog_impact_id = dir.catalog_impact_id
+    WHERE di.risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
+      AND COALESCE(di.is_deleted, false) = false
+    ORDER BY di.sort_order ASC, di.risk_assessment_draft_item_id ASC
+  `);
+
+  const activities = itemRows.map((row, idx) => ({
+    numero: idx + 1,
+    actividad: row.activity_name,
+    codigo: row.activity_code || '',
+    riesgo: row.risk_name || '',
+    descripcion_riesgo: row.risk_description || '',
+    probabilidad: row.probability_name || '',
+    impacto: row.impact_name || '',
+    riesgo_inherente: row.inherent_risk_score ?? null
+  }));
+
+  const notes = parseNotes(draft.notes);
+  const riskRows = Array.isArray(notes?.wizard?.riskAnalysisRows) ? notes.wizard.riskAnalysisRows : [];
+  const controlIds = riskRows.map((r: any) => String(r?.mitigatingControlId || '').trim()).filter(Boolean);
+  const controlRows = controlIds.length
+    ? await prisma.$queryRaw<Array<{ control_id: string; name: string; description: string | null }>>(Prisma.sql`
+        SELECT control_id::text AS control_id, name, description
+        FROM linear_risk.control_catalog
+        WHERE control_id = ANY(${controlIds}::uuid[])
+      `)
+    : [];
+  const controlMap = new Map(controlRows.map((c) => [c.control_id, c]));
+
+  const mitigaciones = riskRows.map((row: any, idx: number) => {
+    const control = row?.mitigatingControlId ? controlMap.get(String(row.mitigatingControlId)) : null;
+    return {
+      numero: idx + 1,
+      control: control?.name || '',
+      cobertura: row?.coveragePct ?? null,
+      riesgo_residual: row?.residualScore ?? null
+    };
+  });
+
+  const evaluations = Array.isArray(canonical?.questionnaire) ? canonical?.questionnaire : [];
+  const hallazgos = evaluations
+    .filter((ev: any) => ev.status === 'no_cumple' || ev.status === 'parcial')
+    .map((ev: any, idx: number) => ({
+      numero: idx + 1,
+      titulo: `Control ${ev.controlId}`,
+      condicion: ev.notes || '',
+      evidencias: Array.isArray(ev.evidence) ? ev.evidence.join(', ') : ''
+    }));
+
+  return {
+    empresa: companyName,
+    periodo_inicio: formatDate(acta.periodo_inicio || periodFromLabel || null),
+    periodo_fin: formatDate(acta.periodo_fin || periodToLabel || null),
+    fecha_emision: formatDate(new Date().toISOString()),
+    resumen_ejecutivo: acta.scope_description || '',
+    objetivos: acta.objetivo || businessContext,
+    alcance: scopeDescription,
+    metodologia: acta.metodologia || '',
+    actividades: activities,
+    mitigaciones,
+    hallazgos
+  };
 }
 
 function normalizeMaterialityWeight(value: unknown): number | null {
@@ -1373,85 +1524,109 @@ export async function putLinearRiskDraftFindingsActionsHandler(request: Request,
   }
 }
 
+async function ensureLinearRiskFinal(auth: { tenantId: string }, draft: LinearDraftRow) {
+  const existing = await prisma.$queryRaw<Array<{ risk_assessment_final_id: bigint }>>(Prisma.sql`
+    SELECT risk_assessment_final_id
+    FROM linear_risk.risk_assessment_final
+    WHERE source_draft_id = ${draft.risk_assessment_draft_id}
+    LIMIT 1
+  `);
+  if (existing[0]) return existing[0].risk_assessment_final_id;
+
+  const source = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT * FROM linear_risk.risk_assessment_draft
+    WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
+    LIMIT 1
+  `);
+  const row = source[0];
+  if (!row) throw new Error('Draft fuente no encontrado');
+
+  const companyUuidRows = await prisma.$queryRaw<{ data_type: string }[]>(Prisma.sql`
+    SELECT data_type
+    FROM information_schema.columns
+    WHERE table_schema = 'linear_risk'
+      AND table_name = 'risk_assessment_final'
+      AND column_name = 'company_id'
+    LIMIT 1
+  `);
+  const finalCompanyUuid = companyUuidRows[0]?.data_type === 'uuid';
+
+  const inserted = finalCompanyUuid
+    ? await prisma.$queryRaw<{ risk_assessment_final_id: bigint }[]>(Prisma.sql`
+        INSERT INTO linear_risk.risk_assessment_final (
+          source_draft_id, assessment_code, title, company_id, assessment_period_label,
+          scope_description, business_context, model_of_business, methodology_version,
+          root_assessment_code, version_no, is_current_version, concluded_at,
+          global_net_risk_score, global_net_risk_level, composite_risk_score, composite_risk_level,
+          executive_summary, draft_snapshot_hash, created_at, updated_at, is_deleted
+        ) VALUES (
+          ${row.risk_assessment_draft_id}, ${`${row.assessment_code}-FINAL`}, ${row.title}, ${auth.tenantId}::uuid, ${row.assessment_period_label},
+          ${row.scope_description}, ${row.business_context}, ${row.model_of_business}, ${row.methodology_version},
+          ${row.root_assessment_code}, ${row.version_no}, true, now(),
+          ${null}, ${null}, ${null}, ${null}, 'Resumen ejecutivo generado desde wizard riesgo-lineal.', ${null}, now(), now(), false
+        ) RETURNING risk_assessment_final_id
+      `)
+    : await prisma.$queryRaw<{ risk_assessment_final_id: bigint }[]>(Prisma.sql`
+        INSERT INTO linear_risk.risk_assessment_final (
+          source_draft_id, assessment_code, title, company_id, assessment_period_label,
+          scope_description, business_context, model_of_business, methodology_version,
+          root_assessment_code, version_no, is_current_version, concluded_at,
+          global_net_risk_score, global_net_risk_level, composite_risk_score, composite_risk_level,
+          executive_summary, draft_snapshot_hash, created_at, updated_at, is_deleted
+        ) VALUES (
+          ${row.risk_assessment_draft_id}, ${`${row.assessment_code}-FINAL`}, ${row.title}, 1, ${row.assessment_period_label},
+          ${row.scope_description}, ${row.business_context}, ${row.model_of_business}, ${row.methodology_version},
+          ${row.root_assessment_code}, ${row.version_no}, true, now(),
+          ${null}, ${null}, ${null}, ${null}, 'Resumen ejecutivo generado desde wizard riesgo-lineal.', ${null}, now(), now(), false
+        ) RETURNING risk_assessment_final_id
+      `);
+
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE linear_risk.risk_assessment_draft
+    SET status = 'concluded', concluded_at = now(), updated_at = now()
+    WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
+  `);
+
+  return inserted[0].risk_assessment_final_id;
+}
+
 export async function postLinearRiskDraftFinalizeHandler(draftId: string) {
   try {
     const auth = await getAuthContext();
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const draft = await findDraft(draftId, auth.tenantId);
     if (!draft) return NextResponse.json({ error: 'Draft no encontrado' }, { status: 404 });
-
-    const source = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT * FROM linear_risk.risk_assessment_draft
-      WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
-      LIMIT 1
-    `);
-    const row = source[0];
-    if (!row) return NextResponse.json({ error: 'Draft fuente no encontrado' }, { status: 404 });
-
-    const companyUuidRows = await prisma.$queryRaw<{ data_type: string }[]>(Prisma.sql`
-      SELECT data_type
-      FROM information_schema.columns
-      WHERE table_schema = 'linear_risk'
-        AND table_name = 'risk_assessment_final'
-        AND column_name = 'company_id'
-      LIMIT 1
-    `);
-    const finalCompanyUuid = companyUuidRows[0]?.data_type === 'uuid';
-
-    const inserted = finalCompanyUuid
-      ? await prisma.$queryRaw<{ risk_assessment_final_id: bigint }[]>(Prisma.sql`
-          INSERT INTO linear_risk.risk_assessment_final (
-            source_draft_id, assessment_code, title, company_id, assessment_period_label,
-            scope_description, business_context, model_of_business, methodology_version,
-            root_assessment_code, version_no, is_current_version, concluded_at,
-            global_net_risk_score, global_net_risk_level, composite_risk_score, composite_risk_level,
-            executive_summary, draft_snapshot_hash, created_at, updated_at, is_deleted
-          ) VALUES (
-            ${row.risk_assessment_draft_id}, ${`${row.assessment_code}-FINAL`}, ${row.title}, ${auth.tenantId}::uuid, ${row.assessment_period_label},
-            ${row.scope_description}, ${row.business_context}, ${row.model_of_business}, ${row.methodology_version},
-            ${row.root_assessment_code}, ${row.version_no}, true, now(),
-            ${null}, ${null}, ${null}, ${null}, 'Resumen ejecutivo generado desde wizard riesgo-lineal.', ${null}, now(), now(), false
-          ) RETURNING risk_assessment_final_id
-        `)
-      : await prisma.$queryRaw<{ risk_assessment_final_id: bigint }[]>(Prisma.sql`
-          INSERT INTO linear_risk.risk_assessment_final (
-            source_draft_id, assessment_code, title, company_id, assessment_period_label,
-            scope_description, business_context, model_of_business, methodology_version,
-            root_assessment_code, version_no, is_current_version, concluded_at,
-            global_net_risk_score, global_net_risk_level, composite_risk_score, composite_risk_level,
-            executive_summary, draft_snapshot_hash, created_at, updated_at, is_deleted
-          ) VALUES (
-            ${row.risk_assessment_draft_id}, ${`${row.assessment_code}-FINAL`}, ${row.title}, 1, ${row.assessment_period_label},
-            ${row.scope_description}, ${row.business_context}, ${row.model_of_business}, ${row.methodology_version},
-            ${row.root_assessment_code}, ${row.version_no}, true, now(),
-            ${null}, ${null}, ${null}, ${null}, 'Resumen ejecutivo generado desde wizard riesgo-lineal.', ${null}, now(), now(), false
-          ) RETURNING risk_assessment_final_id
-        `);
-
-    const finalId = inserted[0].risk_assessment_final_id;
-
-    await prisma.$executeRaw(Prisma.sql`
-      INSERT INTO linear_risk.risk_assessment_report (
-        risk_assessment_final_id, report_code, report_type, report_title,
-        matrix_summary, executive_summary, report_body, issued_at, created_at, updated_at
-      ) VALUES (
-        ${finalId}, ${`REP-${row.assessment_code}`}, 'formal', ${`Informe ${row.title}`},
-        'Matriz consolidada generada desde borrador de riesgo lineal.',
-        'Resumen ejecutivo generado en cierre automático.',
-        'Cuerpo base del informe generado por el wizard de riesgo lineal.',
-        now(), now(), now()
-      )
-    `);
-
-    await prisma.$executeRaw(Prisma.sql`
-      UPDATE linear_risk.risk_assessment_draft
-      SET status = 'concluded', concluded_at = now(), updated_at = now()
-      WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
-    `);
-
+    const finalId = await ensureLinearRiskFinal(auth, draft);
     return NextResponse.json({ ok: true, risk_assessment_final_id: Number(finalId) });
   } catch (error) {
     console.error('Error finalizing linear risk draft:', error);
     return NextResponse.json({ error: 'No se pudo finalizar la evaluación' }, { status: 500 });
+  }
+}
+
+export async function postLinearRiskDraftReportHandler(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await getAuthContext();
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { id } = await params;
+    const draft = await findDraft(id, auth.tenantId);
+    if (!draft) return NextResponse.json({ error: 'Draft no encontrado' }, { status: 404 });
+
+    const body = await request.json().catch(() => ({}));
+    const heatmap = typeof body?.heatmap === 'string' ? body.heatmap : null;
+
+    await ensureLinearRiskFinal(auth, draft);
+    const data = await buildLinearRiskReportData(auth, id, draft);
+    const buffer = await renderLinearRiskReportDocx(data, heatmap);
+
+    return new NextResponse(buffer as unknown as BodyInit, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="Informe_Riesgo_Lineal_${draft.assessment_code}.docx"`
+      }
+    });
+  } catch (error) {
+    console.error('Error generating linear risk report:', error);
+    return NextResponse.json({ error: 'No se pudo generar el informe' }, { status: 500 });
   }
 }

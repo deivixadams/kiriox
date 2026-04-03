@@ -561,48 +561,6 @@
   min-width: 220px;
 }
 
-.howToInline {
-  flex: 1 1 280px;
-  min-width: 240px;
-  padding: 2px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.howToInlineHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 2px;
-}
-
-.howToInlineTitle {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #93c5fd;
-}
-
-.howToInlineHint {
-  margin: 0;
-  font-size: 11px;
-  color: #9fb4d2;
-}
-
-.howToInlineTextarea {
-  width: 100%;
-  background: rgba(2, 6, 23, 0.4);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  color: #e2e8f0;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 12px;
-  resize: vertical;
-  min-height: 110px;
-}
 
 .controlLabel {
   font-size: 10px;
