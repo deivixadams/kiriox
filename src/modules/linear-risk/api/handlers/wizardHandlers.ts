@@ -114,6 +114,17 @@ type DraftInherentSeedRow = {
   inherent_risk_score: number | null;
 };
 
+type RiskScaleRow = {
+  code: string;
+  name: string;
+  min_value: number;
+  max_value: number;
+  severity_rank: number;
+  color_hex?: string | null;
+  applies_to: string;
+  version: number;
+};
+
 let cacheDraftUuid: boolean | null = null;
 let cacheActivityUuid: boolean | null = null;
 
@@ -126,6 +137,21 @@ function mapRiskLevel(score: number) {
   if (score >= 16) return 'alto';
   if (score >= 9) return 'medio';
   return 'bajo';
+}
+
+async function getRiskScaleBand(value: number, appliesTo: 'INHERENT' | 'RESIDUAL') {
+  const rows = await prisma.$queryRaw<RiskScaleRow[]>(
+    Prisma.sql`
+      SELECT code, name, min_value, max_value, severity_rank, color_hex, applies_to, version
+      FROM linear_risk.risk_scale
+      WHERE is_active = true
+        AND UPPER(applies_to) IN ('ALL', ${appliesTo})
+        AND ${value} BETWEEN min_value AND max_value
+      ORDER BY CASE WHEN UPPER(applies_to) = ${appliesTo} THEN 0 ELSE 1 END, version DESC
+      LIMIT 1
+    `
+  );
+  return rows[0] ?? null;
 }
 
 const formatDate = (value?: string | null) => {
@@ -1152,7 +1178,7 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
       savedByCompositeKey.set(key, saved);
     }
 
-    const rows = seedRows.map((row) => {
+    const rows = await Promise.all(seedRows.map(async (row) => {
       const notesObj = parseNotes(row.draft_item_notes);
       const noteProbability = Number(notesObj?.inherent_probability ?? NaN);
       const noteImpact = Number(notesObj?.inherent_impact ?? NaN);
@@ -1182,6 +1208,21 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
         : Number((inherentRisk * (1 - coveragePct / 100)).toFixed(6));
       const selectedControlMeta = validControlId ? availableControls.find((c) => c.id === validControlId) ?? null : null;
 
+      let inherentScale: RiskScaleRow | null = null;
+      let residualScale: RiskScaleRow | null = null;
+      if (inherentRisk != null) {
+        inherentScale = await getRiskScaleBand(inherentRisk, 'INHERENT');
+        if (!inherentScale) {
+          throw new Error(`Configuración de riesgo: sin banda para inherente=${inherentRisk}`);
+        }
+      }
+      if (residualScore != null) {
+        residualScale = await getRiskScaleBand(residualScore, 'RESIDUAL');
+        if (!residualScale) {
+          throw new Error(`Configuración de riesgo: sin banda para residual=${residualScore}`);
+        }
+      }
+
       return {
         rowId: saved?.rowId || `row-${draftItemId}-${riskCatalogId || 'none'}`,
         draftItemId,
@@ -1200,6 +1241,8 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
         impactLabel: row.impact_name || null,
         impact,
         inherentRisk,
+        inherentScale,
+        residualScale,
         mitigatingControlId: validControlId,
         mitigatingControlCode: selectedControlMeta?.code ?? null,
         mitigatingControlName: selectedControlMeta?.name ?? null,
@@ -1208,7 +1251,7 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
         residualScore,
         availableControls,
       };
-    });
+    }));
 
     const totalResidual = rows.reduce((acc, row) => acc + (row.residualScore ?? 0), 0);
 
@@ -1329,9 +1372,29 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
 
     const body = (await request.json()) as { items?: ActivityItemInput[]; companyId?: string | null };
     const items = Array.isArray(body.items) ? body.items : [];
-    const selectedCompanyId = String(body.companyId || '').trim();
-    if (!UUID_REGEX.test(selectedCompanyId)) {
-      return NextResponse.json({ error: 'companyId es obligatorio y debe ser UUID válido.' }, { status: 400 });
+    const selectedCompanyIdRaw = String(body.companyId || '').trim();
+    const selectedCompanyId = UUID_REGEX.test(selectedCompanyIdRaw) ? selectedCompanyIdRaw : null;
+    if (!selectedCompanyId) {
+      return NextResponse.json({ error: 'Debes seleccionar una empresa antes de guardar las actividades.' }, { status: 400 });
+    }
+
+    const seenActivities = new Map<string, number>();
+    for (let idx = 0; idx < items.length; idx += 1) {
+      const id = String(items[idx]?.significant_activity_id || '').trim();
+      if (!UUID_REGEX.test(id)) {
+        return NextResponse.json(
+          { error: `Actividad inválida en la fila ${idx + 1}: debes seleccionar una actividad significativa.` },
+          { status: 400 }
+        );
+      }
+      if (seenActivities.has(id)) {
+        const first = seenActivities.get(id) as number;
+        return NextResponse.json(
+          { error: `Actividad duplicada: filas ${first} y ${idx + 1}.` },
+          { status: 400 }
+        );
+      }
+      seenActivities.set(id, idx + 1);
     }
 
     await prisma.$executeRaw(Prisma.sql`
@@ -1350,12 +1413,6 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
     for (let idx = 0; idx < items.length; idx += 1) {
       const item = items[idx];
       const significantActivityId = String(item.significant_activity_id || '').trim();
-      if (!UUID_REGEX.test(significantActivityId)) {
-        return NextResponse.json(
-          { error: `Actividad inválida en la fila ${idx + 1}: debes seleccionar una actividad significativa.` },
-          { status: 400 }
-        );
-      }
 
       const activityRows = await prisma.$queryRaw<Array<{
         significant_activity_id: string;
@@ -1447,7 +1504,11 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Error saving activities:', error);
-    return NextResponse.json({ error: 'No se pudieron guardar las actividades' }, { status: 500 });
+    const message =
+      (error as any)?.code === '23505'
+        ? 'Actividad o riesgo duplicado: revisa que no estés repitiendo la misma actividad.'
+        : 'No se pudieron guardar las actividades';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 export async function putLinearRiskDraftControlsHandler(request: Request, draftId: string) {

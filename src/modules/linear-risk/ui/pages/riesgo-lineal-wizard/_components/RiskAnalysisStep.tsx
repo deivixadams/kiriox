@@ -28,12 +28,32 @@ type RiskAnalysisRow = {
   impactLabel: string | null;
   impact: number | null;
   inherentRisk: number | null;
+  inherentScale?: {
+    code: string;
+    name: string;
+    min_value: number;
+    max_value: number;
+    severity_rank: number;
+    color_hex?: string | null;
+    applies_to: string;
+    version: number;
+  } | null;
   mitigatingControlId: string | null;
   mitigatingControlCode: string | null;
   mitigatingControlName: string | null;
   mitigatingControlDescription: string | null;
   coveragePct: number;
   residualScore: number | null;
+  residualScale?: {
+    code: string;
+    name: string;
+    min_value: number;
+    max_value: number;
+    severity_rank: number;
+    color_hex?: string | null;
+    applies_to: string;
+    version: number;
+  } | null;
   availableControls: ControlOption[];
 };
 
@@ -108,12 +128,14 @@ export default function RiskAnalysisStep({ draftId, onBack, onNext, onSave }: Ri
             impactLabel: row?.impactLabel ?? null,
             impact: row?.impact == null ? null : Number(row.impact),
             inherentRisk,
+            inherentScale: row?.inherentScale ?? null,
             mitigatingControlId: row?.mitigatingControlId ?? null,
             mitigatingControlCode: row?.mitigatingControlCode ?? null,
             mitigatingControlName: row?.mitigatingControlName ?? null,
             mitigatingControlDescription: row?.mitigatingControlDescription ?? null,
             coveragePct,
             residualScore,
+            residualScale: row?.residualScale ?? null,
             availableControls: Array.isArray(row?.availableControls) ? row.availableControls : [],
           } as RiskAnalysisRow;
         })
@@ -209,6 +231,8 @@ export default function RiskAnalysisStep({ draftId, onBack, onNext, onSave }: Ri
         riskScore: row.residualScore,
         mitigatingControlName: row.mitigatingControlName,
         mitigationLevel: row.coveragePct > 0 ? 'PARCIAL' : null,
+        inherentScale: row.inherentScale ?? null,
+        residualScale: row.residualScale ?? null,
       })),
     [rows]
   );
@@ -228,11 +252,14 @@ export default function RiskAnalysisStep({ draftId, onBack, onNext, onSave }: Ri
     if (ok) onNext();
   };
 
-  const handleHeatmapClick = () => {
+  const handleHeatmapClick = async () => {
     if (rows.length === 0) {
       setError('No hay filas para mostrar en el mapa de calor.');
       return;
     }
+    const ok = await persist();
+    if (!ok) return;
+    await loadRows();
     setError(null);
     setIsHeatmapOpen(true);
   };

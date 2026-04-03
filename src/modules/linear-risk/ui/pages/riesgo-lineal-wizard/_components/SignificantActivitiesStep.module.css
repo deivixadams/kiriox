@@ -48,6 +48,22 @@
   font-weight: 700;
 }
 
+.cardTitleIndex {
+  color: #dbe9ff;
+  font-weight: 700;
+}
+
+.cardTitleDivider {
+  color: #6ee7b7;
+  font-weight: 700;
+}
+
+.cardTitleName {
+  color: #6ee7b7;
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(110, 231, 183, 0.45);
+}
+
 .grid {
   display: grid;
   gap: 10px;

@@ -290,7 +290,11 @@ export default function RiesgoLinealWizardClient() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: normalized, companyId: context.companyId || null }),
     });
-    return res.ok;
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error(payload?.error || 'No se pudo guardar las actividades.');
+    }
+    return true;
   }, [draftId, activities, context.companyId]);
 
   const persistControls = useCallback(async () => {

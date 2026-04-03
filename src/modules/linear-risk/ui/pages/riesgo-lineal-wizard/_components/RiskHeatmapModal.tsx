@@ -15,6 +15,26 @@ type HeatmapRow = {
   riskScore: number | null;
   mitigatingControlName: string | null;
   mitigationLevel: string | null;
+  inherentScale?: {
+    code: string;
+    name: string;
+    min_value: number;
+    max_value: number;
+    severity_rank: number;
+    color_hex?: string | null;
+    applies_to: string;
+    version: number;
+  } | null;
+  residualScale?: {
+    code: string;
+    name: string;
+    min_value: number;
+    max_value: number;
+    severity_rank: number;
+    color_hex?: string | null;
+    applies_to: string;
+    version: number;
+  } | null;
 };
 
 type RiskHeatmapModalProps = {
@@ -54,29 +74,17 @@ function clampScatterCoord(value: number) {
   return Math.max(1.05, Math.min(4.95, value));
 }
 
-function normalizeInherentToLevel(score: number) {
-  if (score <= 0) return 0;
-  const level = Math.round(score / 4);
-  return Math.max(0, Math.min(5, level));
-}
-
-function getBandByLevel(level: number) {
-  if (level <= 1) return { label: 'Bajo', color: '#09b253' };
-  if (level <= 3) return { label: 'Medio', color: '#f4c300' };
-  if (level < 5) return { label: 'Medio Alto', color: '#b8a300' };
-  return { label: 'Alto', color: '#ff3b30' };
-}
-
-function getSeverityByMetric(score: number, metric: MetricMode) {
-  const level = metric === 'inherent' ? normalizeInherentToLevel(score) : score;
-  return { ...getBandByLevel(level), level };
-}
-
-function getPlotLevel(score: number, metric: MetricMode) {
-  if (metric === 'inherent') {
-    return normalizeInherentToLevel(score);
+function getSeverityByScale(scale?: { name?: string | null; severity_rank?: number | null; color_hex?: string | null }) {
+  if (scale?.name) {
+    const rank = scale.severity_rank ?? 0;
+    const label = String(scale.name);
+    if (scale.color_hex) return { label, color: scale.color_hex, level: rank };
+    if (rank <= 1) return { label, color: '#09b253', level: rank };
+    if (rank <= 2) return { label, color: '#f4c300', level: rank };
+    if (rank <= 3) return { label, color: '#b8a300', level: rank };
+    return { label, color: '#ff3b30', level: rank };
   }
-  return Math.max(1, Math.min(5, score));
+  return { label: 'Sin escala', color: '#94a3b8', level: 0 };
 }
 
 function pickScore(row: HeatmapRow, metric: MetricMode): number | null {
@@ -92,21 +100,16 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
       .map((row) => {
         const baseProbability = clampLevel(row.probability);
         const baseImpact = clampLevel(row.impact);
-        const score = pickScore(row, metric);
-        const levelFromScore = score == null ? null : clampLevel(getPlotLevel(score, metric));
-
-        if (metric === 'residual' && levelFromScore != null) {
-          return {
-            row,
-            probability: levelFromScore,
-            impact: levelFromScore
-          };
-        }
+        const scale = metric === 'residual' ? row.residualScale : row.inherentScale;
+        const scaleRank = scale?.severity_rank ?? null;
+        const plotLevel = scaleRank != null ? clampLevel(scaleRank) : null;
+        const probability = plotLevel ?? baseProbability;
+        const impact = plotLevel ?? baseImpact;
 
         return {
           row,
-          probability: baseProbability,
-          impact: baseImpact
+          probability,
+          impact
         };
       })
       .filter((item): item is { row: HeatmapRow; probability: number; impact: number } => item.probability !== null && item.impact !== null);
@@ -114,7 +117,9 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
     const inCellCounter = new Map<string, number>();
     const points = validRows.map(({ row, probability, impact }) => {
       const score = pickScore(row, metric) ?? 0;
-      const severity = getSeverityByMetric(score, metric);
+      const severity = metric === 'residual'
+        ? getSeverityByScale(row.residualScale || undefined)
+        : getSeverityByScale(row.inherentScale || undefined);
       const key = `${probability}:${impact}`;
       const indexInCell = inCellCounter.get(key) ?? 0;
       inCellCounter.set(key, indexInCell + 1);
@@ -123,13 +128,11 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
       const elementLabel = row.customElementName || row.elementName || 'Elemento';
       const base = row.baseScore == null ? '--' : row.baseScore.toFixed(4);
       const residual = row.riskScore == null ? '--' : row.riskScore.toFixed(4);
-      const level = getPlotLevel(score, metric);
-      const stairShift = (level - 3) * 0.34;
-      const yStair = clampScatterCoord(probability + stairShift + jitterY * 0.8);
-
+      const inherentClass = row.inherentScale?.name || 'Sin escala';
+      const residualClass = row.residualScale?.name || 'Sin escala';
       return {
         name: `${elementLabel} | ${riskLabel}`,
-        value: [clampScatterCoord(impact + jitterX), yStair, score],
+        value: [clampScatterCoord(impact + jitterX), clampScatterCoord(probability + jitterY * 0.8), score],
         symbolSize: 12 + Math.min(18, Math.max(0, score)),
         itemStyle: {
           color: 'rgba(255,255,255,0.08)',
@@ -150,17 +153,23 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
         tooltipHtml: [
           `<strong>${riskLabel}</strong>`,
           `${elementLabel}`,
-          `Probabilidad: ${probability}`,
-          `Impacto: ${impact}`,
+          `Probabilidad: ${row.probability == null ? '--' : row.probability}`,
+          `Impacto: ${row.impact == null ? '--' : row.impact}`,
           `Riesgo inherente: ${base}`,
+          `Clasificación inherente: ${inherentClass}`,
           `Riesgo residual: ${residual}`,
+          `Clasificación residual: ${residualClass}`,
           `Control: ${row.mitigatingControlName || 'Sin control'}${row.mitigationLevel ? ` (${row.mitigationLevel})` : ''}`
         ].join('<br/>')
       };
     });
 
     const topRows = [...rows]
-      .map((row) => ({ row, score: row.riskScore ?? 0 }))
+      .map((row) => ({
+        row,
+        score: metric === 'residual' ? (row.riskScore ?? 0) : (row.baseScore ?? 0),
+        scale: metric === 'residual' ? row.residualScale : row.inherentScale
+      }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
 
@@ -317,7 +326,7 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
             </button>
           </div>
           <p className={styles.toolbarHint}>
-            Puntos en mapa: {prepared.plottedCount}/{prepared.totalCount}. Escala aplicada: 0-1 verde, 2-3 amarillo, 4 mostaza, 5+ rojo.
+            Puntos en mapa: {prepared.plottedCount}/{prepared.totalCount}. Escala aplicada desde risk_scale (1-5).
           </p>
         </div>
         <div className={styles.content}>
@@ -329,8 +338,8 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
               <aside className={styles.sidePanel}>
                 <h4 className={styles.sideTitle}>Top Riesgos (Residual)</h4>
                 <div className={styles.sideList}>
-                  {prepared.topRows.map(({ row, score }, index) => {
-                    const sev = getBandByLevel(score);
+                  {prepared.topRows.map(({ row, score, scale }, index) => {
+                    const sev = getSeverityByScale(scale || undefined);
                     return (
                       <div key={row.rowId} className={styles.sideItem}>
                         <div className={styles.sideItemHeader}>

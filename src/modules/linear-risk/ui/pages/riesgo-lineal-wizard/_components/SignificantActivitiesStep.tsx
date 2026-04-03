@@ -57,8 +57,8 @@ type Props = {
   onOpenCreateActivity: (tempId: string) => void;
   onOpenCreateRisk: (tempId: string, significantActivityId: string) => void;
   onBack: () => void;
-  onNext: () => void;
-  onSave: () => void;
+  onNext: () => void | Promise<void>;
+  onSave: () => void | Promise<void>;
   onAIRefine: (payload: { text: string; field: string; promptCode: string; loadingKey?: string }) => Promise<string | null>;
   aiLoadingFields: Record<string, boolean>;
 };
@@ -228,18 +228,34 @@ export default function SignificantActivitiesStep({
       return false;
     }
 
-    const hasInvalid = normalizedItems.some(
-      (item) =>
-        !item.significant_activity_id ||
-        !item.inherent_risk_description.trim() ||
-        item.inherent_probability === null ||
-        item.inherent_impact === null ||
-        Number.isNaN(Number(item.inherent_probability)) ||
-        Number.isNaN(Number(item.inherent_impact))
-    );
+    const seenActivities = new Map<string, number>();
+    for (let idx = 0; idx < normalizedItems.length; idx += 1) {
+      const id = normalizedItems[idx].significant_activity_id;
+      if (!id) continue;
+      if (seenActivities.has(id)) {
+        const first = seenActivities.get(id) as number;
+        setError(`Actividad duplicada: filas ${first} y ${idx + 1}.`);
+        return false;
+      }
+      seenActivities.set(id, idx + 1);
+    }
 
-    if (hasInvalid) {
-      setError('Selecciona actividad y completa riesgo inherente, impacto y probabilidad en todas las filas.');
+    const invalidIndex = normalizedItems.findIndex((item) => {
+      const missingRiskText = !item.inherent_risk_description.trim() && !item.inherent_risk_catalog_id;
+      const missingProb = item.inherent_probability === null || Number.isNaN(Number(item.inherent_probability));
+      const missingImpact = item.inherent_impact === null || Number.isNaN(Number(item.inherent_impact));
+      return !item.significant_activity_id || missingRiskText || missingProb || missingImpact;
+    });
+
+    if (invalidIndex >= 0) {
+      const item = normalizedItems[invalidIndex];
+      const missing: string[] = [];
+      if (!item.significant_activity_id) missing.push('actividad');
+      if (!item.inherent_risk_description.trim() && !item.inherent_risk_catalog_id) missing.push('riesgo inherente');
+      if (item.inherent_probability === null || Number.isNaN(Number(item.inherent_probability))) missing.push('probabilidad');
+      if (item.inherent_impact === null || Number.isNaN(Number(item.inherent_impact))) missing.push('impacto');
+      const detail = missing.length > 0 ? missing.join(', ') : 'datos requeridos';
+      setError(`Fila ${invalidIndex + 1}: completa ${detail}.`);
       return false;
     }
 
@@ -247,16 +263,24 @@ export default function SignificantActivitiesStep({
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     syncNormalized();
     if (!validate()) return;
-    onNext();
+    try {
+      await onNext();
+    } catch (err: any) {
+      setError(err?.message || 'No se pudo guardar las actividades.');
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     syncNormalized();
     if (!validate()) return;
-    onSave();
+    try {
+      await onSave();
+    } catch (err: any) {
+      setError(err?.message || 'No se pudo guardar las actividades. Verifica la empresa seleccionada.');
+    }
   };
 
   const handleAI = async (tempId: string, field: 'inherent_risk_description' | 'materiality_justification', promptCode: string) => {
@@ -328,7 +352,15 @@ export default function SignificantActivitiesStep({
         {normalizedItems.map((item, idx) => (
           <div key={item.tempId} className={styles.card}>
             <div className={styles.cardTop}>
-              <div className={styles.cardTitle}>Actividad {idx + 1}</div>
+              <div className={styles.cardTitle}>
+                <span className={styles.cardTitleIndex}>Actividad {idx + 1}</span>
+                {item.activity_name ? (
+                  <>
+                    <span className={styles.cardTitleDivider}> ─ </span>
+                    <span className={styles.cardTitleName}>{item.activity_name}</span>
+                  </>
+                ) : null}
+              </div>
               <button type="button" className={styles.removeButton} onClick={() => removeItem(item.tempId)}>
                 <Trash2 size={14} />
                 Eliminar
