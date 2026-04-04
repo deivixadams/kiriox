@@ -9,7 +9,7 @@ import ScoreSummaryStep from './_components/ScoreSummaryStep';
 import ScoreControlResultsStep from './_components/ScoreControlResultsStep';
 import ScoreResultStep from './_components/ScoreResultStep';
 import styles from './ScoreWizardClient.module.css';
-import QuestionResultRenderer from '../../components/QuestionResultRenderer';
+import QuestionResultRenderer, { GraphQuestionRenderer } from '../../components/QuestionResultRenderer';
 import { AnalyticalQuestion, ExecutionResult } from '@/modules/structural-risk/domain/types/AnalyticalQuestion';
 
 
@@ -368,7 +368,12 @@ export default function ScoreWizardClient() {
                               const limitedRows = rows.slice(0, 4);
                               const firstRow = limitedRows[0];
                               if (typeof firstRow === 'object' && firstRow !== null && !Array.isArray(firstRow)) {
-                                const columns = Object.keys(firstRow);
+                                const columns = Object.keys(firstRow).filter((col) => {
+                                  const lower = col.toLowerCase();
+                                  if (lower === 'id' || lower.endsWith('_id')) return false;
+                                  if (lower.includes('code')) return false;
+                                  return true;
+                                });
                                 return (
                                   <div className={styles.answerTableWrap}>
                                     <table className={styles.answerTable}>
@@ -417,6 +422,15 @@ export default function ScoreWizardClient() {
                       </div>
                     )}
                   </div>
+                </div>
+                <div className={styles.graphPanel}>
+                  <div className={styles.answerTitle}>Grafo de la pregunta</div>
+                  {!executionResult?.graph_elements?.length && (
+                    <div className={styles.emptyState}>Sin subgrafo disponible para esta respuesta.</div>
+                  )}
+                  {executionResult?.graph_elements?.length ? (
+                    <GraphQuestionRenderer data={executionResult.graph_elements} />
+                  ) : null}
                 </div>
               </div>
             </div>

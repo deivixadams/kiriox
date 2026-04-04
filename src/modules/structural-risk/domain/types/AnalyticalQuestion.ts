@@ -33,6 +33,10 @@ export interface ExecutionContext {
 
 export interface ExecutionResult {
   data: any[];
+  graph_elements?: Array<{
+    element_kind: 'node' | 'edge';
+    element_data: Record<string, any>;
+  }>;
   metadata: {
     executed_at: string;
     duration_ms: number;

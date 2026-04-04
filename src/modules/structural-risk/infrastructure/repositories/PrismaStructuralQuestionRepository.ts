@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../../../infrastructure/db/prisma/client';
 import { AnalyticalQuestion, ExecutionContext, ExecutionResult, ResultType } from '../../domain/types/AnalyticalQuestion';
 import { StructuralQuestionRepository } from '../../domain/contracts/StructuralQuestionRepository';
@@ -153,7 +154,7 @@ export class PrismaStructuralQuestionRepository implements StructuralQuestionRep
       throw new Error(`Question ${code} has no source_of_truth defined.`);
     }
     const rawQuery = String(question.source_of_truth).trim();
-    if (!rawQuery.toLowerCase().startsWith('select')) {
+    if (!/^(with|select)\s/i.test(rawQuery)) {
       throw new Error(`source_of_truth for ${code} must be a SELECT query.`);
     }
 
@@ -161,19 +162,166 @@ export class PrismaStructuralQuestionRepository implements StructuralQuestionRep
 
     const duration = Date.now() - start;
     const normalizedData = Array.isArray(rows) ? rows : [];
+    const safeData = JSON.parse(
+      JSON.stringify(normalizedData, (_, value) => (typeof value === 'bigint' ? value.toString() : value))
+    );
+    const safeGraphElements = JSON.parse(
+      JSON.stringify(await buildSubgraphElements(normalizedData), (_, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+      )
+    );
     const resultType = 'table' as ResultType;
     const answerRenderer = 'table';
 
     return {
-      data: normalizedData,
+      data: safeData,
+      graph_elements: safeGraphElements,
       metadata: {
         executed_at: new Date().toISOString(),
         duration_ms: duration,
-        row_count: normalizedData.length || 0,
+        row_count: safeData.length || 0,
         executed_sql: debug ? rawQuery : undefined,
         result_type: resultType,
         answer_renderer: answerRenderer
       }
     };
   }
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function buildSubgraphElements(rows: any[]) {
+  if (!rows.length) return [];
+
+  const graphRows = rows.filter(
+    (row) => row && typeof row === 'object' && row.element_kind && row.element_data
+  );
+  if (graphRows.length) {
+    return graphRows.map((row) => ({
+      element_kind: row.element_kind,
+      element_data: row.element_data,
+    }));
+  }
+
+  const directNodeIds = new Set<string>();
+  const sourcePkIds = new Set<string>();
+  const nodeCodes = new Set<string>();
+
+  rows.forEach((row) => {
+    if (!row || typeof row !== 'object') return;
+    Object.entries(row).forEach(([key, value]) => {
+      if (typeof value !== 'string') return;
+      const lower = key.toLowerCase();
+      if (isUuid(value)) {
+        if (lower === 'node_id' || lower === 'src_node_id' || lower === 'dst_node_id') {
+          directNodeIds.add(value);
+          return;
+        }
+        if (lower === 'source_pk' || lower.endsWith('_id')) {
+          sourcePkIds.add(value);
+        }
+        return;
+      }
+      if (lower.includes('code')) {
+        nodeCodes.add(value.trim());
+      }
+    });
+  });
+
+  const directIds = Array.from(directNodeIds);
+  const sourceIds = Array.from(sourcePkIds);
+  const codeIds = Array.from(nodeCodes).filter(Boolean);
+  if (!directIds.length && !sourceIds.length && !codeIds.length) return [];
+
+  const nodeWhereParts: string[] = [];
+  const nodeParams: any[] = [];
+  let paramIndex = 1;
+
+  if (directIds.length) {
+    nodeWhereParts.push(`node_id = ANY($${paramIndex}::uuid[])`);
+    nodeParams.push(directIds);
+    paramIndex += 1;
+  }
+  if (sourceIds.length) {
+    nodeWhereParts.push(`source_pk = ANY($${paramIndex}::uuid[])`);
+    nodeParams.push(sourceIds);
+    paramIndex += 1;
+  }
+  if (codeIds.length) {
+    nodeWhereParts.push(`node_code = ANY($${paramIndex}::text[])`);
+    nodeParams.push(codeIds);
+    paramIndex += 1;
+  }
+
+  const nodeWhere = nodeWhereParts.length ? nodeWhereParts.join(' OR ') : 'false';
+  const nodesQuery = `
+    SELECT node_id, node_type, node_code, node_name
+    FROM "views-schema"._v_graph_nodes_master
+    WHERE ${nodeWhere}
+  `;
+  const nodes = await prisma.$queryRawUnsafe<Array<{
+    node_id: string;
+    node_type: string | null;
+    node_code: string | null;
+    node_name: string | null;
+  }>>(nodesQuery, ...nodeParams);
+
+  if (!nodes.length) {
+    const fallbackNodes = [
+      ...directIds.map((id) => ({
+        element_kind: 'node' as const,
+        element_data: {
+          id,
+          label: id,
+          type: 'NODE',
+        },
+      })),
+      ...codeIds.map((code) => ({
+        element_kind: 'node' as const,
+        element_data: {
+          id: code,
+          label: code,
+          type: 'NODE',
+        },
+      })),
+    ];
+    return fallbackNodes;
+  }
+
+  const nodeIds = nodes.map((n) => n.node_id);
+  const edges = await prisma.$queryRawUnsafe<Array<{
+    edge_id: string;
+    src_node_id: string;
+    dst_node_id: string;
+    edge_type: string | null;
+  }>>(
+    `SELECT edge_id, src_node_id, dst_node_id, edge_type
+     FROM "views-schema"._v_graph_edges_master
+     WHERE src_node_id = ANY($1::uuid[])
+        OR dst_node_id = ANY($1::uuid[])`,
+    nodeIds
+  );
+
+  const nodeElements = nodes.map((node) => ({
+    element_kind: 'node' as const,
+    element_data: {
+      id: node.node_id,
+      label: node.node_name || node.node_code || node.node_id,
+      type: node.node_type || 'NODE',
+    },
+  }));
+
+  const edgeElements = edges.map((edge) => ({
+    element_kind: 'edge' as const,
+    element_data: {
+      id: edge.edge_id,
+      source: edge.src_node_id,
+      target: edge.dst_node_id,
+      label: edge.edge_type || 'EDGE',
+    },
+  }));
+
+  return [...nodeElements, ...edgeElements];
 }
