@@ -43,15 +43,6 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
         permission: 'risk.linear.read',
         order: 23,
       },
-      {
-        key: 'risk-key-questions',
-        label: 'Preguntas claves',
-        href: '/score/preguntasClaves',
-        icon: 'CheckSquare',
-        module: 'linear-risk',
-        permission: 'risk.linear.read',
-        order: 24,
-      },
     ],
   },
   {
@@ -80,6 +71,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
     module: 'simulation',
     permission: 'simulation.read',
     order: 50,
+    disabled: true,
   },
   {
     key: 'benchmark',

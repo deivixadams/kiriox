@@ -173,7 +173,13 @@ function toVizEdge(element: GraphViewRow): CytoscapeElementDefinition {
   };
 }
 
-export default function GraphSimulationClient() {
+interface GraphSimulationProps {
+  hideSidebar?: boolean;
+  hideHeader?: boolean;
+}
+
+export default function GraphSimulationClient({ hideSidebar = false, hideHeader = false }: GraphSimulationProps) {
+
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cyRef = useRef<CytoscapeCore | null>(null);
@@ -395,173 +401,144 @@ export default function GraphSimulationClient() {
   return (
     <div className={styles.page}>
       <div className={styles.shell}>
-        <header className={styles.hero}>
-          <div className={styles.heroCopy}>
-            <div className={styles.eyebrow}>graph simulation cockpit</div>
-            <h1 className={styles.title}>Simulación estructural del CRE</h1>
-            <p className={styles.subtitle}>
-              Grafo heterogéneo multicapa: ley → dominio → obligación → riesgo → control → prueba → evidencia
-            </p>
-            <div className={styles.heroBadges}>
-              <span className={styles.badge}><Layers3 size={14} /> {graph?.meta.counts.nodes ?? 0} nodos</span>
-              <span className={styles.badge}><GitBranch size={14} /> {separated.edges.length} aristas visibles</span>
-              <span className={styles.badge}><Sparkles size={14} /> {isSubgraphMode ? 'Modo subgrafo' : 'Grafo completo'}</span>
+        {!hideHeader && (
+          <header className={styles.hero}>
+            <div className={styles.heroCopy}>
+              <p className={styles.subtitle}>
+                Grafo heterogéneo multicapa: ley → dominio → obligación → riesgo → control → prueba → evidencia
+              </p>
             </div>
-          </div>
 
-          <div className={styles.heroActions}>
-            <button
-              type="button"
-              className={styles.dangerButton}
-              onClick={() => router.push('/score/dashboard')}
-            >
-              <XCircle size={14} />
-              Cerrar graph
-            </button>
-            <button type="button" className={styles.ghostButton} onClick={fitGraph}>
-              <Maximize2 size={14} />
-              Ajustar vista
-            </button>
-            <button type="button" className={styles.ghostButton} onClick={resetFilters}>
-              <RefreshCw size={14} />
-              Limpiar filtros
-            </button>
-            {isSubgraphMode ? (
-              <button type="button" className={styles.primaryButton} onClick={restoreFullGraph}>
-                <Minimize2 size={14} />
-                Volver al grafo completo
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onClick={loadSubgraph}
-                disabled={!selectedElement || selectedElement.element_kind !== 'node'}
-              >
-                <Network size={14} />
-                Explorar vecindad
-              </button>
-            )}
-          </div>
-        </header>
+            <div className={styles.heroActions}>
+              {isSubgraphMode ? (
+                <button type="button" className={styles.primaryButton} onClick={restoreFullGraph}>
+                  <Minimize2 size={14} />
+                  Volver al grafo completo
+                </button>
+              ) : null}
+            </div>
+          </header>
+        )}
 
         <div className={styles.workspace}>
-          <aside className={styles.filtersCard}>
-            <div className={styles.cardHeader}>
-              <div>
-                <div className={styles.cardEyebrow}>Filtros</div>
-                <div className={styles.cardTitle}>Exploración semántica</div>
+          {!hideSidebar && (
+            <aside className={styles.filtersCard}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardEyebrow}>Filtros</div>
+                  <div className={styles.cardTitle}>Exploración semántica</div>
+                </div>
+                <Filter size={16} className={styles.cardIcon} />
               </div>
-              <Filter size={16} className={styles.cardIcon} />
-            </div>
+              
+              <label className={styles.searchBox}>
+                <Search size={16} />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar por code, label o id"
+                />
+              </label>
 
-            <label className={styles.searchBox}>
-              <Search size={16} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar por code, label o id"
-              />
-            </label>
-
-            <div className={styles.controlBlock}>
-              <div className={styles.controlLabel}>Layout</div>
-              <div className={styles.segmented}>
-                {LAYOUT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`${styles.segmentButton} ${layout === option.value ? styles.segmentActive : ''}`}
-                    onClick={() => setLayout(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+              <div className={styles.controlBlock}>
+                <div className={styles.controlLabel}>Layout</div>
+                <div className={styles.segmented}>
+                  {LAYOUT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`${styles.segmentButton} ${layout === option.value ? styles.segmentActive : ''}`}
+                      onClick={() => setLayout(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className={styles.controlBlock}>
-              <div className={styles.controlLabel}>Tipos de nodo</div>
-              <div className={styles.filterList}>
-                {availableNodeTypes.map((option) => (
-                  <label key={option.value} className={styles.filterItem}>
+              <div className={styles.controlBlock}>
+                <div className={styles.controlLabel}>Tipos de nodo</div>
+                <div className={styles.filterList}>
+                  {availableNodeTypes.map((option) => (
+                    <label key={option.value} className={styles.filterItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedNodeTypes.includes(option.value)}
+                        onChange={() => handleNodeTypeToggle(option.value)}
+                      />
+                      <span>{option.value}</span>
+                      <strong>{option.count}</strong>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.controlBlock}>
+                <div className={styles.controlLabel}>Tipos de arista</div>
+                <div className={styles.filterList}>
+                  {availableEdgeTypes.map((option) => (
+                    <label key={option.value} className={styles.filterItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedEdgeTypes.includes(option.value)}
+                        onChange={() => handleEdgeTypeToggle(option.value)}
+                      />
+                      <span>{option.value}</span>
+                      <strong>{option.count}</strong>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.controlBlock}>
+                <div className={styles.controlLabel}>Atributos estructurales</div>
+                <div className={styles.toggleGrid}>
+                  <label className={styles.toggleItem}>
+                    <input type="checkbox" checked={onlyHardGate} onChange={() => setOnlyHardGate((current) => !current)} />
+                    <span><ShieldAlert size={14} /> Hard gates</span>
+                  </label>
+                  <label className={styles.toggleItem}>
                     <input
                       type="checkbox"
-                      checked={selectedNodeTypes.includes(option.value)}
-                      onChange={() => handleNodeTypeToggle(option.value)}
+                      checked={onlyDependencyRoot}
+                      onChange={() => setOnlyDependencyRoot((current) => !current)}
                     />
-                    <span>{option.value}</span>
-                    <strong>{option.count}</strong>
+                    <span><Network size={14} /> Dependency roots</span>
                   </label>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.controlBlock}>
-              <div className={styles.controlLabel}>Tipos de arista</div>
-              <div className={styles.filterList}>
-                {availableEdgeTypes.map((option) => (
-                  <label key={option.value} className={styles.filterItem}>
+                  <label className={styles.toggleItem}>
+                    <input type="checkbox" checked={onlyPrimary} onChange={() => setOnlyPrimary((current) => !current)} />
+                    <span><ShieldCheck size={14} /> Edges primarios</span>
+                  </label>
+                  <label className={styles.toggleItem}>
                     <input
                       type="checkbox"
-                      checked={selectedEdgeTypes.includes(option.value)}
-                      onChange={() => handleEdgeTypeToggle(option.value)}
+                      checked={onlyMandatory}
+                      onChange={() => setOnlyMandatory((current) => !current)}
                     />
-                    <span>{option.value}</span>
-                    <strong>{option.count}</strong>
+                    <span><Layers3 size={14} /> Edges mandatorios</span>
                   </label>
-                ))}
+                </div>
               </div>
-            </div>
 
-            <div className={styles.controlBlock}>
-              <div className={styles.controlLabel}>Atributos estructurales</div>
-              <div className={styles.toggleGrid}>
-                <label className={styles.toggleItem}>
-                  <input type="checkbox" checked={onlyHardGate} onChange={() => setOnlyHardGate((current) => !current)} />
-                  <span><ShieldAlert size={14} /> Hard gates</span>
-                </label>
-                <label className={styles.toggleItem}>
-                  <input
-                    type="checkbox"
-                    checked={onlyDependencyRoot}
-                    onChange={() => setOnlyDependencyRoot((current) => !current)}
-                  />
-                  <span><Network size={14} /> Dependency roots</span>
-                </label>
-                <label className={styles.toggleItem}>
-                  <input type="checkbox" checked={onlyPrimary} onChange={() => setOnlyPrimary((current) => !current)} />
-                  <span><ShieldCheck size={14} /> Edges primarios</span>
-                </label>
-                <label className={styles.toggleItem}>
-                  <input
-                    type="checkbox"
-                    checked={onlyMandatory}
-                    onChange={() => setOnlyMandatory((current) => !current)}
-                  />
-                  <span><Layers3 size={14} /> Edges mandatorios</span>
-                </label>
+              <div className={styles.controlBlock}>
+                <div className={styles.controlLabel}>Criticidad mínima</div>
+                <input
+                  className={styles.range}
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="1"
+                  value={criticalityMin}
+                  onChange={(event) => setCriticalityMin(Number(event.target.value))}
+                />
+                <div className={styles.rangeMeta}>
+                  <span>0</span>
+                  <strong>{criticalityMin}</strong>
+                  <span>5</span>
+                </div>
               </div>
-            </div>
-
-            <div className={styles.controlBlock}>
-              <div className={styles.controlLabel}>Criticidad mínima</div>
-              <input
-                className={styles.range}
-                type="range"
-                min="0"
-                max="5"
-                step="1"
-                value={criticalityMin}
-                onChange={(event) => setCriticalityMin(Number(event.target.value))}
-              />
-              <div className={styles.rangeMeta}>
-                <span>0</span>
-                <strong>{criticalityMin}</strong>
-                <span>5</span>
-              </div>
-            </div>
-          </aside>
+            </aside>
+          )}
 
           <div className={styles.mainColumn}>
             <section className={styles.graphCard}>
@@ -570,10 +547,7 @@ export default function GraphSimulationClient() {
                   <div className={styles.cardEyebrow}>Canvas</div>
                   <div className={styles.cardTitle}>Grafo regulatorio navegable</div>
                 </div>
-                <div className={styles.countPills}>
-                  <span className={styles.badge}>Visibles {graph?.meta.counts.total ?? 0}</span>
-                  <span className={styles.badge}>Conectadas {separated.edges.length}</span>
-                </div>
+
               </div>
 
               {loading && <div className={styles.emptyState}>Cargando grafo...</div>}

@@ -158,6 +158,50 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
               : undefined;
 
             if (!hasChildren) {
+              if (item.disabled) {
+                return (
+                  <div key={item.key} style={dividerStyle}>
+                    <div
+                      className="sidebar-link"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "1rem",
+                        padding: "0.7rem 0.75rem",
+                        borderRadius: "10px",
+                        color: "var(--muted)",
+                        textDecoration: "none",
+                        fontSize: "0.85rem",
+                        background: "transparent",
+                        opacity: 0.45,
+                        cursor: "not-allowed",
+                      }}
+                    >
+                      <Icon size={18} color="var(--muted)" />
+                      {!collapsed && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+                          {item.label}
+                          {item.badge && (
+                            <span
+                              style={{
+                                borderRadius: "999px",
+                                padding: "0.1rem 0.45rem",
+                                fontSize: "0.62rem",
+                                textTransform: "uppercase",
+                                border: "1px solid var(--glass-border)",
+                                color: "var(--muted)",
+                              }}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div key={item.key} style={dividerStyle}>
                   <Link
@@ -249,6 +293,30 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
                   {item.children?.map((child) => {
                     const ChildIcon = resolveIcon(child.icon);
                     const active = isActivePath(pathname, child.href);
+                    if (child.disabled) {
+                      return (
+                        <div
+                          key={child.key}
+                          className="sidebar-link"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "1rem",
+                            padding: "0.65rem 0.75rem 0.65rem 1.15rem",
+                            marginLeft: collapsed ? "0" : "0.8rem",
+                            borderRadius: "10px",
+                            color: "var(--muted)",
+                            textDecoration: "none",
+                            fontSize: "0.82rem",
+                            opacity: 0.45,
+                            cursor: "not-allowed",
+                          }}
+                        >
+                          <ChildIcon size={16} color="var(--muted)" />
+                          {!collapsed && <span>{child.label}</span>}
+                        </div>
+                      );
+                    }
                     return (
                       <Link
                         key={child.key}

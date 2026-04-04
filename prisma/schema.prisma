@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["catalogos", "core", "corpus", "graph", "pendiente", "security", "score", "params"]
+  schemas  = ["catalogos", "core", "corpus", "graph", "pendiente", "security", "score", "params", "structural_risk", "views"]
 }
 
 model corpus_catalog_control_automation {

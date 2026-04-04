@@ -4,6 +4,7 @@ export async function GET(request: Request) {
     const prisma = (await import('@/lib/prisma')).default;
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company_id');
+    const minimal = searchParams.get('minimal') === '1';
     const queryOrEmpty = async <T,>(query: Promise<T>): Promise<T | any[]> => {
       try {
         return await query;
@@ -15,47 +16,13 @@ export async function GET(request: Request) {
       }
     };
 
-    const jurisdictionsRaw = await queryOrEmpty(prisma.$queryRaw`
+    const reinosRaw = await queryOrEmpty(prisma.$queryRaw`
       SELECT id, name, code
-      FROM graph.jurisdiction
+      FROM core.reino
+      WHERE COALESCE(is_active, true) = true
       ORDER BY name ASC
     `);
-    const jurisdictions = Array.isArray(jurisdictionsRaw) ? jurisdictionsRaw : [];
-
-    const frameworksRaw = await queryOrEmpty(prisma.$queryRaw`
-      SELECT id, code, name, jurisdiction_id
-      FROM "_DONOTUSE_".corpus_framework
-      WHERE COALESCE(status, 'active') = 'active'
-      ORDER BY name ASC
-    `);
-    const frameworks = Array.isArray(frameworksRaw)
-      ? frameworksRaw.map((f: any) => ({
-          id: f.id,
-          code: f.code,
-          name: f.name,
-          jurisdictionId: f.jurisdiction_id,
-        }))
-      : [];
-
-    const frameworkVersionsRaw = await queryOrEmpty(prisma.$queryRaw`
-      SELECT
-        fv.id,
-        fv.framework_id,
-        fv.version,
-        fv.effective_date,
-        fv.created_at
-      FROM corpus.framework_version fv
-      WHERE COALESCE(fv.status, 'active') = 'active'
-      ORDER BY COALESCE(fv.effective_date, fv.created_at::date) DESC, fv.created_at DESC
-    `);
-    const frameworkVersions = Array.isArray(frameworkVersionsRaw)
-      ? frameworkVersionsRaw.map((v: any) => ({
-          id: v.id,
-          version: v.version,
-          frameworkId: v.framework_id,
-          effectiveDate: v.effective_date,
-        }))
-      : [];
+    const reinos = Array.isArray(reinosRaw) ? reinosRaw : [];
 
     const loadCompanies = async () => {
       const securityCompanies = await queryOrEmpty(prisma.$queryRaw`
@@ -80,7 +47,7 @@ export async function GET(request: Request) {
       return null;
     };
 
-    if (companyId) {
+    if (companyId && !minimal) {
       const generalJurisdictionRows = await queryOrEmpty(prisma.$queryRaw`
         SELECT id
         FROM graph.jurisdiction
@@ -133,12 +100,62 @@ export async function GET(request: Request) {
 
     const companies = await loadCompanies();
 
+    if (minimal) {
+      return NextResponse.json({
+        companies,
+        reinos,
+      });
+    }
+
+    const jurisdictionsRaw = await queryOrEmpty(prisma.$queryRaw`
+      SELECT id, name, code
+      FROM graph.jurisdiction
+      ORDER BY name ASC
+    `);
+    const jurisdictions = Array.isArray(jurisdictionsRaw) ? jurisdictionsRaw : [];
+
+    const frameworksRaw = await queryOrEmpty(prisma.$queryRaw`
+      SELECT id, code, name, jurisdiction_id
+      FROM "_DONOTUSE_".corpus_framework
+      WHERE COALESCE(status, 'active') = 'active'
+      ORDER BY name ASC
+    `);
+    const frameworks = Array.isArray(frameworksRaw)
+      ? frameworksRaw.map((f: any) => ({
+          id: f.id,
+          code: f.code,
+          name: f.name,
+          jurisdictionId: f.jurisdiction_id,
+        }))
+      : [];
+
+    const frameworkVersionsRaw = await queryOrEmpty(prisma.$queryRaw`
+      SELECT
+        fv.id,
+        fv.framework_id,
+        fv.version,
+        fv.effective_date,
+        fv.created_at
+      FROM corpus.framework_version fv
+      WHERE COALESCE(fv.status, 'active') = 'active'
+      ORDER BY COALESCE(fv.effective_date, fv.created_at::date) DESC, fv.created_at DESC
+    `);
+    const frameworkVersions = Array.isArray(frameworkVersionsRaw)
+      ? frameworkVersionsRaw.map((v: any) => ({
+          id: v.id,
+          version: v.version,
+          frameworkId: v.framework_id,
+          effectiveDate: v.effective_date,
+        }))
+      : [];
+
     return NextResponse.json({
       companies,
       jurisdictions,
       frameworks,
       frameworkSources: [],
       frameworkVersions,
+      reinos,
     });
   } catch (error: any) {
     console.error('Error fetching superintendence context:', error);

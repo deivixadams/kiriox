@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       periodEnd,
       mode,
       draftId,
+      reinoId,
     } = body || {};
 
     if (!companyId || !periodStart || !periodEnd || !mode) {
@@ -31,6 +32,113 @@ export async function POST(request: Request) {
     const frameworkVersionId = typeof frameworkVersionIdInput === 'string'
       ? frameworkVersionIdInput
       : null;
+
+    const selectedReinoId = typeof reinoId === 'string' && reinoId.trim().length > 0
+      ? reinoId.trim()
+      : null;
+
+    let realmDomainIds: string[] = [];
+    if (selectedReinoId) {
+      const domainRows = await prisma.$queryRaw<Array<{ domain_id: string }>>(Prisma.sql`
+        SELECT DISTINCT domain_id
+        FROM core.map_reino_domain
+        WHERE reino_id = ${selectedReinoId}::uuid
+      `);
+      realmDomainIds = (domainRows || []).map((row) => row.domain_id);
+      if (realmDomainIds.length === 0) {
+        return NextResponse.json({ error: 'El reino seleccionado no tiene dominios configurados.' }, { status: 400 });
+      }
+    }
+
+    const viewRows = await prisma.$queryRaw<Array<{
+      control_id: string;
+      control_code: string | null;
+      structural_score: Prisma.Decimal | number | null;
+      propagation_impact_score: Prisma.Decimal | number | null;
+      domain_span: Prisma.Decimal | number | null;
+      risk_span: Prisma.Decimal | number | null;
+      global_rank: Prisma.Decimal | number | null;
+      bucket: string | null;
+    }>>(Prisma.sql`
+      SELECT
+        control_id,
+        control_code,
+        structural_score,
+        propagation_impact_score,
+        domain_span,
+        risk_span,
+        global_rank,
+        bucket
+      FROM "views-schema".dashboard_top10_controls
+    `).catch(() => [] as any[]);
+
+    if (Array.isArray(viewRows) && viewRows.length > 0) {
+      const selection = {
+        obligations: [] as any[],
+        risks: [] as any[],
+        controls: viewRows.map((row, idx) => ({
+          id: row.control_id,
+          code: row.control_code || '',
+          name: row.control_code || 'Control',
+          description: row.bucket || null,
+          score: toNumber(row.propagation_impact_score ?? row.structural_score ?? 0),
+          rank: Number.isFinite(Number(row.global_rank)) ? Number(row.global_rank) : idx + 1,
+          reasons: ['views-schema.dashboard_top10_controls'],
+        })),
+        tests: [] as any[],
+      };
+
+      const run = await prisma.$transaction(async (tx) => {
+        const runDraft = draftId
+          ? await tx.run_draft.update({
+              where: { id: draftId },
+              data: {
+                company_id: companyId,
+                framework_version_id: frameworkVersionId as any,
+                period_start: new Date(periodStart),
+                period_end: new Date(periodEnd),
+                mode,
+                updated_at: new Date(),
+              },
+            })
+          : await tx.run_draft.create({
+              data: {
+                company_id: companyId,
+                framework_version_id: frameworkVersionId as any,
+                period_start: new Date(periodStart),
+                period_end: new Date(periodEnd),
+                mode,
+              },
+            });
+
+        await Promise.all([
+          tx.run_obligation_draft.deleteMany({ where: { run_id: runDraft.id } }),
+          tx.run_risk_draft.deleteMany({ where: { run_id: runDraft.id } }),
+          tx.run_control_draft.deleteMany({ where: { run_id: runDraft.id } }),
+          tx.run_test_draft.deleteMany({ where: { run_id: runDraft.id } }),
+        ]);
+
+        if (selection.controls.length) {
+          await tx.run_control_draft.createMany({
+            data: selection.controls.map((c) => ({
+              run_id: runDraft.id,
+              control_id: c.id,
+              score: c.score,
+              rank: c.rank,
+              reasons: c.reasons,
+            })),
+          });
+        }
+
+        return runDraft;
+      });
+
+      return NextResponse.json({
+        draftId: run.id,
+        selection,
+      });
+    }
+
     if (!frameworkVersionId) {
       return NextResponse.json({ error: 'framework_version_id es requerido' }, { status: 400 });
     }
@@ -44,17 +152,47 @@ export async function POST(request: Request) {
       const viewRisks = await prisma.$queryRaw(Prisma.sql`
         SELECT DISTINCT v.risk_id, v.risk_code, v.risk_title, r.description
         FROM corpus._score_v_cre_structural_controls_explain_v1 v
-        LEFT JOIN graph.risk r ON r.id = v.risk_id
+        LEFT JOIN core.risk r ON r.id = v.risk_id
       `);
 
       const viewControls = await prisma.$queryRaw(Prisma.sql`
         SELECT DISTINCT v.control_id, v.control_code, c.name, c.description
         FROM corpus._score_v_cre_structural_controls_explain_v1 v
-        LEFT JOIN graph.control c ON c.id = v.control_id
+        LEFT JOIN core.control c ON c.id = v.control_id
       `);
 
+      let allowedObligationIds = new Set<string>();
+      let allowedRiskIds = new Set<string>();
+      let allowedControlIds = new Set<string>();
+      if (realmDomainIds.length > 0) {
+        const obligationRows = await prisma.$queryRaw<Array<{ obligation_id: string }>>(Prisma.sql`
+          SELECT DISTINCT mde.element_id AS obligation_id
+          FROM graph.map_domain_element mde
+          JOIN graph.domain_elements de ON de.id = mde.element_id
+          WHERE de.element_type = 'OBLIGATION'
+            AND mde.domain_id IN (${Prisma.join(realmDomainIds.map((id) => Prisma.sql`${id}::uuid`))})
+        `);
+        allowedObligationIds = new Set((obligationRows || []).map((row) => row.obligation_id));
+
+        const riskRows = await prisma.$queryRaw<Array<{ risk_id: string }>>(Prisma.sql`
+          SELECT DISTINCT risk_id
+          FROM core.map_elements_risk
+          WHERE element_id IN (${Prisma.join(Array.from(allowedObligationIds).map((id) => Prisma.sql`${id}::uuid`))})
+        `);
+        allowedRiskIds = new Set((riskRows || []).map((row) => row.risk_id));
+
+        const controlRows = await prisma.$queryRaw<Array<{ control_id: string }>>(Prisma.sql`
+          SELECT DISTINCT control_id
+          FROM core.map_elements_control
+          WHERE element_id IN (${Prisma.join(Array.from(allowedObligationIds).map((id) => Prisma.sql`${id}::uuid`))})
+        `);
+        allowedControlIds = new Set((controlRows || []).map((row) => row.control_id));
+      }
+
       const viewPayload = {
-        obligations: (viewObligations as any[]).map((o, idx) => ({
+        obligations: (viewObligations as any[])
+          .filter((o) => realmDomainIds.length === 0 || allowedObligationIds.has(o.obligation_id))
+          .map((o, idx) => ({
           id: o.obligation_id,
           code: o.obligation_code,
           title: o.obligation_title,
@@ -62,7 +200,9 @@ export async function POST(request: Request) {
           rank: idx + 1,
           reasons: ['structural_view'],
         })),
-        risks: (viewRisks as any[]).map((r, idx) => ({
+        risks: (viewRisks as any[])
+          .filter((r) => realmDomainIds.length === 0 || allowedRiskIds.has(r.risk_id))
+          .map((r, idx) => ({
           id: r.risk_id,
           code: r.risk_code,
           name: r.risk_title,
@@ -71,7 +211,9 @@ export async function POST(request: Request) {
           rank: idx + 1,
           reasons: ['structural_view'],
         })),
-        controls: (viewControls as any[]).map((c, idx) => ({
+        controls: (viewControls as any[])
+          .filter((c) => realmDomainIds.length === 0 || allowedControlIds.has(c.control_id))
+          .map((c, idx) => ({
           id: c.control_id,
           code: c.control_code,
           name: c.name,
@@ -94,7 +236,7 @@ export async function POST(request: Request) {
                 where: { id: draftId },
                 data: {
                   company_id: companyId,
-                  framework_version_id: frameworkVersionId,
+                  framework_version_id: frameworkVersionId as any,
                   period_start: new Date(periodStart),
                   period_end: new Date(periodEnd),
                   mode,
@@ -104,7 +246,7 @@ export async function POST(request: Request) {
             : await tx.run_draft.create({
                 data: {
                   company_id: companyId,
-                  framework_version_id: frameworkVersionId,
+                  framework_version_id: frameworkVersionId as any,
                   period_start: new Date(periodStart),
                   period_end: new Date(periodEnd),
                   mode,
@@ -179,6 +321,7 @@ export async function POST(request: Request) {
       WHERE de.element_type = 'OBLIGATION'
         AND COALESCE(de.obligation_status, 'active') = 'active'
         AND d.framework_version_id = ${frameworkVersionId}::uuid
+        ${realmDomainIds.length > 0 ? Prisma.sql`AND mde.domain_id IN (${Prisma.join(realmDomainIds.map((id) => Prisma.sql`${id}::uuid`))})` : Prisma.sql``}
       ORDER BY de.code
     `)) as Array<{
       id: string;
@@ -223,7 +366,7 @@ export async function POST(request: Request) {
     const controls = controlIds.length > 0
       ? ((await prisma.$queryRaw(Prisma.sql`
           SELECT id, code, name, description, is_hard_gate, evidence_required
-          FROM graph.control
+          FROM core.control
           WHERE status = 'active'
             AND id IN (${Prisma.join(controlIds.map((id) => Prisma.sql`${id}::uuid`))})
         `)) as Array<{
@@ -239,7 +382,7 @@ export async function POST(request: Request) {
     let riskControls = controlIds.length > 0
       ? ((await prisma.$queryRaw(Prisma.sql`
           SELECT control_id, risk_id, mitigation_strength
-          FROM graph.map_risk_control
+          FROM core.map_risk_control
           WHERE framework_version_id = ${frameworkVersionId}::uuid
             AND control_id IN (${Prisma.join(controlIds.map((id) => Prisma.sql`${id}::uuid`))})
         `)) as Array<{ control_id: string; risk_id: string; mitigation_strength: number }>)
@@ -249,7 +392,7 @@ export async function POST(request: Request) {
       riskControls = controlIds.length > 0
         ? ((await prisma.$queryRaw(Prisma.sql`
             SELECT control_id, risk_id, mitigation_strength
-            FROM graph.map_risk_control
+            FROM core.map_risk_control
             WHERE control_id IN (${Prisma.join(controlIds.map((id) => Prisma.sql`${id}::uuid`))})
           `)) as Array<{ control_id: string; risk_id: string; mitigation_strength: number }>)
         : [];
@@ -262,7 +405,7 @@ export async function POST(request: Request) {
     const risks = riskIds.length > 0
       ? ((await prisma.$queryRaw(Prisma.sql`
           SELECT id, code, name, description, risk_layer_id
-          FROM graph.risk
+          FROM core.risk
           WHERE id IN (${Prisma.join(riskIds.map((id) => Prisma.sql`${id}::uuid`))})
         `)) as Array<{
           id: string;
@@ -537,7 +680,7 @@ export async function POST(request: Request) {
             where: { id: draftId },
             data: {
               company_id: companyId,
-              framework_version_id: frameworkVersionId,
+              framework_version_id: frameworkVersionId as any,
               period_start: new Date(periodStart),
               period_end: new Date(periodEnd),
               mode,
@@ -547,7 +690,7 @@ export async function POST(request: Request) {
         : await tx.run_draft.create({
             data: {
               company_id: companyId,
-              framework_version_id: frameworkVersionId,
+              framework_version_id: frameworkVersionId as any,
               period_start: new Date(periodStart),
               period_end: new Date(periodEnd),
               mode,

@@ -9,6 +9,7 @@ export type NavigationItem = {
   permission?: string;
   order: number;
   badge?: string;
+  disabled?: boolean;
   children?: NavigationItem[];
 };
 
@@ -17,4 +18,3 @@ export type ResolvedNavigationItem = Omit<NavigationItem, 'children'> & {
 };
 
 export type NavigationAccessContext = Pick<AccessContext, 'enabledModules' | 'permissions'>;
-

@@ -9,16 +9,24 @@ import ScoreSummaryStep from './_components/ScoreSummaryStep';
 import ScoreControlResultsStep from './_components/ScoreControlResultsStep';
 import ScoreResultStep from './_components/ScoreResultStep';
 import styles from './ScoreWizardClient.module.css';
+import QuestionResultRenderer from '../../components/QuestionResultRenderer';
+import { AnalyticalQuestion, ExecutionResult } from '@/modules/structural-risk/domain/types/AnalyticalQuestion';
 
-const TOTAL_STEPS = 5;
+
+
+const TOTAL_STEPS = 6;
 
 const STEP_TITLES = [
   'Contexto y Marco',
+  'Preguntas Clave',
   'Alcance Normativo',
   'Evaluación 4D del Control',
   'Resultado del Score',
   'Análisis de Controles'
 ];
+
+// STRUCTURAL_QUESTIONS moved to state/API
+
 
 const ENGINE_PROFILE_BASE = [
   { key: 'w_D', label: 'Diseño', detail: 'Mide cuánto influye el diseño del control (política, estructura, alcance). Si baja, el motor asume controles frágiles desde el origen.' },
@@ -53,8 +61,11 @@ export default function ScoreWizardClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
+  const [selectedQuestionCode, setSelectedQuestionCode] = useState('');
   const [companies, setCompanies] = useState<{ id: string; name: string; code?: string }[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [reinos, setReinos] = useState<{ id: string; name: string; code?: string }[]>([]);
+  const [selectedReinoId, setSelectedReinoId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [endDateAuto, setEndDateAuto] = useState(true);
@@ -65,6 +76,11 @@ export default function ScoreWizardClient() {
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<AnalyticalQuestion[]>([]);
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
+  const [executionLoading, setExecutionLoading] = useState(false);
+  const [executionError, setExecutionError] = useState<string | null>(null);
+
   const [controlEvaluations, setControlEvaluations] = useState<any[]>([]);
   const [controlStats, setControlStats] = useState<{ total: number; evaluated: number }>({ total: 0, evaluated: 0 });
   const [engineProfile, setEngineProfile] = useState(
@@ -130,93 +146,101 @@ export default function ScoreWizardClient() {
     setEndDate(`${yyyy}-${mm}-${dd}`);
   }, [startDate, endDateAuto]);
 
+  // Fetch Questions for Step 2
   useEffect(() => {
-    let alive = true;
-    const loadContext = async () => {
+    if (step !== 2) return;
+    const loadQuestions = async () => {
       try {
-        const res = await fetch('/api/superintendence/context');
+        const res = await fetch('/api/score/questions');
         if (!res.ok) return;
         const data = await res.json();
+        setQuestions(data.questions || []);
+      } catch (err) {
+        console.error('Error loading questions:', err);
+      }
+    };
+    loadQuestions();
+  }, [step]);
+
+  // Execute Question when selected
+  useEffect(() => {
+    if (step !== 2 || !selectedQuestionCode) {
+      setExecutionResult(null);
+      return;
+    }
+    const q = questions.find(q => q.code === selectedQuestionCode);
+    if (!q) return;
+
+    const execute = async () => {
+      setExecutionLoading(true);
+      setExecutionError(null);
+      try {
+        const res = await fetch('/api/score/questions/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: q.code,
+            context: {
+              companyId: selectedCompanyId,
+              frameworkVersionId: frameworkVersionId || null,
+              reinoId: selectedReinoId || null,
+              periodStart: startDate || null,
+              periodEnd: endDate || null,
+            },
+            debug: true
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error ejecutando pregunta');
+        setExecutionResult(data.result);
+      } catch (err: any) {
+        setExecutionError(err.message);
+      } finally {
+        setExecutionLoading(false);
+      }
+    };
+    execute();
+  }, [selectedQuestionCode, questions, step, selectedCompanyId, frameworkVersionId, selectedReinoId, startDate, endDate]);
+
+  useEffect(() => {
+    let alive = true;
+      const loadContext = async () => {
+        try {
+          const res = await fetch('/api/superintendence/context?minimal=1');
+          if (!res.ok) return;
+          const data = await res.json();
         if (!alive) return;
         const list = Array.isArray(data?.companies) ? data.companies : [];
         setCompanies(list);
         if (!selectedCompanyId && list.length > 0) {
           setSelectedCompanyId(list[0].id);
         }
-        const frameworkVersions = Array.isArray(data?.frameworkVersions) ? data.frameworkVersions : [];
-        const latestVersion = frameworkVersions[0];
-        if (latestVersion?.id) {
-          setFrameworkVersionId((prev) => prev || latestVersion.id);
+        const reinoList = Array.isArray(data?.reinos) ? data.reinos : [];
+        setReinos(reinoList);
+        if (!selectedReinoId && reinoList.length > 0) {
+          setSelectedReinoId(reinoList[0].id);
         }
-        setContextLoaded(true);
-      } catch {
-        if (alive) setContextLoaded(true);
-      }
-    };
-    loadContext();
-    return () => {
-      alive = false;
-    };
-  }, [selectedCompanyId]);
+          setContextLoaded(true);
+        } catch {
+          if (alive) setContextLoaded(true);
+        }
+      };
+      loadContext();
+      return () => {
+        alive = false;
+      };
+    }, [selectedCompanyId]);
 
   useEffect(() => {
-    let alive = true;
-    const loadEngineProfile = async () => {
-      try {
-        const res = await fetch('/api/params/active');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!alive) return;
-        const params = data?.parameters || [];
-        const paramMap = new Map<string, number>(
-          params.map((p: any) => [p.code, typeof p.numeric_value === 'number' ? p.numeric_value : Number(p.numeric_value)])
-        );
-        setEngineProfile(
-          ENGINE_PROFILE_BASE.map((item) => {
-            const val = paramMap.get(item.key);
-            const formatted = Number.isFinite(val)
-              ? Number(val).toFixed(2)
-              : '—';
-            return {
-              ...item,
-              value: `${item.key.toUpperCase()} ${formatted}`,
-            };
-          })
-        );
-      } catch {
-        return;
-      }
-    };
-    loadEngineProfile();
-    return () => {
-      alive = false;
-    };
+    setEngineProfile(ENGINE_PROFILE_BASE.map((item) => ({ ...item, value: '—' })));
   }, []);
 
   useEffect(() => {
-    let alive = true;
-    const loadCompanyContext = async () => {
-      if (!selectedCompanyId) return;
-      try {
-        const res = await fetch(`/api/superintendence/context?company_id=${selectedCompanyId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!alive) return;
-        if (data?.frameworkVersionId) {
-          setFrameworkVersionId(data.frameworkVersionId);
-        }
-      } catch {
-        return;
-      }
-    };
-    loadCompanyContext();
-    return () => {
-      alive = false;
-    };
+    return;
   }, [selectedCompanyId]);
 
   const headerItems = useMemo(() => {
-    if (step !== 3) return [];
+    if (step !== 4) return [];
     const total = controlStats.total;
     const evaluated = controlStats.evaluated;
     return [
@@ -226,7 +250,7 @@ export default function ScoreWizardClient() {
   }, [step, controlStats]);
 
   const title = STEP_TITLES[step - 1] || 'Wizard';
-  const subtitle = step === 2
+  const subtitle = step === 3
     ? 'Selecciona el universo crítico que entra al score.'
     : 'Evaluación y Resultados';
 
@@ -235,21 +259,26 @@ export default function ScoreWizardClient() {
       setSelectionError('Completa empresa y periodo antes de seleccionar.');
       return;
     }
+    if (reinos.length > 0 && !selectedReinoId) {
+      setSelectionError('Selecciona un reino antes de continuar.');
+      return;
+    }
     setSelectionLoading(true);
     setSelectionError(null);
     try {
-      const res = await fetch('/api/score/selector', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyId: selectedCompanyId,
-          frameworkVersionId,
-          periodStart: startDate,
-          periodEnd: endDate,
-          mode,
-          draftId,
-        }),
-      });
+        const res = await fetch('/api/score/selector', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            companyId: selectedCompanyId,
+            frameworkVersionId: frameworkVersionId || null,
+            periodStart: startDate,
+            periodEnd: endDate,
+            mode,
+            draftId,
+            reinoId: selectedReinoId || null,
+          }),
+        });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || 'No se pudo generar la seleccion');
@@ -264,15 +293,16 @@ export default function ScoreWizardClient() {
     }
   };
 
-  useEffect(() => {
-    if (step !== 2) return;
-    if (selection || selectionLoading) return;
-    if (!selectedCompanyId || !startDate || !endDate || !frameworkVersionId) return;
-    const key = `${selectedCompanyId}:${frameworkVersionId}:${startDate}:${endDate}`;
-    if (autoSelectKeyRef.current === key) return;
-    autoSelectKeyRef.current = key;
-    handleSelection('top20');
-  }, [step, selection, selectionLoading, selectedCompanyId, startDate, endDate, frameworkVersionId]);
+    useEffect(() => {
+      if (step !== 3) return;
+      if (selection || selectionLoading) return;
+      if (!selectedCompanyId || !startDate || !endDate) return;
+      if (reinos.length > 0 && !selectedReinoId) return;
+      const key = `${selectedCompanyId}:${startDate}:${endDate}:${selectedReinoId || 'all'}`;
+      if (autoSelectKeyRef.current === key) return;
+      autoSelectKeyRef.current = key;
+      handleSelection('top20');
+  }, [step, selection, selectionLoading, selectedCompanyId, startDate, endDate, selectedReinoId, reinos.length]);
 
   return (
     <div className={styles.shellWrapper}>
@@ -282,6 +312,7 @@ export default function ScoreWizardClient() {
         step={step}
         totalSteps={TOTAL_STEPS}
         headerItems={headerItems}
+        onClose={step === 2 ? () => router.push('/score/dashboard') : undefined}
         centerContent={
           controlStats.evaluated < controlStats.total && (
             <div className={styles.incompleteBannerSmall}>
@@ -292,6 +323,117 @@ export default function ScoreWizardClient() {
         }
       >
         {step === 2 ? (
+          <div className={styles.root}>
+            <div className={styles.card}>
+              <div className={styles.field}>
+                <span className={styles.label}>Pregunta Analítica</span>
+                <div className={styles.questionsLayout}>
+                  <div className={styles.questionsGrid}>
+                    {questions.map((q) => (
+                      <button
+                        key={q.code}
+                        type="button"
+                        className={`${styles.questionCard} ${q.code === selectedQuestionCode ? styles.questionCardActive : ''}`}
+                        onClick={() => setSelectedQuestionCode(q.code)}
+                      >
+                        <div
+                          className={styles.questionTitle}
+                          data-tooltip={q.business_meaning || q.description || q.objective || ''}
+                        >
+                          {q.question}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className={styles.answerPanel}>
+                    <div className={styles.answerTitle}>Respuesta</div>
+                    {!selectedQuestionCode && (
+                      <div className={styles.emptyState}>Selecciona una pregunta para ver la respuesta.</div>
+                    )}
+                    {selectedQuestionCode && (
+                      <div className={styles.resultBlock}>
+                        {executionLoading && (
+                          <div className={styles.emptyState}>Analizando respuesta...</div>
+                        )}
+                        {!executionLoading && executionError && (
+                          <div className={styles.emptyState}>{executionError}</div>
+                        )}
+                        {!executionLoading && !executionError && (
+                          <div className={styles.emptyState}>
+                            {(() => {
+                              const rows = executionResult?.data || [];
+                              if (!rows.length) {
+                                return 'No se encontraron resultados para esta pregunta.';
+                              }
+                              const limitedRows = rows.slice(0, 4);
+                              const firstRow = limitedRows[0];
+                              if (typeof firstRow === 'object' && firstRow !== null && !Array.isArray(firstRow)) {
+                                const columns = Object.keys(firstRow);
+                                return (
+                                  <div className={styles.answerTableWrap}>
+                                    <table className={styles.answerTable}>
+                                      <thead>
+                                        <tr>
+                                          {columns.map((col) => (
+                                            <th key={col}>{col.replaceAll('_', ' ').toUpperCase()}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {limitedRows.map((row, idx) => (
+                                          <tr key={idx}>
+                                            {columns.map((col) => (
+                                              <td key={col}>{row?.[col] != null ? String(row[col]) : ''}</td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                    {rows.length > 4 && (
+                                      <div className={styles.answerLimitNote}>
+                                        Mostrando 4 de {rows.length} resultados.
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className={styles.answerList}>
+                                  {limitedRows.map((row, idx) => (
+                                    <div key={idx} className={styles.answerItem}>
+                                      {typeof row === 'string' ? row : JSON.stringify(row)}
+                                    </div>
+                                  ))}
+                                  {rows.length > 4 && (
+                                    <div className={styles.answerLimitNote}>
+                                      Mostrando 4 de {rows.length} resultados.
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.footer}>
+              <div className={styles.footerActions}>
+                <button className={styles.backButton} onClick={() => setStep((s) => Math.max(1, s - 1))}>Volver</button>
+                <button className={styles.ghostButton} onClick={() => {}}>Guardar</button>
+                <button
+                  className={styles.primaryButton}
+                  onClick={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : step === 3 ? (
           <ScoreScopeStep
             selection={selection}
             selectionLoading={selectionLoading}
@@ -333,6 +475,22 @@ export default function ScoreWizardClient() {
                         ))}
                       </select>
                     </div>
+                    <div className={styles.field}>
+                      <span className={styles.label}>Reino</span>
+                      <select
+                        className={styles.input}
+                        value={selectedReinoId}
+                        onChange={(e) => setSelectedReinoId(e.target.value)}
+                        disabled={!contextLoaded}
+                      >
+                        <option value="">{contextLoaded ? 'Seleccione reino' : 'Cargando...'}</option>
+                        {reinos.map((reino) => (
+                          <option key={reino.id} value={reino.id}>
+                            {reino.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   <div className={styles.card}>
                     <div className={styles.field}>
@@ -366,7 +524,7 @@ export default function ScoreWizardClient() {
               </>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <ScoreControl4DStep
                 runId={draftId}
                 evaluations={controlEvaluations}
@@ -378,23 +536,23 @@ export default function ScoreWizardClient() {
               />
             )}
 
-            {step === 4 && (
+            {step === 5 && (
               <ScoreSummaryStep
                 runId={draftId}
-                onBack={() => setStep(3)}
-                onNext={() => setStep(5)}
+                onBack={() => setStep(4)}
+                onNext={() => setStep(6)}
               />
             )}
 
-            {step === 5 && (
+            {step === 6 && (
               <ScoreControlResultsStep
                 runId={draftId}
-                onBack={() => setStep(4)}
+                onBack={() => setStep(5)}
                 onNext={() => {}}
               />
             )}
 
-            {step <= 2 && (
+            {step <= 1 && (
               <div className={styles.footer}>
                 <div className={styles.footerActions}>
                   <button className={styles.backButton} onClick={() => setStep((s) => Math.max(1, s - 1))}>Volver</button>

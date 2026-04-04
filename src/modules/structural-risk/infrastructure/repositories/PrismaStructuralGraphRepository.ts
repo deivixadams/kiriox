@@ -9,7 +9,7 @@ export class PrismaStructuralGraphRepository implements StructuralGraphRepositor
 
     return prisma.$queryRaw<GraphViewRow[]>(Prisma.sql`
       SELECT element_kind, element_key, element_data
-      FROM graph.cre_graph_view
+      FROM views.cre_graph_view
       ${whereSql}
       ORDER BY element_key
     `);
@@ -20,7 +20,7 @@ export class PrismaStructuralGraphRepository implements StructuralGraphRepositor
 
     return prisma.$queryRaw<GraphViewRow[]>(Prisma.sql`
       SELECT element_kind, element_key, element_data
-      FROM graph.cre_graph_view
+      FROM views.cre_graph_view
       ${whereSql}
       ORDER BY element_key
     `);
@@ -29,7 +29,7 @@ export class PrismaStructuralGraphRepository implements StructuralGraphRepositor
   async getNodeTypeCounts(): Promise<FilterCountRow[]> {
     return prisma.$queryRaw<FilterCountRow[]>(Prisma.sql`
       SELECT element_data->>'type' AS value, COUNT(*)::int AS count
-      FROM graph.cre_graph_view
+      FROM views.cre_graph_view
       WHERE element_kind = 'node'
       GROUP BY 1
       ORDER BY 1
@@ -39,7 +39,7 @@ export class PrismaStructuralGraphRepository implements StructuralGraphRepositor
   async getEdgeTypeCounts(): Promise<FilterCountRow[]> {
     return prisma.$queryRaw<FilterCountRow[]>(Prisma.sql`
       SELECT element_data->>'edge_type' AS value, COUNT(*)::int AS count
-      FROM graph.cre_graph_view
+      FROM views.cre_graph_view
       WHERE element_kind = 'edge'
       GROUP BY 1
       ORDER BY 1
@@ -49,7 +49,7 @@ export class PrismaStructuralGraphRepository implements StructuralGraphRepositor
   async getNodeById(nodeId: string): Promise<GraphViewRow[]> {
     return prisma.$queryRaw<GraphViewRow[]>(Prisma.sql`
       SELECT element_kind, element_key, element_data
-      FROM graph.cre_graph_view
+      FROM views.cre_graph_view
       WHERE element_kind = 'node'
         AND element_data->>'id' = ${nodeId}
     `);
@@ -58,7 +58,7 @@ export class PrismaStructuralGraphRepository implements StructuralGraphRepositor
   async getEdgesByNodeId(nodeId: string): Promise<GraphViewRow[]> {
     return prisma.$queryRaw<GraphViewRow[]>(Prisma.sql`
       SELECT element_kind, element_key, element_data
-      FROM graph.cre_graph_view
+      FROM views.cre_graph_view
       WHERE element_kind = 'edge'
         AND (
           element_data->>'source' = ${nodeId}
@@ -71,7 +71,7 @@ export class PrismaStructuralGraphRepository implements StructuralGraphRepositor
   async getNodesByIds(nodeIds: string[]): Promise<GraphViewRow[]> {
     return prisma.$queryRaw<GraphViewRow[]>(Prisma.sql`
       SELECT element_kind, element_key, element_data
-      FROM graph.cre_graph_view
+      FROM views.cre_graph_view
       WHERE element_kind = 'node'
         AND element_data->>'id' = ANY(${nodeIds}::text[])
       ORDER BY element_key

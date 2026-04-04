@@ -252,7 +252,7 @@ export default function DecisionWizardClient() {
     const routes: Record<Method, string> = {
       matrix: "/score/evaluacion/lineal-assessment",
       graph: "/score/score?step=1",
-      dual: "/score/preguntasClaves?enfoque=dual",
+      dual: "/score/score?step=1",
     };
 
     router.push(routes[selectedMethod]);
