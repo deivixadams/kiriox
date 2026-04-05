@@ -1,0 +1,59 @@
+.legend {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupTitle {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #64748b;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.box {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.element { background: #334155; border-color: #475569; }
+.risk { transform: rotate(45deg); background: #451a03; border-color: #92400e; width: 10px; height: 10px; margin: 1px; }
+.control { border-radius: 50%; background: #064e3b; border-color: #059669; }
+.failed { background: #991b1b; border-color: #f87171; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+
+.line {
+  width: 14px;
+  height: 2px;
+  border-radius: 99px;
+}
+
+.propagated { background: #f87171; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }

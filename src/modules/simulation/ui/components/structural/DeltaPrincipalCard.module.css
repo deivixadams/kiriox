@@ -1,0 +1,132 @@
+.card {
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.7));
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.icon {
+  color: #0ea5e9;
+}
+
+.eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #7dd3fc;
+  font-weight: 800;
+}
+
+.mainDelta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.scoreRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.scoreItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.scoreItem span {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.scoreItem strong {
+  font-size: 28px;
+  color: #cbd5e1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.activeScore {
+  color: #f43f5e !important;
+}
+
+.arrowBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.arrow {
+  color: #f43f5e;
+}
+
+.deltaPct {
+  align-self: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.decomposition {
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.decompTitle {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #64748b;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.decompGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.decompItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.decompItem span {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.decompItem strong {
+  font-size: 11px;
+  color: #f1f5f9;
+  font-weight: 800;
+}

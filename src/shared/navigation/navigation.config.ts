@@ -66,12 +66,30 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   {
     key: 'simulation',
     label: 'Simulación',
-    href: '/score/simulacion',
     icon: 'FlaskConical',
     module: 'simulation',
     permission: 'simulation.read',
     order: 50,
-    disabled: true,
+    children: [
+      {
+        key: 'simulation-failures',
+        label: 'Fallas de controles',
+        href: '/score/simulacion/fallas-controles',
+        icon: 'ShieldX',
+        module: 'simulation',
+        permission: 'simulation.read',
+        order: 51,
+      },
+      {
+        key: 'simulation-montecarlo',
+        label: 'Monte Carlo',
+        href: '/score/simulacion/monte-carlo',
+        icon: 'Binary',
+        module: 'simulation',
+        permission: 'simulation.read',
+        order: 52,
+      },
+    ],
   },
   {
     key: 'benchmark',

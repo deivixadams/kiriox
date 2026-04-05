@@ -1,0 +1,31 @@
+.container {
+  display: flex;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.button {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.button:hover:not(.active) {
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.4);
+}
+
+.active {
+  background: #334155;
+  color: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(2, 6, 23, 0.2);
+}

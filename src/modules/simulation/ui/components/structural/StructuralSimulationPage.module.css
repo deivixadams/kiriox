@@ -1,0 +1,77 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 800px;
+  background: 
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(244, 114, 182, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(9, 16, 34, 0.98), rgba(4, 9, 20, 1));
+  color: #eff6ff;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  padding: 0 16px;
+}
+
+.leftSidebar {
+  width: 360px;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.centerCanvas {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rightSidebar {
+  width: 380px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.bottomBench {
+  height: 240px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(8, 14, 30, 0.96);
+  padding: 16px 24px;
+}
+
+/* Scrollbar styling */
+.leftSidebar::-webkit-scrollbar,
+.rightSidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.leftSidebar::-webkit-scrollbar-thumb,
+.rightSidebar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 99px;
+}
+
+@media (max-width: 1440px) {
+  .leftSidebar {
+    width: 320px;
+  }
+  .rightSidebar {
+    width: 340px;
+  }
+}

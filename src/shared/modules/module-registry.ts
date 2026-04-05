@@ -114,7 +114,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     code: "simulation",
     name: "Simulation",
     isCore: false,
-    defaultEnabled: false,
+    defaultEnabled: true,
     dependencies: ["core", "governance", "structural-risk"],
     basePath: "/simulation",
     navigationKey: "simulation",

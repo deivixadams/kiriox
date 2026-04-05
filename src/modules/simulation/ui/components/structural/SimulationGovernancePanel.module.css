@@ -1,0 +1,226 @@
+.container {
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mainHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  padding-bottom: 16px;
+}
+
+.headerIcon {
+  color: #7dd3fc;
+}
+
+.mainTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+}
+
+.sectionHeader h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.card,
+.logicCard {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(8, 14, 30, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tableList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tableList li {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 6px;
+  color: #7dd3fc;
+  border: 1px solid rgba(125, 211, 252, 0.15);
+}
+
+.textQuote {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 2px solid #0ea5e9;
+  font-style: italic;
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.viewGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.viewItem {
+  padding: 12px 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.viewTitle {
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7dd3fc;
+  margin-bottom: 6px;
+}
+
+.viewDesc {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.metricsBox {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metricsTitle {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.05em;
+}
+
+.metricList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metricList code {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  color: #eff6ff;
+  background: rgba(30, 41, 59, 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.logicEmphasize {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #eff6ff;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #cbd5e1;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 10px;
+}
+
+.textNote {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+  font-style: italic;
+}
+
+.flowGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.flowItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 14px;
+  text-align: center;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.flowLabel {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #7dd3fc;
+  letter-spacing: 0.15em;
+}
+
+.flowItem p {
+  margin: 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.flowItem code {
+  font-family: 'Fira Code', monospace;
+  color: #eff6ff;
+  background: rgba(30, 41, 59, 0.6);
+  padding: 1px 4px;
+  border-radius: 3px;
+}

@@ -1,0 +1,148 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  padding: 12px;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(8, 15, 32, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  transition: border-color 150ms ease;
+}
+
+.searchBox:focus-within {
+  border-color: rgba(125, 211, 252, 0.3);
+}
+
+.searchIcon {
+  color: #64748b;
+}
+
+.searchBox input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f1f5f9;
+  font-size: 12px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.list::-webkit-scrollbar {
+  width: 3px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 9px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  position: relative;
+}
+
+.item:hover {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.itemSelected {
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 150ms ease;
+}
+
+.itemSelected .check {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: white;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.code {
+  font-size: 10px;
+  font-weight: 800;
+  color: #7dd3fc;
+  letter-spacing: 0.05em;
+}
+
+.name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.indicator {
+  width: 2px;
+  height: 16px;
+  background: #0ea5e9;
+  border-radius: 9px;
+  position: absolute;
+  left: 0;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.clearBtn {
+  background: transparent;
+  border: none;
+  color: #f43f5e;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 5px;
+}
+
+.clearBtn:hover {
+  background: rgba(244, 63, 94, 0.1);
+}

@@ -1,0 +1,161 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  color: #7dd3fc;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #f1f5f9;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.count {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.tableWrapper {
+  flex: 1;
+  overflow: auto;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  padding: 12px 16px;
+  color: #94a3b8;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  z-index: 10;
+}
+
+.table tbody td {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+  color: #cbd5e1;
+}
+
+.table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.3);
+}
+
+.step {
+  color: #7dd3fc;
+  font-weight: 800;
+  width: 60px;
+}
+
+.nodeCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nodeType {
+  font-size: 9px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nodeId {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.relBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.value {
+  color: #cbd5e1;
+  font-family: monospace;
+}
+
+.valueActive {
+  color: #fb7185;
+  font-weight: 800;
+  font-family: monospace;
+}
+
+.delta {
+  color: #f43f5e;
+  font-weight: 800;
+  font-family: monospace;
+}
+
+.reason {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.zap {
+  color: #f59e0b;
+}
+
+.empty {
+  text-align: center;
+  padding: 40px !important;
+  color: #475569;
+  font-style: italic;
+}
+
+.tableWrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 9px;
+}
