@@ -89,6 +89,15 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
         permission: 'simulation.read',
         order: 52,
       },
+      {
+        key: 'simulation-failures-2',
+        label: 'Fallas de controles2',
+        href: '/app-simulation',
+        icon: 'ActivitySquare',
+        module: 'simulation',
+        permission: 'simulation.read',
+        order: 53,
+      },
     ],
   },
   {

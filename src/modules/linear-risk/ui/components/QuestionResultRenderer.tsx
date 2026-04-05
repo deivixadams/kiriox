@@ -114,6 +114,8 @@ type GraphRow = {
 
 export function GraphQuestionRenderer({ data, design }: { data: any[]; design?: Record<string, any> | null }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const GRAPH_MOTION_SPEED = 0.8;
+  const BASE_ANIMATION_MS = 900;
 
   const elements = useMemo(() => {
     return extractGraphElements(data, design);
@@ -132,7 +134,8 @@ export function GraphQuestionRenderer({ data, design }: { data: any[]; design?: 
         elements,
         layout: {
           name: String(design?.layout || 'cose'),
-          animate: false,
+          animate: true,
+          animationDuration: Math.round(BASE_ANIMATION_MS / GRAPH_MOTION_SPEED),
           fit: true,
           padding: 40,
         } as any,

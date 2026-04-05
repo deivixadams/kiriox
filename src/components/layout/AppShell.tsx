@@ -10,7 +10,7 @@ import type { AccessContext } from '@/modules/security';
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLogin = pathname === '/login';
-  const isImmersiveSimulation = pathname.startsWith('/score/simulacion');
+  const isImmersiveSimulation = pathname.startsWith('/score/simulacion') || pathname.startsWith('/app-simulation');
   const showTopbarScopeSelectors = pathname === '/score/dashboard' || pathname.startsWith('/score/dashboard/');
 
   const [access, setAccess] = useState<AccessContext | null>(null);

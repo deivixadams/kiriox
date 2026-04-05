@@ -1,6 +1,4 @@
-export * from './domain';
-export * from './application';
-export * from './infrastructure';
-export * from './api';
-export * from './ui';
-
+export * from './domain/AnalyticsEngine';
+export * from './application/SimulationProvider';
+export * from './infrastructure/ThreeManager';
+export * from './ui/SimulationView';
