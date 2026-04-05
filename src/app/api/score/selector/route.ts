@@ -104,6 +104,7 @@ export async function POST(request: Request) {
           : await tx.run_draft.create({
               data: {
                 company_id: companyId,
+                company: { connect: { id: companyId } },
                 framework_version_id: frameworkVersionId as any,
                 period_start: new Date(periodStart),
                 period_end: new Date(periodEnd),
@@ -246,6 +247,7 @@ export async function POST(request: Request) {
             : await tx.run_draft.create({
                 data: {
                   company_id: companyId,
+                  company: { connect: { id: companyId } },
                   framework_version_id: frameworkVersionId as any,
                   period_start: new Date(periodStart),
                   period_end: new Date(periodEnd),
@@ -690,6 +692,7 @@ export async function POST(request: Request) {
         : await tx.run_draft.create({
             data: {
               company_id: companyId,
+              company: { connect: { id: companyId } },
               framework_version_id: frameworkVersionId as any,
               period_start: new Date(periodStart),
               period_end: new Date(periodEnd),
@@ -761,6 +764,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to build selection' }, { status: 500 });
   }
 }
-
 
 

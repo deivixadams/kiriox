@@ -80,6 +80,10 @@ export default function ScoreWizardClient() {
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [executionLoading, setExecutionLoading] = useState(false);
   const [executionError, setExecutionError] = useState<string | null>(null);
+  const [showFullGraph, setShowFullGraph] = useState(false);
+  const [fullGraphElements, setFullGraphElements] = useState<any[]>([]);
+  const [fullGraphLoading, setFullGraphLoading] = useState(false);
+  const [fullGraphError, setFullGraphError] = useState<string | null>(null);
 
   const [controlEvaluations, setControlEvaluations] = useState<any[]>([]);
   const [controlStats, setControlStats] = useState<{ total: number; evaluated: number }>({ total: 0, evaluated: 0 });
@@ -168,6 +172,7 @@ export default function ScoreWizardClient() {
       setExecutionResult(null);
       return;
     }
+    setShowFullGraph(false);
     const q = questions.find(q => q.code === selectedQuestionCode);
     if (!q) return;
 
@@ -201,6 +206,26 @@ export default function ScoreWizardClient() {
     };
     execute();
   }, [selectedQuestionCode, questions, step, selectedCompanyId, frameworkVersionId, selectedReinoId, startDate, endDate]);
+
+  const handleShowFullGraph = async () => {
+    setShowFullGraph(true);
+    if (fullGraphElements.length > 0) return;
+    setFullGraphLoading(true);
+    setFullGraphError(null);
+    try {
+      const params = new URLSearchParams();
+      params.set('mode', 'full');
+      if (selectedReinoId) params.set('reinoId', selectedReinoId);
+      const res = await fetch(`/api/score/questions/graph?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'No se pudo cargar el grafo completo');
+      setFullGraphElements(data.elements || []);
+    } catch (err: any) {
+      setFullGraphError(err?.message || 'No se pudo cargar el grafo completo');
+    } finally {
+      setFullGraphLoading(false);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -421,16 +446,42 @@ export default function ScoreWizardClient() {
                         )}
                       </div>
                     )}
+                    <button
+                      type="button"
+                      className={styles.showGraphButton}
+                      onClick={handleShowFullGraph}
+                    >
+                      Mostrar Graph
+                    </button>
                   </div>
                 </div>
                 <div className={styles.graphPanel}>
-                  <div className={styles.answerTitle}>Grafo de la pregunta</div>
-                  {!executionResult?.graph_elements?.length && (
-                    <div className={styles.emptyState}>Sin subgrafo disponible para esta respuesta.</div>
+                  <div className={styles.graphHeader}>
+                    <div className={styles.answerTitle}>Grafo de la pregunta</div>
+                    <div className={styles.graphLegend}>
+                      <span className={styles.legendItem}><span className={styles.legendDot} /> Control</span>
+                      <span className={styles.legendItem}><span className={styles.legendTriangle} /> Elemento</span>
+                      <span className={styles.legendItem}><span className={styles.legendStar} /> Riesgo</span>
+                    </div>
+                  </div>
+                  {showFullGraph ? (
+                    <>
+                      {fullGraphLoading && <div className={styles.emptyState}>Cargando grafo completo...</div>}
+                      {fullGraphError && <div className={styles.emptyState}>{fullGraphError}</div>}
+                      {!fullGraphLoading && !fullGraphError && (
+                        <GraphQuestionRenderer data={fullGraphElements} design={executionResult?.graph_design} />
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {!executionResult?.graph_elements?.length && (
+                        <div className={styles.emptyState}>Sin subgrafo disponible para esta respuesta.</div>
+                      )}
+                      {executionResult?.graph_elements?.length ? (
+                        <GraphQuestionRenderer data={executionResult.graph_elements} design={executionResult.graph_design} />
+                      ) : null}
+                    </>
                   )}
-                  {executionResult?.graph_elements?.length ? (
-                    <GraphQuestionRenderer data={executionResult.graph_elements} />
-                  ) : null}
                 </div>
               </div>
             </div>

@@ -11,6 +11,7 @@ export interface AnalyticalQuestion {
   analytical_dimension?: string;
   source_of_truth: string;
   source_kind: string;
+  graph_design?: Record<string, any> | null;
   result_type: ResultType;
   answer_renderer: string;
   interpretation_rule?: string;
@@ -37,6 +38,7 @@ export interface ExecutionResult {
     element_kind: 'node' | 'edge';
     element_data: Record<string, any>;
   }>;
+  graph_design?: Record<string, any> | null;
   metadata: {
     executed_at: string;
     duration_ms: number;

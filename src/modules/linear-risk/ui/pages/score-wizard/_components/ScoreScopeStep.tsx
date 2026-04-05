@@ -188,7 +188,7 @@ export default function ScoreScopeStep({
           <button className={styles.backButton} onClick={onBack}>Volver</button>
           <button className={styles.ghostButton} onClick={onSave}>Guardar</button>
           <button className={styles.questionnaireButton} onClick={onNext} disabled>Cuestionario</button>
-          <button className={styles.primaryButton} onClick={onNext} disabled={!selection}>Continuar</button>
+          <button className={styles.primaryButton} onClick={onNext}>Continuar</button>
         </div>
       </div>
     </div>

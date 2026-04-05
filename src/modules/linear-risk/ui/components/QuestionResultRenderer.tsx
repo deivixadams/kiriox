@@ -112,12 +112,12 @@ type GraphRow = {
   element_data?: Record<string, any>;
 };
 
-export function GraphQuestionRenderer({ data }: { data: any[] }) {
+export function GraphQuestionRenderer({ data, design }: { data: any[]; design?: Record<string, any> | null }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const elements = useMemo(() => {
-    return extractGraphElements(data);
-  }, [data]);
+    return extractGraphElements(data, design);
+  }, [data, design]);
 
   useEffect(() => {
     let mounted = true;
@@ -131,7 +131,7 @@ export function GraphQuestionRenderer({ data }: { data: any[] }) {
         container: containerRef.current,
         elements,
         layout: {
-          name: 'cose',
+          name: String(design?.layout || 'cose'),
           animate: false,
           fit: true,
           padding: 40,
@@ -162,17 +162,17 @@ export function GraphQuestionRenderer({ data }: { data: any[] }) {
   return <div ref={containerRef} className={styles.graphCanvas} />;
 }
 
-function extractGraphElements(data: any[]): ElementDefinition[] {
+function extractGraphElements(data: any[], design?: Record<string, any> | null): ElementDefinition[] {
   if (!Array.isArray(data)) return [];
   if (data.length === 0) return [];
 
   if ('elements' in (data[0] || {})) {
     const payload = data[0] as { elements?: GraphRow[] };
-    return toCytoscapeElements(payload.elements || []);
+    return toCytoscapeElements(payload.elements || [], design);
   }
 
   if (data[0]?.element_kind) {
-    return toCytoscapeElements(data as GraphRow[]);
+    return toCytoscapeElements(data as GraphRow[], design);
   }
 
   const nodes = data[0]?.nodes || [];
@@ -182,18 +182,61 @@ function extractGraphElements(data: any[]): ElementDefinition[] {
       ...nodes.map((node: any) => ({ element_kind: 'node', element_data: node })),
       ...edges.map((edge: any) => ({ element_kind: 'edge', element_data: edge })),
     ];
-    return toCytoscapeElements(normalized);
+    return toCytoscapeElements(normalized, design);
   }
 
   return [];
 }
 
-function toCytoscapeElements(rows: GraphRow[]): ElementDefinition[] {
+function toCytoscapeElements(rows: GraphRow[], design?: Record<string, any> | null): ElementDefinition[] {
+  const labelField = String(design?.label_field || '').trim();
+  const nodeColorBy = String(design?.node_color_by || '').toLowerCase();
+  const edgeColorBy = String(design?.edge_color_by || '').toLowerCase();
+  const maxNodes = typeof design?.max_nodes === 'number' ? design.max_nodes : null;
+  const hideNodeTypes = Array.isArray(design?.hide_node_types)
+    ? new Set(design?.hide_node_types.map((t: string) => String(t).toUpperCase()))
+    : null;
+  const hideEdgeTypes = Array.isArray(design?.hide_edge_types)
+    ? new Set(design?.hide_edge_types.map((t: string) => String(t).toUpperCase()))
+    : null;
+
+  let nodesCount = 0;
   return rows
     .filter((row) => row?.element_data)
     .map((row) => {
       const data = row.element_data || {};
       const id = String(data.id || data.code || data.key || row.element_key || Math.random());
+      const type = String(data.type || data.node_type || data.kind || 'NODE').toUpperCase();
+      if (row.element_kind === 'node') {
+        if (hideNodeTypes?.has(type)) return null as any;
+        nodesCount += 1;
+        if (maxNodes && nodesCount > maxNodes) return null as any;
+      }
+      if (row.element_kind === 'edge' && hideEdgeTypes?.has(String(data.edge_type || data.type || '').toUpperCase())) {
+        return null as any;
+      }
+      const colorMap: Record<string, string> = {
+        RISK: '#ef4444',
+        CONTROL: '#22c55e',
+        ELEMENT: '#facc15',
+        OBLIGATION: '#facc15',
+      };
+      const shapeMap: Record<string, string> = {
+        ELEMENT: 'triangle',
+        OBLIGATION: 'triangle',
+        CONTROL: 'ellipse',
+        RISK: 'star',
+      };
+      const sizeMap: Record<string, number> = {
+        ELEMENT: 60,
+        OBLIGATION: 60,
+        CONTROL: 52,
+        RISK: 48,
+      };
+      const vizColor =
+        nodeColorBy === 'custom' && data.color ? String(data.color) : colorMap[type] || '#38bdf8';
+      const vizShape = shapeMap[type] || 'ellipse';
+      const vizSize = Number(data.size) || sizeMap[type] || 46;
       if (row.element_kind === 'edge') {
         return {
           data: {
@@ -201,17 +244,33 @@ function toCytoscapeElements(rows: GraphRow[]): ElementDefinition[] {
             source: String(data.source || data.from || data.source_id || ''),
             target: String(data.target || data.to || data.target_id || ''),
             label: data.label || data.edge_type || data.code || 'edge',
+            vizColor:
+              edgeColorBy === 'custom' && data.color
+                ? String(data.color)
+                : '#ffffff',
           },
         };
       }
+      const label =
+        (labelField && data[labelField]) ||
+        data.label ||
+        data.name ||
+        data.title ||
+        data.node_name ||
+        data.code ||
+        id;
       return {
         data: {
           id,
-          label: data.label || data.name || data.title || data.code || id,
-          type: data.type || data.kind || 'NODE',
+          label,
+          type,
+          vizColor,
+          vizShape,
+          vizSize,
         },
       };
-    });
+    })
+    .filter(Boolean);
 }
 
 function buildBasicStylesheet() {
@@ -219,19 +278,22 @@ function buildBasicStylesheet() {
     {
       selector: 'node',
       style: {
-        'background-color': '#38bdf8',
+        'background-color': 'data(vizColor)',
         label: 'data(label)',
         color: '#e5eefc',
         'font-size': 10,
         'font-weight': 700,
+        'text-outline-width': 2,
+        'text-outline-color': '#000000',
         'text-wrap': 'wrap',
         'text-max-width': 120,
         'text-valign': 'center',
         'text-halign': 'center',
-        width: 46,
-        height: 46,
+        width: 'data(vizSize)',
+        height: 'data(vizSize)',
         'border-width': 2,
-        'border-color': '#0ea5e9',
+        'border-color': '#ffffff',
+        shape: 'data(vizShape)',
         'overlay-opacity': 0,
       },
     },
@@ -240,15 +302,17 @@ function buildBasicStylesheet() {
       style: {
         width: 2,
         'curve-style': 'bezier',
-        'line-color': '#94a3b8',
-        'target-arrow-color': '#94a3b8',
+        'line-color': 'data(vizColor)',
+        'target-arrow-color': 'data(vizColor)',
         'target-arrow-shape': 'triangle',
         label: 'data(label)',
         color: '#bfdbfe',
-        'font-size': 8,
+        'font-size': 5,
         'text-background-opacity': 1,
         'text-background-color': 'rgba(7, 13, 30, 0.88)',
         'text-background-padding': 3,
+        'text-outline-width': 2,
+        'text-outline-color': '#000000',
         'text-rotation': 'autorotate',
         'overlay-opacity': 0,
         opacity: 0.9,
