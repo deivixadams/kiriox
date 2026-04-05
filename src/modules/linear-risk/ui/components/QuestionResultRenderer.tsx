@@ -141,6 +141,14 @@ export function GraphQuestionRenderer({ data, design }: { data: any[]; design?: 
         style: buildBasicStylesheet() as any,
       });
 
+      // Force consistent label sizes regardless of element count
+      cy.style()
+        .selector('node')
+        .style({ 'font-size': 7 })
+        .selector('edge')
+        .style({ 'font-size': 5 })
+        .update();
+
       return () => cy.destroy();
     };
 
@@ -281,7 +289,7 @@ function buildBasicStylesheet() {
         'background-color': 'data(vizColor)',
         label: 'data(label)',
         color: '#e5eefc',
-        'font-size': 10,
+        'font-size': 7,
         'font-weight': 700,
         'text-outline-width': 2,
         'text-outline-color': '#000000',
