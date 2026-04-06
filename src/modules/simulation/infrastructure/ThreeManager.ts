@@ -12,6 +12,8 @@ export class ThreeManager {
   edgeLines: THREE.Object3D[] = [];
   planeMesh: THREE.Mesh | null = null;
   originalPlanePositions: Float32Array | null = null;
+  nodeLabels: Record<string, THREE.Sprite> = {};
+  nodeLabelLines: Record<string, THREE.Line> = {};
   raycaster: THREE.Raycaster;
   mouse: THREE.Vector2;
   isDragging: boolean = false;
@@ -186,6 +188,64 @@ export class ThreeManager {
       } else {
         this.nodeMeshes[data.id].material = material;
       }
+
+      // --- LABELS FOR ELEMENTS ---
+      if (data.type === 'element' && data.name) {
+        if (!this.nodeLabels[data.id]) {
+          const spriteMaterial = new THREE.SpriteMaterial({
+            map: this.createLabelTexture(data.name),
+            transparent: true,
+            opacity: 0.9,
+            depthTest: false // Render over everything
+          });
+          const sprite = new THREE.Sprite(spriteMaterial);
+          sprite.scale.set(10, 4, 1); // Relación de aspecto del rectángulo
+          // --- POSICIÓN HORIZONTAL ALEJADA ---
+          const dirX = data.x === 0 && data.z === 0 ? 1 : data.x;
+          const dirZ = data.z === 0 && data.x === 0 ? 0 : data.z;
+          const mag = Math.sqrt(dirX * dirX + dirZ * dirZ);
+          const offsetX = (dirX / mag) * 15; // Aumentado en 20%+ (de 12 a 15)
+          const offsetZ = (dirZ / mag) * 15;
+
+          sprite.position.set(data.x + offsetX, data.y, data.z + offsetZ);
+          this.group.add(sprite);
+          this.nodeLabels[data.id] = sprite;
+
+          // --- LINEA DE CONEXIÓN HORIZONTAL ---
+          const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+          const linePoints = [
+            new THREE.Vector3(0, 0, 0), // Base del nodo
+            new THREE.Vector3(offsetX, 0, offsetZ) // Hasta el sprite alejado
+          ];
+          const lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
+          const connectionLine = new THREE.Line(lineGeo, lineMat);
+          connectionLine.position.set(data.x, data.y, data.z);
+          this.group.add(connectionLine);
+          this.nodeLabelLines[data.id] = connectionLine;
+        } else {
+          // ACTUALIZACIÓN DE POSICIÓN (Incluso si ya existen)
+          const dirX = data.x === 0 && data.z === 0 ? 1 : data.x;
+          const dirZ = data.z === 0 && data.x === 0 ? 0 : data.z;
+          const mag = Math.sqrt(dirX * dirX + dirZ * dirZ);
+          const offsetX = (dirX / mag) * 15; // Sincronizado a 15
+          const offsetZ = (dirZ / mag) * 15;
+
+          this.nodeLabels[data.id].position.set(data.x + offsetX, data.y, data.z + offsetZ);
+          
+          if (!this.nodeLabelLines[data.id]) {
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+            const linePoints = [
+              new THREE.Vector3(0, 0, 0),
+              new THREE.Vector3(offsetX, 0, offsetZ)
+            ];
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
+            const connectionLine = new THREE.Line(lineGeo, lineMat);
+            this.group.add(connectionLine);
+            this.nodeLabelLines[data.id] = connectionLine;
+          }
+          this.nodeLabelLines[data.id].position.set(data.x, data.y, data.z);
+        }
+      }
     });
 
     this.edgeLines.forEach(line => {
@@ -317,8 +377,29 @@ export class ThreeManager {
         } else if (data.type === 'element' && data.stress > 0) {
           const scale = 1 + Math.sin(elapsedTime * 2 + data.x) * (data.stress * 0.2);
           mesh.scale.setScalar(scale);
+
+          // EFECTO BLINK EN LABEL
+          const label = this.nodeLabels[data.id];
+          if (label) {
+            const speed = 2 + data.stress * 6; // La velocidad escala con el estrés
+            const pulse = 0.5 + Math.sin(elapsedTime * speed) * 0.5;
+            // El color va de blanco/azul (normal) a Rojo intenso (alerta)
+            const colorIntensity = Math.min(1, data.stress);
+            label.material.color.setRGB(
+              1, // Siempre rojo al máximo si hay estrés
+              1 - (colorIntensity * pulse), // G se reduce -> más rojo
+              1 - (colorIntensity * pulse)  // B se reduce -> más rojo
+            );
+            // La opacidad también pulsa si el riesgo es alto
+            label.material.opacity = 0.7 + (pulse * 0.3 * colorIntensity);
+          }
         } else {
           mesh.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+          const label = this.nodeLabels[data.id];
+          if (label) {
+            label.material.color.setRGB(1, 1, 1);
+            label.material.opacity = 0.8;
+          }
         }
       });
     }
@@ -329,5 +410,50 @@ export class ThreeManager {
   cleanup() {
     if (this.animationId !== null) cancelAnimationFrame(this.animationId);
     this.renderer.dispose();
+  }
+
+  createLabelTexture(text: string): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d')!;
+
+    // Fondo elegante (Glassmorphism oscuro)
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    this.roundRect(ctx, 10, 60, 492, 136, 20, true, true);
+
+    // Borde sutil
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Texto
+    ctx.fillStyle = 'white';
+    ctx.font = '700 48px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 10;
+    ctx.fillText(text.toUpperCase(), 256, 128);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    return texture;
+  }
+
+  roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: boolean, stroke: boolean) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
   }
 }

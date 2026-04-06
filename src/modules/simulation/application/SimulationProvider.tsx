@@ -9,6 +9,8 @@ interface SimulationState {
   metrics: SystemMetrics;
   events: SimulationEvent[];
   toggleControl: (id: string) => void;
+  isAutomatic: boolean;
+  setAutomatic: (val: boolean) => void;
   resetSimulation: () => void;
 }
 
@@ -35,6 +37,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setEdges(initialEdges);
     setMetrics(initialMetrics);
   }, []);
+
+  const [isAutomatic, setAutomatic] = useState(true);
 
   const toggleControl = useCallback((id: string) => {
     setNodes(prev => {
@@ -71,6 +75,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   useEffect(() => {
+    if (!isAutomatic) return; // Only fail nodes if automatic mode is active
+
     const interval = setInterval(() => {
       setNodes(prev => {
         const activeControls = Object.values(prev).filter(n => n.type === 'control' && n.active);
@@ -84,7 +90,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [toggleControl]);
+  }, [toggleControl, isAutomatic]);
 
   const resetSimulation = useCallback(() => {
     setNodes(prev => {
@@ -104,7 +110,16 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   if (Object.keys(nodes).length === 0) return null; // Let the UI handle loading
 
   return (
-    <SimulationContext.Provider value={{ nodes, edges, metrics, events, toggleControl, resetSimulation }}>
+    <SimulationContext.Provider value={{ 
+      nodes, 
+      edges, 
+      metrics, 
+      events, 
+      isAutomatic,
+      setAutomatic,
+      toggleControl, 
+      resetSimulation 
+    }}>
       {children}
     </SimulationContext.Provider>
   );

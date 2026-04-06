@@ -10,6 +10,7 @@ export interface NodeData {
   z: number;
   active: boolean;    // Controles: true = funcionando. Riesgos: true = materializado.
   stress: number;     // Nivel de impacto (0 a 1+)
+  name?: string;      // Nombre humano para el nodo (especialmente para elementos de negocio)
   dependencies: string[]; // IDs de nodos conectados hacia abajo
 }
 
@@ -56,6 +57,18 @@ export class AnalyticsEngine {
   static generateTopology() {
     const nodes: Record<string, NodeData> = {};
     const edges: EdgeData[] = [];
+    const elementNames = [
+      "Core Banking", "Payment Gateway", "User Auth API", "SWIFT Node", "Ledger DB", 
+      "Risk Engine", "Client Portal", "Audit Logs", "Treasury Hub", "KYC Service",
+      "OAuth Provider", "Batch Processor", "Reporting Tool", "Backoffice UI", "API Gateway",
+      "Mobile App", "Fraud Detector", "Settlement Engine", "Credit Scoring", "Loan Origination",
+      "Fixed Income", "Asset Mgmt", "Stock Broker", "FX Liquidity", "Crypto Custody",
+      "Insurance Portal", "Claims Service", "Policy Manager", "Pricing API", "Underwriting",
+      "Compliance Hub", "AML Monitor", "Sanctions Check", "Watchlist DB", "Tax System",
+      "GL Bridge", "SAP Connector", "Master Data", "Cache Cluster", "Message Bus",
+      "Notification Svc", "Push Server", "Identity Store", "Token Vault", "HSM Cluster",
+      "DNS Resolver", "Load Balancer", "CDN Edge", "WAF Node", "Firewall API"
+    ];
 
     const createLayer = (count: number, type: NodeType, y: number, radius: number) => {
       const ids: string[] = [];
@@ -71,6 +84,7 @@ export class AnalyticsEngine {
           z: Math.sin(theta) * r,
           active: type === 'control' ? true : false,
           stress: 0,
+          name: type === 'element' ? elementNames[i % elementNames.length] : undefined,
           dependencies: []
         };
         ids.push(id);

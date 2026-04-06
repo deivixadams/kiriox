@@ -8,7 +8,7 @@ import { CONFIG } from '../../domain/AnalyticsEngine';
 import styles from '../SimulationSystem.module.css';
 
 export const SidebarPanel: React.FC = () => {
-  const { metrics, resetSimulation, events } = useSimulationStore();
+  const { metrics, resetSimulation, events, isAutomatic, setAutomatic } = useSimulationStore();
   
   // Get latest event data
   const latestEvent = events.length > 0 ? events[0] : null;
@@ -35,12 +35,24 @@ export const SidebarPanel: React.FC = () => {
             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px', backgroundColor: 'rgba(51, 65, 85, 0.2)', color: '#cbd5e1', fontSize: '11px', fontWeight: '700', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', cursor: 'pointer' }}
           >
             <RotateCcw style={{ width: '12px', height: '12px' }} />
-            Restablecer
+            Reset
           </button>
           <button 
-            style={{ padding: '10px 14px', backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#60a5fa', fontSize: '11px', fontWeight: '700', borderRadius: '8px', border: '1px solid rgba(37, 99, 235, 0.2)', cursor: 'pointer' }}
+            onClick={() => setAutomatic(!isAutomatic)}
+            style={{ 
+              padding: '10px 14px', 
+              backgroundColor: isAutomatic ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', 
+              color: isAutomatic ? '#10b981' : '#f87171', 
+              fontSize: '11px', 
+              fontWeight: '700', 
+              borderRadius: '8px', 
+              border: isAutomatic ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)', 
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: isAutomatic ? '0 0 10px rgba(16, 185, 129, 0.1)' : 'none'
+            }}
           >
-            Wave Tool
+            Automatic: {isAutomatic ? 'True' : 'False'}
           </button>
         </div>
       </div>
