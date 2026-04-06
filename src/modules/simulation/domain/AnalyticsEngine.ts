@@ -51,7 +51,7 @@ export const CONFIG = {
     riskMitigated: new THREE.Color('#7F1D1D'),
     control: new THREE.Color('#10B981'), // Verde
     controlFailed: new THREE.Color('#374151'), // Gris oscuro
-    edgeMitigation: '#10B981',
+    edgeMitigation: '#94a3b8',
     edgeImpact: '#EF4444',
     edgeIdle: '#4B5563',
   }

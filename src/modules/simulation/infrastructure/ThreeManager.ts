@@ -258,7 +258,7 @@ export class ThreeManager {
 
       if (controlNode && controlNode.active) {
         color = CONFIG.colors.edgeMitigation;
-        opacity = 0.4;
+        opacity = 0.2;
       } else if ((source.type === 'risk' && source.active) || (target.type === 'risk' && target.active)) {
         color = CONFIG.colors.edgeImpact;
         opacity = 0.6;

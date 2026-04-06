@@ -8,9 +8,12 @@ interface SimulationState {
   edges: EdgeData[];
   metrics: SystemMetrics;
   events: SimulationEvent[];
+  criticalControls: string[];
   toggleControl: (id: string) => void;
   isAutomatic: boolean;
   setAutomatic: (val: boolean) => void;
+  frameworkMode: 'AML' | 'CYB';
+  setFrameworkMode: (mode: 'AML' | 'CYB') => void;
   resetSimulation: () => void;
 }
 
@@ -26,19 +29,27 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [nodes, setNodes] = useState<Record<string, NodeData>>({});
   const [edges, setEdges] = useState<EdgeData[]>([]);
   const [events, setEvents] = useState<SimulationEvent[]>([]);
+  const [isAutomatic, setAutomatic] = useState(true);
+  const [frameworkMode, setFrameworkMode] = useState<'AML' | 'CYB'>('AML');
   const [metrics, setMetrics] = useState<SystemMetrics>({
-    linearExposure: 0, structuralFragility: 0, activeRisksCount: 0, failedControlsCount: 0, criticalElementsCount: 0
+    linearExposure: 0, structuralFragility: 0, activeRisksCount: 0, failedControlsCount: 0, criticalElementsCount: 0, cascadePercentage: 0
   });
+  const [criticalControls, setCriticalControls] = useState<string[]>([]);
 
   useEffect(() => {
-    const { nodes: initialNodes, edges: initialEdges } = AnalyticsEngine.generateTopology();
-    const { updatedNodes, metrics: initialMetrics } = AnalyticsEngine.recalculateState(initialNodes);
-    setNodes(updatedNodes);
-    setEdges(initialEdges);
-    setMetrics(initialMetrics);
-  }, []);
-
-  const [isAutomatic, setAutomatic] = useState(true);
+    const loadTopology = async () => {
+      try {
+        const { nodes: initialNodes, edges: initialEdges } = await AnalyticsEngine.fetchRealTopology(frameworkMode);
+        const { updatedNodes, metrics: initialMetrics } = AnalyticsEngine.recalculateState(initialNodes);
+        setNodes(updatedNodes);
+        setEdges(initialEdges);
+        setMetrics(initialMetrics);
+      } catch (error) {
+        console.error("Failed to load real topology:", error);
+      }
+    };
+    loadTopology();
+  }, [frameworkMode]);
 
   const toggleControl = useCallback((id: string) => {
     setNodes(prev => {
@@ -46,8 +57,21 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (next[id] && next[id].type === 'control') {
         const wasActive = prev[id].active;
         next[id] = { ...next[id], active: !next[id].active };
+        const prevFragility = AnalyticsEngine.recalculateState(prev).metrics.structuralFragility;
         const { updatedNodes, metrics: newMetrics } = AnalyticsEngine.recalculateState(next);
         setMetrics(newMetrics);
+        
+        // Detectar controles clave: si la fragilidad sube ≥5% al eliminarse
+        if (wasActive && !next[id].active) {
+          const delta = newMetrics.structuralFragility - prevFragility;
+          if (delta >= 5) {
+            const controlName = prev[id].name || id;
+            setCriticalControls(curr => {
+              if (curr.includes(controlName)) return curr;
+              return [...curr, controlName];
+            });
+          }
+        }
         
         if (wasActive && !next[id].active) {
           const newlyActiveRisks = Object.values(updatedNodes)
@@ -105,6 +129,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return updatedNodes;
     });
     setEvents([]);
+    setCriticalControls([]);
   }, []);
 
   if (Object.keys(nodes).length === 0) return null; // Let the UI handle loading
@@ -115,8 +140,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       edges, 
       metrics, 
       events, 
+      criticalControls,
       isAutomatic,
       setAutomatic,
+      frameworkMode,
+      setFrameworkMode,
       toggleControl, 
       resetSimulation 
     }}>
