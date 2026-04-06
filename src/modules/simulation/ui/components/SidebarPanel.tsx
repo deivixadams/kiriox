@@ -8,10 +8,15 @@ import { CONFIG } from '../../domain/AnalyticsEngine';
 import styles from '../SimulationSystem.module.css';
 
 export const SidebarPanel: React.FC = () => {
-  const { metrics, resetSimulation, events, isAutomatic, setAutomatic } = useSimulationStore();
+  const { nodes, metrics, resetSimulation, events, isAutomatic, setAutomatic, frameworkMode, setFrameworkMode } = useSimulationStore();
   
   // Get latest event data
   const latestEvent = events.length > 0 ? events[0] : null;
+
+  const getEventControlName = () => {
+    if (!latestEvent) return '';
+    return nodes[latestEvent.controlId]?.name || latestEvent.controlId;
+  };
   
   const isFragile = metrics.structuralFragility > 30;
   const hasFailures = metrics.failedControlsCount > 0;
@@ -49,34 +54,79 @@ export const SidebarPanel: React.FC = () => {
               border: isAutomatic ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)', 
               cursor: 'pointer',
               transition: 'all 0.3s ease',
-              boxShadow: isAutomatic ? '0 0 10px rgba(16, 185, 129, 0.1)' : 'none'
+              boxShadow: isAutomatic ? '0 0 10px rgba(16, 185, 129, 0.1)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            Automatic: {isAutomatic ? 'True' : 'False'}
+            {isAutomatic ? <Zap size={14} /> : <Terminal size={14} />}
+            {isAutomatic ? 'Auto Pilot' : 'Manual'}
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', backgroundColor: 'rgba(30, 41, 59, 0.5)', borderRadius: '8px', padding: '4px', marginBottom: '24px' }}>
+          <button
+            onClick={() => setFrameworkMode('AML')}
+            style={{
+              flex: 1,
+              padding: '8px',
+              backgroundColor: frameworkMode === 'AML' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+              color: frameworkMode === 'AML' ? '#60a5fa' : '#94a3b8',
+              border: frameworkMode === 'AML' ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Modo AML
+          </button>
+          <button
+            onClick={() => setFrameworkMode('CYB')}
+            style={{
+              flex: 1,
+              padding: '8px',
+              backgroundColor: frameworkMode === 'CYB' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+              color: frameworkMode === 'CYB' ? '#c084fc' : '#94a3b8',
+              border: frameworkMode === 'CYB' ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid transparent',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Modo CIBER
           </button>
         </div>
       </div>
 
-      {/* Real-time Metrics Panels (Matching the provided UI) */}
+      {/* Global Metrics */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <MetricCard 
-          title="Índice de Fragilidad" 
-          value={metrics.structuralFragility.toFixed(1)} 
-          suffix="%"
-          icon={<Activity style={{ width: '18px', height: '18px' }} />} 
-          alert={isFragile}
-        />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <h2 style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em', margin: 0, fontWeight: 700 }}>Métricas Consolidadas</h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <MetricCard 
+              title="Índice de Fragilidad" 
+              value={`${Math.round(metrics.structuralFragility)}%`} 
+              icon={<ShieldAlert style={{ color: isFragile ? '#ef4444' : '#10b981' }} />}
+              alert={isFragile}
+            />
+          </div>
           <MetricCard 
             title="Exposición" 
-            value={metrics.linearExposure} 
-            icon={<Zap style={{ width: '16px', height: '16px' }} />} 
+            value={`${Math.round(metrics.linearExposure)}`} 
+            icon={<Activity style={{ color: '#60a5fa' }} />}
+            alert={false}
           />
           <MetricCard 
-            title="Fallos Activos" 
-            value={metrics.failedControlsCount} 
-            icon={<ShieldAlert style={{ width: '16px', height: '16px' }} />} 
-            alert={hasFailures}
+            title="Cascada" 
+            value={`${Math.round(metrics.cascadePercentage || 0)}%`} 
+            icon={<RotateCcw style={{ color: '#f59e0b' }} />}
+            alert={metrics.cascadePercentage! > 20}
           />
         </div>
       </div>
@@ -96,20 +146,26 @@ export const SidebarPanel: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ paddingLeft: '10px', borderLeft: '2px solid #ef4444' }}>
                 <p style={{ color: '#ef4444', fontSize: '9px', textTransform: 'uppercase', fontWeight: 800, marginBottom: '2px' }}>Control Originario</p>
-                <p style={{ color: '#ffffff', fontSize: '12px', fontFamily: 'monospace', fontWeight: 700, margin: 0 }}>● {latestEvent.controlId} (FALLIDO)</p>
+                <p style={{ color: '#ffffff', fontSize: '12px', fontFamily: 'monospace', fontWeight: 700, margin: 0 }}>● {getEventControlName()} (FALLIDO)</p>
               </div>
 
               {latestEvent.risksMaterialized.length > 0 && (
                  <div style={{ paddingLeft: '10px', borderLeft: '2px solid #f97316' }}>
-                   <p style={{ color: '#f97316', fontSize: '9px', textTransform: 'uppercase', fontWeight: 800, marginBottom: '2px' }}>Riesgos Emitidos</p>
-                   <p style={{ color: '#cbd5e1', fontSize: '11px', fontFamily: 'monospace', lineHeight: 1.4, margin: 0 }}>{latestEvent.risksMaterialized.slice(0, 3).join(', ')}...</p>
+                   <p style={{ color: '#f97316', fontSize: '9px', textTransform: 'uppercase', fontWeight: 800, marginBottom: '2px' }}>Riesgos Materializados</p>
+                   <div style={{ color: '#cbd5e1', fontSize: '10px', fontFamily: 'monospace', lineHeight: 1.4, margin: 0 }}>
+                     {latestEvent.risksMaterialized.slice(0, 3).map(id => <div key={id}>- {nodes[id]?.name || id}</div>)}
+                     {latestEvent.risksMaterialized.length > 3 && <div>... (+{latestEvent.risksMaterialized.length - 3})</div>}
+                   </div>
                  </div>
               )}
 
               {latestEvent.elementsAffected.length > 0 && (
                  <div style={{ paddingLeft: '10px', borderLeft: '2px solid #fbbf24' }}>
                    <p style={{ color: '#fbbf24', fontSize: '9px', textTransform: 'uppercase', fontWeight: 800, marginBottom: '2px' }}>Unidades Afectadas</p>
-                   <p style={{ color: '#cbd5e1', fontSize: '11px', fontFamily: 'monospace', lineHeight: 1.4, margin: 0 }}>{latestEvent.elementsAffected.slice(0, 3).join(', ')}...</p>
+                   <div style={{ color: '#cbd5e1', fontSize: '10px', fontFamily: 'monospace', lineHeight: 1.4, margin: 0 }}>
+                     {latestEvent.elementsAffected.slice(0, 3).map(id => <div key={id}>- {nodes[id]?.name || id}</div>)}
+                     {latestEvent.elementsAffected.length > 3 && <div>... (+{latestEvent.elementsAffected.length - 3})</div>}
+                   </div>
                  </div>
               )}
             </div>
@@ -128,23 +184,23 @@ export const SidebarPanel: React.FC = () => {
           <li style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }}></span>
-              <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600 }}>Capa de Controles</span>
+              <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600 }}>Controles Afectados</span>
             </div>
-            <span style={{ color: '#f8fafc', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>{CONFIG.counts.controls}</span>
+            <span style={{ color: '#f8fafc', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>{metrics.failedControlsCount}</span>
           </li>
           <li style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }}></span>
-              <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600 }}>Capa de Riesgos</span>
+              <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600 }}>Riesgos Materializados</span>
             </div>
-            <span style={{ color: '#f8fafc', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>{CONFIG.counts.risks}</span>
+            <span style={{ color: '#f8fafc', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>{metrics.activeRisksCount}</span>
           </li>
           <li style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#fbbf24' }}></span>
-              <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600 }}>Capa Base</span>
+              <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600 }}>Elementos Afectados</span>
             </div>
-            <span style={{ color: '#f8fafc', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>{CONFIG.counts.elements}</span>
+            <span style={{ color: '#f8fafc', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>{metrics.criticalElementsCount}</span>
           </li>
         </ul>
       </div>

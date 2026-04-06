@@ -12,6 +12,8 @@ export interface NodeData {
   stress: number;     // Nivel de impacto (0 a 1+)
   name?: string;      // Nombre humano para el nodo (especialmente para elementos de negocio)
   dependencies: string[]; // IDs de nodos conectados hacia abajo
+  failure_impact_score?: number;
+  is_hard_gate?: boolean;
 }
 
 export interface EdgeData {
@@ -19,6 +21,7 @@ export interface EdgeData {
   source: string;
   target: string;
   active: boolean; // Transmite impacto o mitigación
+  edge_type?: string;
 }
 
 export interface SystemMetrics {
@@ -27,6 +30,7 @@ export interface SystemMetrics {
   activeRisksCount: number;
   failedControlsCount: number;
   criticalElementsCount: number;
+  cascadePercentage?: number;
 }
 
 export interface SimulationEvent {
@@ -123,6 +127,64 @@ export class AnalyticsEngine {
     return { nodes, edges };
   }
 
+  static async fetchRealTopology(framework: string): Promise<{ nodes: Record<string, NodeData>, edges: EdgeData[] }> {
+    console.log(`[AnalyticsEngine] Requesting real topology for framework: ${framework}`);
+    const response = await fetch(`/api/simulation/topology?framework=${framework}`);
+    if (!response.ok) throw new Error("API failed to return topology");
+    
+    const data = await response.json();
+    const nodes: Record<string, NodeData> = {};
+    const rawNodes = (data.nodes || []) as any[];
+    const rawEdges = (data.edges || []) as any[];
+
+    // Map DB nodes to 3D simulation nodes with layout
+    const layerIndices: Record<string, number> = { element: 0, risk: 0, control: 0 };
+    const counts: Record<string, number> = {
+      element: rawNodes.filter((n) => n.node_type.toLowerCase() === 'element' || n.node_type.toLowerCase() === 'obligation').length,
+      risk: rawNodes.filter((n) => n.node_type.toLowerCase() === 'risk').length,
+      control: rawNodes.filter((n) => n.node_type.toLowerCase() === 'control').length,
+    };
+
+    rawNodes.forEach((dbNode: any) => {
+      const typeStr = dbNode.node_type.toLowerCase();
+      const type: NodeType = (typeStr === 'obligation' ? 'element' : typeStr) as NodeType;
+      const i = layerIndices[type]++;
+      const count = Math.max(1, counts[type]);
+      const y = type === 'element' ? CONFIG.layers.elementsY : (type === 'risk' ? CONFIG.layers.risksY : CONFIG.layers.controlsY);
+      
+      // Radio intermedio para separación, pero acotado para entrar en malla
+      const radius = type === 'element' ? 40 : (type === 'risk' ? 35 : 40);
+      
+      const theta = i * Math.PI * (1 + Math.sqrt(5));
+      const r = radius * Math.sqrt(i / count);
+
+      nodes[dbNode.node_id] = {
+        id: dbNode.node_id,
+        type,
+        x: Math.cos(theta) * r,
+        y: y + (Math.random() * 2 - 1),
+        z: Math.sin(theta) * r,
+        active: type === 'control' ? true : false,
+        stress: 0,
+        name: dbNode.node_name || dbNode.node_code,
+        dependencies: rawEdges.filter(e => e.src_node_id === dbNode.node_id).map(e => e.dst_node_id),
+        failure_impact_score: dbNode.failure_impact_score,
+        is_hard_gate: dbNode.is_hard_gate
+      };
+    });
+
+    const finalEdges = rawEdges.map(e => ({
+      id: e.edge_id,
+      source: e.src_node_id,
+      target: e.dst_node_id,
+      active: e.edge_type === 'ELEMENT_HAS_CONTROL' || 
+              e.edge_type === 'OBLIGATION_HAS_CONTROL' || 
+              e.edge_type === 'RISK_MITIGATED_BY_CONTROL'
+    }));
+
+    return { nodes, edges: finalEdges };
+  }
+
   static recalculateState(nodes: Record<string, NodeData>): { updatedNodes: Record<string, NodeData>, metrics: SystemMetrics } {
     const nextNodes = JSON.parse(JSON.stringify(nodes)) as Record<string, NodeData>;
     
@@ -131,19 +193,31 @@ export class AnalyticsEngine {
     let criticalElements = 0;
     let totalStress = 0;
 
+    const totalElements = Object.values(nextNodes).filter(n => n.type === 'element').length;
+    const totalRisks = Object.values(nextNodes).filter(n => n.type === 'risk').length;
+
     Object.values(nextNodes).filter(n => n.type === 'risk').forEach(risk => {
-      const mitigatingControls = Object.values(nextNodes).filter(c => c.type === 'control' && c.dependencies.includes(risk.id));
+      // Buscar controles conectados al riesgo sin importar la direccionalidad del grafo original
+      const mitigatingControls = Object.values(nextNodes).filter(c => 
+        c.type === 'control' && (c.dependencies.includes(risk.id) || risk.dependencies.includes(c.id))
+      );
+      const expected = mitigatingControls.length;
       const activeMitigations = mitigatingControls.filter(c => c.active).length;
-      risk.active = activeMitigations < mitigatingControls.length;
-      risk.stress = risk.active ? 1 : 0.2;
+      const exposure = expected === 0 ? 1 : 1 - (activeMitigations / expected);
+      
+      risk.active = exposure > 0;
+      risk.stress = exposure; // Escala progresiva de vulnerabilidad del 0 al 1
       if (risk.active) activeRisks++;
     });
 
     Object.values(nextNodes).filter(n => n.type === 'element').forEach(element => {
-      const impactingRisks = Object.values(nextNodes).filter(r => r.type === 'risk' && r.dependencies.includes(element.id));
+      // Buscar riesgos que impacten el elemento sin importar la direccionalidad
+      const impactingRisks = Object.values(nextNodes).filter(r => 
+        r.type === 'risk' && (r.dependencies.includes(element.id) || element.dependencies.includes(r.id))
+      );
       const activeImpacts = impactingRisks.filter(r => r.active).length;
       element.stress = activeImpacts * 0.5;
-      if (element.stress >= 1) criticalElements++;
+      if (element.stress > 0) criticalElements++; // Affected element
       totalStress += element.stress;
     });
 
@@ -151,7 +225,8 @@ export class AnalyticsEngine {
 
     const metrics: SystemMetrics = {
       linearExposure: activeRisks * 1.5,
-      structuralFragility: Math.min(100, (totalStress / CONFIG.counts.elements) * 100),
+      structuralFragility: Math.min(100, (totalStress / Math.max(totalElements, 1)) * 100),
+      cascadePercentage: Math.min(100, (activeRisks / Math.max(totalRisks, 1)) * 100),
       activeRisksCount: activeRisks,
       failedControlsCount: failedControls,
       criticalElementsCount: criticalElements

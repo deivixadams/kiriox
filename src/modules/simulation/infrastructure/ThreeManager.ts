@@ -21,20 +21,22 @@ export class ThreeManager {
   dragStartPosition: { x: number; y: number } = { x: 0, y: 0 };
   theta: number = Math.PI / 4;
   phi: number = Math.PI / 3;
-  radius: number = 110; // Alejamos un poco más la cámara para ganar aire arriba
+  radius: number = 115;   // Acercar la cámara para mayor prominencia de los nodos
   clock: THREE.Clock;
   nodes: Record<string, NodeData> | null = null;
   animationId: number | null = null;
   materialCache: Record<string, THREE.MeshStandardMaterial> = {};
   edgeMaterialCache: Record<string, THREE.LineBasicMaterial> = {};
   cylinderGeo = new THREE.CylinderGeometry(0.1, 0.1, 1, 6);
+  onHover?: (name: string | null, x: number, y: number) => void;
 
-  constructor(canvas: HTMLCanvasElement, toggleControl: (id: string) => void) {
+  constructor(canvas: HTMLCanvasElement, toggleControl: (id: string) => void, onHover?: (name: string | null, x: number, y: number) => void) {
     this.canvas = canvas;
     this.toggleControl = toggleControl;
+    this.onHover = onHover;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#020617');
-    this.scene.fog = new THREE.Fog('#020617', 60, 180);
+    this.scene.fog = new THREE.Fog('#020617', 100, 300); // Niebla ajustada a la nueva escala
 
     const aspect = canvas.clientWidth / canvas.clientHeight || 1;
     this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
@@ -66,11 +68,13 @@ export class ThreeManager {
   }
 
   updateCamera() {
-    this.camera.position.x = this.radius * Math.sin(this.phi) * Math.sin(this.theta);
+    // Calculamos la órbita anclándola al offset X=15 del clúster, de modo que la distancia al centro es CONSTANTE.
+    this.camera.position.x = 15 + this.radius * Math.sin(this.phi) * Math.sin(this.theta);
     this.camera.position.y = this.radius * Math.cos(this.phi);
     this.camera.position.z = this.radius * Math.sin(this.phi) * Math.cos(this.theta);
-    // Miramos al centro del grupo desplazado
-    this.camera.lookAt(15, -30, 0); // Miramos más abajo para que la parte superior del cluster no choque
+    
+    // Miramos al centro del grupo desplazado permanentemente
+    this.camera.lookAt(15, -30, 0); 
   }
 
   initInteraction() {
@@ -98,13 +102,26 @@ export class ThreeManager {
       const intersects = this.raycaster.intersectObjects(this.group.children);
       
       let hoveredInteractive = false;
+      let hoveredName: string | null = null;
+      let hoverX = 0, hoverY = 0;
+
       for (let i = 0; i < intersects.length; i++) {
-        if (intersects[i].object.userData.isInteractive) {
+        const obj = intersects[i].object;
+        if (obj.userData.isInteractive) {
           hoveredInteractive = true;
+          hoveredName = obj.userData.name || 'Unknown Control';
+          
+          // Calcular posición 2D
+          const vec = obj.position.clone();
+          vec.project(this.camera);
+          hoverX = (vec.x * .5 + .5) * rect.width + rect.left;
+          hoverY = -(vec.y * .5 - .5) * rect.height + rect.top;
           break;
         }
       }
+      
       document.body.style.cursor = hoveredInteractive ? 'pointer' : 'default';
+      if (this.onHover) this.onHover(hoveredName, hoverX, hoverY);
     };
 
     const handleMouseUp = () => {
@@ -152,6 +169,24 @@ export class ThreeManager {
   }
 
   updateData(nodes: Record<string, NodeData>, edges: EdgeData[]) {
+    // 1. Cleanup old nodes/labels/lines that are not in the new dataset
+    Object.keys(this.nodeMeshes).forEach(id => {
+      if (!nodes[id]) {
+        this.group.remove(this.nodeMeshes[id]);
+        delete this.nodeMeshes[id];
+        
+        if (this.nodeLabels[id]) {
+          this.group.remove(this.nodeLabels[id]);
+          delete this.nodeLabels[id];
+        }
+        
+        if (this.nodeLabelLines[id]) {
+          this.group.remove(this.nodeLabelLines[id]);
+          delete this.nodeLabelLines[id];
+        }
+      }
+    });
+
     this.nodes = nodes;
 
     Object.values(nodes).forEach(data => {
@@ -182,70 +217,26 @@ export class ThreeManager {
         }
         
         mesh.position.set(data.x, data.y, data.z);
-        mesh.userData = { id: data.id, type: data.type, isInteractive: data.type === 'control' };
+        mesh.userData = { 
+          id: data.id, 
+          name: data.name, 
+          type: data.type, 
+          isInteractive: data.type === 'control' 
+        };
         this.group.add(mesh);
         this.nodeMeshes[data.id] = mesh;
       } else {
         this.nodeMeshes[data.id].material = material;
+        this.nodeMeshes[data.id].userData.name = data.name;
       }
 
-      // --- LABELS FOR ELEMENTS ---
-      if (data.type === 'element' && data.name) {
-        if (!this.nodeLabels[data.id]) {
-          const spriteMaterial = new THREE.SpriteMaterial({
-            map: this.createLabelTexture(data.name),
-            transparent: true,
-            opacity: 0.9,
-            depthTest: false // Render over everything
-          });
-          const sprite = new THREE.Sprite(spriteMaterial);
-          sprite.scale.set(10, 4, 1); // Relación de aspecto del rectángulo
-          // --- POSICIÓN HORIZONTAL ALEJADA ---
-          const dirX = data.x === 0 && data.z === 0 ? 1 : data.x;
-          const dirZ = data.z === 0 && data.x === 0 ? 0 : data.z;
-          const mag = Math.sqrt(dirX * dirX + dirZ * dirZ);
-          const offsetX = (dirX / mag) * 15; // Aumentado en 20%+ (de 12 a 15)
-          const offsetZ = (dirZ / mag) * 15;
+      // --- ESCALA BASADA EN IMPACTO REAL ---
+      const mesh = this.nodeMeshes[data.id];
+      const baseScale = 1.0 + (data.failure_impact_score || 0) * 0.4; // Hasta 40% más grande según impacto
+      mesh.scale.setScalar(baseScale);
+      mesh.position.set(data.x, data.y, data.z);
 
-          sprite.position.set(data.x + offsetX, data.y, data.z + offsetZ);
-          this.group.add(sprite);
-          this.nodeLabels[data.id] = sprite;
-
-          // --- LINEA DE CONEXIÓN HORIZONTAL ---
-          const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
-          const linePoints = [
-            new THREE.Vector3(0, 0, 0), // Base del nodo
-            new THREE.Vector3(offsetX, 0, offsetZ) // Hasta el sprite alejado
-          ];
-          const lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
-          const connectionLine = new THREE.Line(lineGeo, lineMat);
-          connectionLine.position.set(data.x, data.y, data.z);
-          this.group.add(connectionLine);
-          this.nodeLabelLines[data.id] = connectionLine;
-        } else {
-          // ACTUALIZACIÓN DE POSICIÓN (Incluso si ya existen)
-          const dirX = data.x === 0 && data.z === 0 ? 1 : data.x;
-          const dirZ = data.z === 0 && data.x === 0 ? 0 : data.z;
-          const mag = Math.sqrt(dirX * dirX + dirZ * dirZ);
-          const offsetX = (dirX / mag) * 15; // Sincronizado a 15
-          const offsetZ = (dirZ / mag) * 15;
-
-          this.nodeLabels[data.id].position.set(data.x + offsetX, data.y, data.z + offsetZ);
-          
-          if (!this.nodeLabelLines[data.id]) {
-            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
-            const linePoints = [
-              new THREE.Vector3(0, 0, 0),
-              new THREE.Vector3(offsetX, 0, offsetZ)
-            ];
-            const lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
-            const connectionLine = new THREE.Line(lineGeo, lineMat);
-            this.group.add(connectionLine);
-            this.nodeLabelLines[data.id] = connectionLine;
-          }
-          this.nodeLabelLines[data.id].position.set(data.x, data.y, data.z);
-        }
-      }
+      // (Lógica de Labels eliminada para restaurar diseño de tetraedros amarillos)
     });
 
     this.edgeLines.forEach(line => {
@@ -258,24 +249,30 @@ export class ThreeManager {
       const source = nodes[edge.source];
       const target = nodes[edge.target];
       if (!source || !target) return;
-      if (source.type === 'control' && !source.active) return;
+
+      const controlNode = source.type === 'control' ? source : (target.type === 'control' ? target : null);
+      if (controlNode && !controlNode.active) return; // Si el control muere, las líneas que lo conectan deben desaparecer
 
       let color = CONFIG.colors.edgeIdle;
       let opacity = 0.15;
 
-      if (source.type === 'control' && source.active) {
+      if (controlNode && controlNode.active) {
         color = CONFIG.colors.edgeMitigation;
         opacity = 0.4;
-      } else if (source.type === 'risk' && source.active) {
+      } else if ((source.type === 'risk' && source.active) || (target.type === 'risk' && target.active)) {
         color = CONFIG.colors.edgeImpact;
         opacity = 0.6;
       }
 
-      if (source.type === 'risk' && target.type === 'element' && source.active) {
+      const riskNode = source.type === 'risk' ? source : (target.type === 'risk' ? target : null);
+      const elementNode = source.type === 'element' ? source : (target.type === 'element' ? target : null);
+      const isRiskToElement = riskNode !== null && elementNode !== null;
+
+      if (isRiskToElement && riskNode!.active) {
         const dist = new THREE.Vector3(source.x, source.y, source.z).distanceTo(new THREE.Vector3(target.x, target.y, target.z));
         const midPoint = new THREE.Vector3((source.x + target.x) / 2, (source.y + target.y) / 2, (source.z + target.z) / 2);
         
-        const matKey = `thick_${color}_${opacity}`;
+        const matKey = `thin_cyl_${color}_${opacity}`;
         if (!this.materialCache[matKey]) {
           this.materialCache[matKey] = new THREE.MeshStandardMaterial({
             color: new THREE.Color(color),
@@ -290,7 +287,11 @@ export class ThreeManager {
         cyl.position.copy(midPoint);
         const direction = new THREE.Vector3().subVectors(new THREE.Vector3(target.x, target.y, target.z), new THREE.Vector3(source.x, source.y, source.z));
         cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
-        cyl.scale.set(1, dist, 1);
+        
+        // Aumenta el grosor dinámicamente si el riesgo pierde controles asociados (incremento de hasta +150%)
+        const baseThickness = 0.25;
+        const thickness = baseThickness * (1 + ((riskNode!.stress || 0) * 1.5)); 
+        cyl.scale.set(thickness, dist, thickness);
         
         this.group.add(cyl);
         this.edgeLines.push(cyl);
@@ -370,36 +371,14 @@ export class ThreeManager {
         if (!mesh) return;
         
         if (data.type === 'control' && !data.active) {
-          mesh.scale.lerp(new THREE.Vector3(0.001, 0.001, 0.001), 0.2);
+          mesh.scale.setScalar(0.001);
         } else if (data.type === 'risk' && data.active) {
-          const scale = 1 + Math.sin(elapsedTime * 4) * 0.15;
-          mesh.scale.setScalar(scale);
+          mesh.scale.setScalar(1.2);
         } else if (data.type === 'element' && data.stress > 0) {
-          const scale = 1 + Math.sin(elapsedTime * 2 + data.x) * (data.stress * 0.2);
+          const scale = 1 + (data.stress * 0.2);
           mesh.scale.setScalar(scale);
-
-          // EFECTO BLINK EN LABEL
-          const label = this.nodeLabels[data.id];
-          if (label) {
-            const speed = 2 + data.stress * 6; // La velocidad escala con el estrés
-            const pulse = 0.5 + Math.sin(elapsedTime * speed) * 0.5;
-            // El color va de blanco/azul (normal) a Rojo intenso (alerta)
-            const colorIntensity = Math.min(1, data.stress);
-            label.material.color.setRGB(
-              1, // Siempre rojo al máximo si hay estrés
-              1 - (colorIntensity * pulse), // G se reduce -> más rojo
-              1 - (colorIntensity * pulse)  // B se reduce -> más rojo
-            );
-            // La opacidad también pulsa si el riesgo es alto
-            label.material.opacity = 0.7 + (pulse * 0.3 * colorIntensity);
-          }
         } else {
-          mesh.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
-          const label = this.nodeLabels[data.id];
-          if (label) {
-            label.material.color.setRGB(1, 1, 1);
-            label.material.opacity = 0.8;
-          }
+          mesh.scale.setScalar(1);
         }
       });
     }
@@ -414,30 +393,41 @@ export class ThreeManager {
 
   createLabelTexture(text: string): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
+    canvas.width = 1024; // Ampliamos el canvas enormemente para que quepa cualquier letra larga
     canvas.height = 256;
     const ctx = canvas.getContext('2d')!;
 
-    // Fondo elegante (Glassmorphism oscuro)
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-    this.roundRect(ctx, 10, 60, 492, 136, 20, true, true);
-
-    // Borde sutil
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 4;
-    ctx.stroke();
+    // Se eliminó el fondo (roundRect) y el borde para dejar el texto limpio flotando sobre la escena
 
     // Texto
-    ctx.fillStyle = 'white';
     ctx.font = '700 48px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    
+    // Configuración de sombreado
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 10;
-    ctx.fillText(text.toUpperCase(), 256, 128);
+    
+    // Truncar texto si es muy largo (ahora podemos usar más de 40 caracteres!)
+    let displayText = text.toUpperCase();
+    if (displayText.length > 35) {
+      displayText = displayText.substring(0, 33) + '...';
+    }
+
+    // Dibujar CONTORNO negro para máximo contraste en el CENTRO del nuevo canvas (512x128)
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 6;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(displayText, 512, 128);
+
+    // Dibujar RELLENO blanco (deshabilitando sombra para el relleno interno)
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'white';
+    ctx.fillText(displayText, 512, 128);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
     return texture;
   }
 
