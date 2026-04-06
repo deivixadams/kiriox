@@ -61,10 +61,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const { updatedNodes, metrics: newMetrics } = AnalyticsEngine.recalculateState(next);
         setMetrics(newMetrics);
         
-        // Detectar controles clave: si la fragilidad sube ≥5% al eliminarse
+        // Detectar controles clave: si la fragilidad sube ≥7% al eliminarse
         if (wasActive && !next[id].active) {
           const delta = newMetrics.structuralFragility - prevFragility;
-          if (delta >= 5) {
+          if (delta >= 7) {
             const controlName = prev[id].name || id;
             setCriticalControls(curr => {
               if (curr.includes(controlName)) return curr;
