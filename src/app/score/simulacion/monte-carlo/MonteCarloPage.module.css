@@ -1,0 +1,40 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.mainLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 520px;
+}
+
+.sidePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.notePanel {
+  font-size: 0.75rem;
+  color: var(--secondary);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+@media (max-width: 1200px) {
+  .mainLayout {
+    grid-template-columns: 1fr;
+  }
+}

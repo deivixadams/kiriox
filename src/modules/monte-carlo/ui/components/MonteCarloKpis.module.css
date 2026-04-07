@@ -1,0 +1,33 @@
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.kpiCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+}
+
+.kpiLabel {
+  font-size: 0.65rem;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.kpiValue {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.kpiMeta {
+  font-size: 0.7rem;
+  color: var(--secondary);
+}
