@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { X } from 'lucide-react';
 import styles from './SignificantActivityNewPage.module.css';
 
 type RiskRow = {
@@ -217,6 +218,10 @@ export default function RiskCatalogNewPage() {
     router.push(params.toString() ? `${returnTo}?${params.toString()}` : returnTo);
   };
 
+  const closeScreen = () => {
+    router.back();
+  };
+
   const handleDelete = async () => {
     if (!form.id) {
       setError('No hay riesgo seleccionado para eliminar.');
@@ -326,9 +331,14 @@ export default function RiskCatalogNewPage() {
   return (
     <div className={styles.page}>
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Nuevo riesgo</h1>
-          <p className={styles.subtitle}>Registra riesgos del catálogo para la actividad significativa seleccionada.</p>
+        <div className={styles.headerWrapper}>
+          <button type="button" className={styles.closeButton} onClick={closeScreen} aria-label="Cerrar">
+            <X size={16} />
+          </button>
+          <div className={styles.header}>
+            <h1 className={styles.title}>Nuevo riesgo</h1>
+            <p className={styles.subtitle}>Registra riesgos del catálogo para la actividad significativa seleccionada.</p>
+          </div>
         </div>
 
         <form className={styles.card} onSubmit={handleSubmit}>

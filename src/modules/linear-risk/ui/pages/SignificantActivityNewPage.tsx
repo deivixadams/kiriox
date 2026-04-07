@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { X } from 'lucide-react';
 import styles from './SignificantActivityNewPage.module.css';
 
 type CompanyOption = { id: string; name: string };
@@ -120,6 +121,10 @@ export default function SignificantActivityNewPage() {
     if (draft) params.set('draft', draft);
     params.set('step', '2');
     router.push(params.toString() ? `${returnTo}?${params.toString()}` : returnTo);
+  };
+
+  const closeScreen = () => {
+    router.back();
   };
 
   const clearForNew = () => {
@@ -242,11 +247,16 @@ export default function SignificantActivityNewPage() {
   return (
     <div className={styles.page}>
       <div className={styles.container}>
-        <div className={styles.header}>
+        <div className={styles.headerWrapper}>
+          <button type="button" className={styles.closeButton} onClick={closeScreen} aria-label="Cerrar">
+            <X size={16} />
+          </button>
+          <div className={styles.header}>
           <h1 className={styles.title}>Nueva actividad significativa</h1>
           <p className={styles.subtitle}>
             Define una actividad en el catálogo de riesgo lineal para usarla inmediatamente en el Paso 2 del wizard.
           </p>
+          </div>
         </div>
 
         <form className={styles.card} onSubmit={handleSubmit}>
