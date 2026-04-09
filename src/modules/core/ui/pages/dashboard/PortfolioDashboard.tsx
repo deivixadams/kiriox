@@ -1,11 +1,14 @@
 import {
     TrendingUp,
     TrendingDown,
-    AlertTriangle,
-    CheckCircle2,
-    Clock,
-    FileText
+    FileText,
+    ShieldAlert,
+    ClipboardCheck,
+    FlaskConical,
+    Bell,
+    Scale
 } from "lucide-react";
+import PortfolioGraphCanvas from "../../components/PortfolioGraphCanvas";
 
 export default function PortfolioDashboard() {
     return (
@@ -13,7 +16,7 @@ export default function PortfolioDashboard() {
             {/* Header section */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.25rem', opacity: 0.7 }}>Benchmark de Portafolio</h2>
+                    <h2 style={{ fontSize: '1.25rem', opacity: 0.7 }}>Centro de Control de Red</h2>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>Visión General</h1>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
@@ -24,44 +27,43 @@ export default function PortfolioDashboard() {
                 </div>
             </div>
 
-            {/* Main Metrics */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-                <MetricCard
-                    title="Score de Grupo"
-                    value="74.2"
-                    trend="+2.1"
-                    trendType="up"
+            {/* Main Options */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                <OptionCard
+                    title="Riesgo"
+                    icon={<ShieldAlert size={20} />}
                     color="var(--primary)"
+                    status="Score 74.2"
                 />
-                <MetricCard
-                    title="Peor Empresa"
-                    value="48.5"
-                    trend="-5.4"
-                    trendType="down"
-                    color="var(--danger)"
-                />
-                <MetricCard
-                    title="Gatillos Activos"
-                    value="12"
-                    subValue="En 3 empresas"
-                    color="var(--warning)"
-                />
-                <MetricCard
-                    title="Defendibilidad"
-                    value="Alta"
-                    subValue="Ready to audit"
+                <OptionCard
+                    title="Auditoría"
+                    icon={<ClipboardCheck size={20} />}
                     color="var(--accent)"
+                    status="15 Pruebas"
+                />
+                <OptionCard
+                    title="Simulación"
+                    icon={<FlaskConical size={20} />}
+                    color="var(--warning)"
+                    status="3 Scenarios"
+                />
+                <OptionCard
+                    title="Alertas"
+                    icon={<Bell size={20} />}
+                    color="var(--danger)"
+                    status="12 Activas"
+                />
+                <OptionCard
+                    title="Gobierno"
+                    icon={<Scale size={20} />}
+                    color="var(--secondary)"
+                    status="Completo"
                 />
             </div>
 
-            {/* Second Row: Heatmap Placeholders & Trends */}
+            {/* Second Row: Graph & Trends */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-                <div className="glass-card">
-                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600' }}>Matriz Empresa × Dominio</h3>
-                    <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.1)', borderRadius: '12px' }}>
-                        <p style={{ opacity: 0.5 }}>[ Heatmap Visualizer - Coming Soon ]</p>
-                    </div>
-                </div>
+                <PortfolioGraphCanvas />
 
                 <div className="glass-card">
                     <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600' }}>Hotspots de Riesgo</h3>
@@ -97,30 +99,38 @@ export default function PortfolioDashboard() {
     );
 }
 
-function MetricCard({ title, value, trend, trendType, subValue, color }: any) {
+function OptionCard({ title, icon, color, status }: any) {
     return (
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderLeft: `4px solid ${color}` }}>
-            <span style={{ fontSize: '0.9rem', opacity: 0.7, fontWeight: '500' }}>{title}</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
-                <span style={{ fontSize: '2rem', fontWeight: 'bold' }}>{value}</span>
-                {trend && (
-                    <span style={{
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        color: trendType === 'up' ? 'var(--accent)' : 'var(--danger)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.2rem'
-                    }}>
-                        {trendType === 'up' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                        {trend}
-                    </span>
-                )}
+        <div className="glass-card" style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '1rem', 
+            borderTop: `4px solid ${color}`,
+            cursor: 'pointer',
+            transition: 'transform 0.2s',
+            alignItems: 'center',
+            padding: '2rem 1.5rem'
+        }}>
+            <div style={{ 
+                width: 48, 
+                height: 48, 
+                borderRadius: '50%', 
+                background: `rgba(255,255,255,0.05)`, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: color
+            }}>
+                {icon}
             </div>
-            {subValue && <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>{subValue}</span>}
+            <div style={{ textAlign: 'center' }}>
+                <span style={{ fontSize: '1.1rem', fontWeight: 'bold', display: 'block' }}>{title}</span>
+                <span style={{ fontSize: '0.85rem', opacity: 0.6 }}>{status}</span>
+            </div>
         </div>
     );
 }
+
 
 function HotspotItem({ title, severity, delta }: any) {
     const color = severity === 'Crítico' ? 'var(--danger)' : severity === 'Alto' ? 'var(--warning)' : 'var(--primary)';

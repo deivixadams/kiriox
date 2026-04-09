@@ -74,8 +74,9 @@ type SidebarProps = {
 
 export default function Sidebar({ items, loading = false }: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const collapsed = !isHovering;
 
   useEffect(() => {
     const saved = sessionStorage.getItem("sidebar_expanded");
@@ -96,6 +97,8 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
   return (
     <aside
       className="glass-card"
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
       style={{
         width: collapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)",
         height: "100vh",
@@ -132,12 +135,19 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
             </h1>
           </div>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          style={{ background: "none", border: "none", color: "var(--foreground)", cursor: "pointer", padding: "0.5rem" }}
+        <div
+          style={{
+            width: "32px",
+            height: "32px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--muted)",
+          }}
+          aria-hidden
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
+        </div>
       </div>
 
       <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.5rem", overflowY: "auto", overflowX: "hidden" }}>

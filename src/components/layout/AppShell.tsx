@@ -12,6 +12,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isLogin = pathname === '/login';
   const isImmersiveSimulation = pathname.startsWith('/score/simulacion') || pathname.startsWith('/app-simulation');
   const showTopbarScopeSelectors = pathname === '/score/dashboard' || pathname.startsWith('/score/dashboard/');
+  const isPortfolioDashboard = pathname === '/';
 
   const [access, setAccess] = useState<AccessContext | null>(null);
   const [navigation, setNavigation] = useState<ResolvedNavigationItem[]>([]);
@@ -62,9 +63,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const filteredNavigation = (() => {
+    if (!isPortfolioDashboard) return navigation;
+    const allowedOrder = ['risk', 'audit', 'simulation', 'alerts', 'governance'];
+    const byKey = new Map(navigation.map((item) => [item.key, item]));
+    return allowedOrder.map((key) => byKey.get(key)).filter((item): item is ResolvedNavigationItem => Boolean(item));
+  })();
+
   return (
     <div className="layout-wrapper">
-      <Sidebar items={navigation} loading={loadingAccess} />
+      <Sidebar items={filteredNavigation} loading={loadingAccess} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
         <Topbar access={access} showScopeSelectors={showTopbarScopeSelectors} />
         <main className="main-content">
