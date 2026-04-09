@@ -1,0 +1,207 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.hero {
+  position: relative;
+  padding: 2.5rem 2.75rem;
+  border-radius: 28px;
+  background: radial-gradient(120% 120% at 0% 0%, rgba(59, 130, 246, 0.25), rgba(15, 23, 42, 0.75) 60%, rgba(2, 6, 23, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.55);
+  overflow: hidden;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.heroTitle {
+  font-size: 2.6rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.heroSub {
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 1rem;
+  margin-top: 0.6rem;
+  max-width: 680px;
+}
+
+.heroSignal {
+  margin-top: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.55);
+  font-size: 0.82rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.kpiSecondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  padding: 1.4rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 30px rgba(2, 6, 23, 0.35);
+}
+
+.cardEmphasis {
+  padding: 1.75rem;
+  border-radius: 22px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: linear-gradient(140deg, rgba(30, 64, 175, 0.35), rgba(15, 23, 42, 0.7));
+  box-shadow: 0 24px 40px rgba(2, 6, 23, 0.45);
+}
+
+.cardTitle {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.cardValue {
+  margin-top: 0.7rem;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.cardMeta {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.relationGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.densityGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.signalCard {
+  padding: 1.1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.signalValue {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-top: 0.4rem;
+}
+
+.signalTag {
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(94, 234, 212, 0.7);
+}
+
+.executivePanel {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+.executiveCopy {
+  padding: 1.6rem 1.8rem;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 22px 40px rgba(2, 6, 23, 0.35);
+}
+
+.executiveText {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.placeholder {
+  padding: 1.6rem;
+  border-radius: 20px;
+  border: 1px dashed rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.4);
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(148, 163, 184, 0.7);
+  text-align: center;
+}
+
+.sidebarTitle {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+@media (max-width: 1200px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+  .relationGrid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+  .densityGrid {
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+  }
+  .executivePanel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .kpiRow,
+  .kpiSecondary {
+    grid-template-columns: 1fr;
+  }
+  .hero {
+    padding: 2rem 1.8rem;
+  }
+}

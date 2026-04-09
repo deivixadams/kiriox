@@ -43,7 +43,7 @@ export default function LinealAssessmentWarningPage() {
         </section>
 
         <footer className={styles.footer}>
-          <Link href="/score/dashboard" className={styles.ghostButton}>
+          <Link href="/dashboard/riesgo" className={styles.ghostButton}>
             Cancelar
           </Link>
           <Link href="/score/evaluacion/inicio" className={styles.secondaryButton}>

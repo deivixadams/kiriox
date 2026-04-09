@@ -13,6 +13,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isImmersiveSimulation = pathname.startsWith('/score/simulacion') || pathname.startsWith('/app-simulation');
   const showTopbarScopeSelectors = pathname === '/score/dashboard' || pathname.startsWith('/score/dashboard/');
   const isPortfolioDashboard = pathname === '/';
+  const isModuleDashboard = pathname.startsWith('/dashboard/');
 
   const [access, setAccess] = useState<AccessContext | null>(null);
   const [navigation, setNavigation] = useState<ResolvedNavigationItem[]>([]);
@@ -59,7 +60,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [isImmersiveSimulation, isLogin]);
 
-  if (isLogin || isImmersiveSimulation) {
+  if (isLogin || isImmersiveSimulation || isModuleDashboard) {
     return <>{children}</>;
   }
 
