@@ -5,9 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_SHORT_NAME } from "@/config/app";
 import {
+  Activity,
   Archive,
   BarChart3,
   Bell,
+  Binary,
   BriefcaseBusiness,
   CalendarCheck2,
   CheckSquare,
@@ -26,7 +28,9 @@ import {
   Scale,
   Shield,
   ShieldAlert,
+  ShieldX,
   SlidersHorizontal,
+  Target,
   Trophy,
   UserRoundCheck,
   Users,
@@ -55,6 +59,10 @@ const ICON_MAP: Record<string, any> = {
   ListChecks,
   UserRoundCheck,
   CheckSquare,
+  Activity,
+  ShieldX,
+  Binary,
+  Target,
 };
 
 function resolveIcon(iconName?: string) {
@@ -92,6 +100,162 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
     setExpandedSections(next);
     sessionStorage.setItem("sidebar_expanded", JSON.stringify(next));
   };
+
+  const isActiveItem = (item: ResolvedNavigationItem): boolean => {
+    if (isActivePath(pathname, item.href)) return true;
+    return Boolean(item.children?.some((child) => isActiveItem(child)));
+  };
+
+  const renderNavItems = (navItems: ResolvedNavigationItem[], depth = 0) =>
+    [...navItems]
+      .sort((a, b) => a.order - b.order)
+      .map((item) => {
+        const Icon = resolveIcon(item.icon);
+        const hasChildren = Boolean(item.children && item.children.length > 0);
+        const sectionExpanded = expandedSections[item.key] ?? true;
+        const active = isActiveItem(item);
+        const leftPadding = `${0.75 + depth * 0.4}rem`;
+        const dividerStyle = depth === 0 && hasChildren
+          ? { borderBottom: "1px solid rgba(220, 220, 220, 0.22)", paddingBottom: "0.35rem", marginBottom: "0.35rem" }
+          : undefined;
+
+        if (!hasChildren) {
+          if (item.disabled) {
+            return (
+              <div key={item.key} style={dividerStyle}>
+                <div
+                  className="sidebar-link"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "1rem",
+                    padding: `0.65rem 0.75rem 0.65rem ${leftPadding}`,
+                    borderRadius: "10px",
+                    color: "var(--muted)",
+                    textDecoration: "none",
+                    fontSize: depth > 0 ? "0.82rem" : "0.85rem",
+                    background: "transparent",
+                    opacity: 0.45,
+                    cursor: "not-allowed",
+                  }}
+                >
+                  <Icon size={depth > 0 ? 16 : 18} color="var(--muted)" />
+                  {!collapsed && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+                      {item.label}
+                      {item.badge && (
+                        <span
+                          style={{
+                            borderRadius: "999px",
+                            padding: "0.1rem 0.45rem",
+                            fontSize: "0.62rem",
+                            textTransform: "uppercase",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--muted)",
+                          }}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div key={item.key} style={dividerStyle}>
+              <Link
+                href={item.href || "#"}
+                className={`sidebar-link ${active ? "active" : ""}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "1rem",
+                  padding: `0.65rem 0.75rem 0.65rem ${leftPadding}`,
+                  borderRadius: "10px",
+                  color: active ? "white" : "var(--foreground)",
+                  textDecoration: "none",
+                  transition: "all 0.2s ease",
+                  fontSize: depth > 0 ? "0.82rem" : "0.85rem",
+                  background: active ? "var(--primary-glow)" : "transparent",
+                }}
+              >
+                <Icon size={depth > 0 ? 16 : 18} color="var(--primary)" />
+                {!collapsed && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+                    {item.label}
+                    {item.badge && (
+                      <span
+                        style={{
+                          borderRadius: "999px",
+                          padding: "0.1rem 0.45rem",
+                          fontSize: "0.62rem",
+                          textTransform: "uppercase",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--primary)",
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </Link>
+            </div>
+          );
+        }
+
+        return (
+          <div key={item.key} style={{ marginBottom: "0.25rem", ...dividerStyle }}>
+            {!collapsed ? (
+              <button
+                onClick={() => toggleSection(item.key)}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  background: active ? "rgba(255,255,255,0.06)" : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: depth > 0 ? "0.78rem" : "0.8rem",
+                  color: active ? "var(--primary)" : "var(--muted)",
+                  padding: `0.65rem 0.75rem 0.65rem ${leftPadding}`,
+                  cursor: "pointer",
+                  borderRadius: "8px",
+                }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.65rem", fontWeight: 600 }}>
+                  <Icon size={depth > 0 ? 15 : 16} color="var(--primary)" />
+                  {item.label}
+                </span>
+                <ChevronDown
+                  size={14}
+                  style={{
+                    transform: sectionExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+                    transition: "transform 0.2s ease",
+                  }}
+                />
+              </button>
+            ) : (
+              <div style={{ padding: `0.65rem 0.75rem 0.65rem ${leftPadding}`, opacity: 0.3 }}>
+                <Icon size={16} color="var(--primary)" />
+              </div>
+            )}
+
+            <div
+              style={{
+                display: collapsed || sectionExpanded ? "flex" : "none",
+                flexDirection: "column",
+                gap: "0.2rem",
+              }}
+            >
+              {item.children ? renderNavItems(item.children, depth + 1) : null}
+            </div>
+          </div>
+        );
+      });
 
   return (
     <aside
@@ -147,204 +311,7 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
           </div>
         )}
 
-        {!loading &&
-          sortedItems.map((item) => {
-            const Icon = resolveIcon(item.icon);
-            const hasChildren = Boolean(item.children && item.children.length > 0);
-            const sectionExpanded = expandedSections[item.key] ?? true;
-            const parentActive = isActivePath(pathname, item.href) || Boolean(item.children?.some((c) => isActivePath(pathname, c.href)));
-            const dividerStyle = hasChildren
-              ? { borderBottom: "1px solid rgba(220, 220, 220, 0.22)", paddingBottom: "0.35rem", marginBottom: "0.35rem" }
-              : undefined;
-
-            if (!hasChildren) {
-              if (item.disabled) {
-                return (
-                  <div key={item.key} style={dividerStyle}>
-                    <div
-                      className="sidebar-link"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "1rem",
-                        padding: "0.7rem 0.75rem",
-                        borderRadius: "10px",
-                        color: "var(--muted)",
-                        textDecoration: "none",
-                        fontSize: "0.85rem",
-                        background: "transparent",
-                        opacity: 0.45,
-                        cursor: "not-allowed",
-                      }}
-                    >
-                      <Icon size={18} color="var(--muted)" />
-                      {!collapsed && (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
-                          {item.label}
-                          {item.badge && (
-                            <span
-                              style={{
-                                borderRadius: "999px",
-                                padding: "0.1rem 0.45rem",
-                                fontSize: "0.62rem",
-                                textTransform: "uppercase",
-                                border: "1px solid var(--glass-border)",
-                                color: "var(--muted)",
-                              }}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={item.key} style={dividerStyle}>
-                  <Link
-                    href={item.href || "#"}
-                    className={`sidebar-link ${parentActive ? "active" : ""}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "1rem",
-                      padding: "0.7rem 0.75rem",
-                      borderRadius: "10px",
-                      color: parentActive ? "white" : "var(--foreground)",
-                      textDecoration: "none",
-                      transition: "all 0.2s ease",
-                      fontSize: "0.85rem",
-                      background: parentActive ? "var(--primary-glow)" : "transparent",
-                      position: "relative",
-                    }}
-                  >
-                    <Icon size={18} color="var(--primary)" />
-                    {!collapsed && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
-                        {item.label}
-                        {item.badge && (
-                          <span
-                            style={{
-                              borderRadius: "999px",
-                              padding: "0.1rem 0.45rem",
-                              fontSize: "0.62rem",
-                              textTransform: "uppercase",
-                              border: "1px solid var(--glass-border)",
-                              color: "var(--primary)",
-                            }}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </Link>
-                </div>
-              );
-            }
-
-            return (
-              <div key={item.key} style={{ marginBottom: "0.25rem", ...dividerStyle }}>
-                {!collapsed ? (
-                  <button
-                    onClick={() => toggleSection(item.key)}
-                    style={{
-                      width: "100%",
-                      border: "none",
-                      background: parentActive ? "rgba(255,255,255,0.06)" : "transparent",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      fontSize: "0.8rem",
-                      color: parentActive ? "var(--primary)" : "var(--muted)",
-                      padding: "0.7rem 0.75rem",
-                      cursor: "pointer",
-                      borderRadius: "8px",
-                    }}
-                  >
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.65rem", fontWeight: 600 }}>
-                      <Icon size={16} color="var(--primary)" />
-                      {item.label}
-                    </span>
-                    <ChevronDown
-                      size={14}
-                      style={{
-                        transform: sectionExpanded ? "rotate(0deg)" : "rotate(-90deg)",
-                        transition: "transform 0.2s ease",
-                      }}
-                    />
-                  </button>
-                ) : (
-                  <div style={{ padding: "0.7rem 0.75rem", borderTop: "1px solid var(--glass-border)", opacity: 0.3 }} />
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.2rem",
-                    height: collapsed || sectionExpanded ? "auto" : "0",
-                    overflow: "hidden",
-                  }}
-                >
-                  {item.children?.map((child) => {
-                    const ChildIcon = resolveIcon(child.icon);
-                    const active = isActivePath(pathname, child.href);
-                    if (child.disabled) {
-                      return (
-                        <div
-                          key={child.key}
-                          className="sidebar-link"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "1rem",
-                            padding: "0.65rem 0.75rem 0.65rem 1.15rem",
-                            marginLeft: collapsed ? "0" : "0.8rem",
-                            borderRadius: "10px",
-                            color: "var(--muted)",
-                            textDecoration: "none",
-                            fontSize: "0.82rem",
-                            opacity: 0.45,
-                            cursor: "not-allowed",
-                          }}
-                        >
-                          <ChildIcon size={16} color="var(--muted)" />
-                          {!collapsed && <span>{child.label}</span>}
-                        </div>
-                      );
-                    }
-                    return (
-                      <Link
-                        key={child.key}
-                        href={child.href || "#"}
-                        className={`sidebar-link ${active ? "active" : ""}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "1rem",
-                          padding: "0.65rem 0.75rem 0.65rem 1.15rem",
-                          marginLeft: collapsed ? "0" : "0.8rem",
-                          borderRadius: "10px",
-                          color: active ? "white" : "var(--foreground)",
-                          textDecoration: "none",
-                          transition: "all 0.2s ease",
-                          fontSize: "0.82rem",
-                          background: active ? "var(--primary-glow)" : "transparent",
-                        }}
-                      >
-                        <ChildIcon size={16} color="var(--primary)" />
-                        {!collapsed && <span>{child.label}</span>}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+        {!loading && renderNavItems(sortedItems)}
       </nav>
     </aside>
   );
