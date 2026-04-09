@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["catalogos", "core", "corpus", "graph", "pendiente", "security", "score", "params", "structural_risk", "views"]
+  schemas  = ["catalogos", "core", "corpus", "graph", "pendiente", "security", "score", "params", "structural_risk", "views", "linear_risk"]
 }
 
 model corpus_catalog_control_automation {
@@ -1319,6 +1319,7 @@ model security_users {
   security_user_scope  security_user_scope[]
   security_user_token  security_user_token[]
   user_x_rbac          user_x_rbac[]
+  owned_processes      process[]
 
   @@schema("security")
 }
@@ -1736,4 +1737,168 @@ model corpus_parameter_obligation_weight {
   @@schema("pendiente")
 }
 
+model core_domain_elements {
+  id                               String                           @id @db.Uuid
+  map_significant_activity_element map_significant_activity_element[]
 
+  @@map("domain_elements")
+  @@schema("core")
+}
+
+model significant_activity {
+  significant_activity_id          String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id                       String                           @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  activity_code                    String                           @db.VarChar(100)
+  activity_name                    String                           @db.VarChar(255)
+  activity_description             String?                          @db.Text
+  is_active                        Boolean                          @default(true)
+  created_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+
+  map_process_significant_activity map_process_significant_activity[]
+  map_significant_activity_element map_significant_activity_element[]
+
+  @@schema("linear_risk")
+}
+
+model objective {
+  objective_id                     String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id                       String                           @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  objective_code                   String                           @db.VarChar(100)
+  objective_name                   String                           @db.VarChar(255)
+  objective_description            String?                          @db.Text
+  rationale                        Json?                            @db.JsonB
+  sequence_order                   Int?
+  is_active                        Boolean                          @default(true)
+  created_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+
+  map_objective_macroprocess       map_objective_macroprocess[]
+
+  @@schema("linear_risk")
+}
+
+model macro_process {
+  macro_process_id                 String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id                       String                           @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  macro_process_code               String                           @db.VarChar(100)
+  macro_process_name               String                           @db.VarChar(255)
+  macro_process_description        String?                          @db.Text
+  rationale                        Json?                            @db.JsonB
+  sequence_order                   Int?
+  is_active                        Boolean                          @default(true)
+  created_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+
+  map_objective_macroprocess       map_objective_macroprocess[]
+  map_macroprocess_process         map_macroprocess_process[]
+
+  @@schema("linear_risk")
+}
+
+model process {
+  process_id                       String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id                       String                           @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  process_code                     String                           @db.VarChar(100)
+  process_name                     String                           @db.VarChar(255)
+  process_description              String?                          @db.Text
+  rationale                        Json?                            @db.JsonB
+  sequence_order                   Int?
+  is_active                        Boolean                          @default(true)
+  process_owner_user_id            String?                          @db.Uuid
+  created_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+
+  map_macroprocess_process         map_macroprocess_process[]
+  map_process_significant_activity map_process_significant_activity[]
+  process_owner                    security_users?                 @relation(fields: [process_owner_user_id], references: [id], onDelete: SetNull, onUpdate: Cascade, map: "process_owner_user_id_fkey")
+
+  @@schema("linear_risk")
+}
+
+model risk_appetite {
+  risk_appetite_id                 String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id                       String                           @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  appetite_code                    String                           @db.VarChar(100)
+  appetite_name                    String                           @db.VarChar(255)
+  appetite_description             String?                          @db.Text
+  rationale                        Json?                            @db.JsonB
+  sequence_order                   Int?
+  is_active                        Boolean                          @default(true)
+  created_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime                         @default(now()) @db.Timestamptz(6)
+
+  @@schema("linear_risk")
+}
+
+model map_objective_macroprocess {
+  map_objective_macroprocess_id    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  objective_id                     String       @db.Uuid
+  macro_process_id                 String       @db.Uuid
+  is_primary                       Boolean      @default(true)
+  link_strength                    Decimal?     @db.Decimal(5, 4)
+  rationale                        Json?        @db.JsonB
+  sequence_order                   Int?
+  created_at                       DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime     @default(now()) @db.Timestamptz(6)
+
+  objective                         objective    @relation(fields: [objective_id], references: [objective_id], onDelete: Restrict, onUpdate: Cascade, map: "map_objective_macroprocess_objective_id_fkey")
+  macro_process                     macro_process @relation(fields: [macro_process_id], references: [macro_process_id], onDelete: Restrict, onUpdate: Cascade, map: "map_objective_macroprocess_macro_process_id_fkey")
+
+  @@unique([objective_id, macro_process_id], map: "uq_map_objective_macroprocess_pair")
+  @@schema("linear_risk")
+}
+
+model map_macroprocess_process {
+  map_macroprocess_process_id      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  macro_process_id                 String       @db.Uuid
+  process_id                       String       @db.Uuid
+  is_primary                       Boolean      @default(true)
+  link_strength                    Decimal?     @db.Decimal(5, 4)
+  rationale                        Json?        @db.JsonB
+  sequence_order                   Int?
+  created_at                       DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime     @default(now()) @db.Timestamptz(6)
+
+  macro_process                    macro_process @relation(fields: [macro_process_id], references: [macro_process_id], onDelete: Restrict, onUpdate: Cascade, map: "map_macroprocess_process_macro_process_id_fkey")
+  process                          process       @relation(fields: [process_id], references: [process_id], onDelete: Restrict, onUpdate: Cascade, map: "map_macroprocess_process_process_id_fkey")
+
+  @@unique([macro_process_id, process_id], map: "uq_map_macroprocess_process_pair")
+  @@schema("linear_risk")
+}
+
+model map_process_significant_activity {
+  map_process_significant_activity_id String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  process_id                         String                 @db.Uuid
+  significant_activity_id            String                 @db.Uuid
+  is_primary                         Boolean                @default(true)
+  link_strength                      Decimal?               @db.Decimal(5, 4)
+  rationale                          Json?                  @db.JsonB
+  sequence_order                     Int?
+  created_at                         DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at                         DateTime               @default(now()) @db.Timestamptz(6)
+
+  process                            process                @relation(fields: [process_id], references: [process_id], onDelete: Restrict, onUpdate: Cascade, map: "map_process_significant_activity_process_id_fkey")
+  significant_activity               significant_activity   @relation(fields: [significant_activity_id], references: [significant_activity_id], onDelete: Restrict, onUpdate: Cascade, map: "map_process_significant_activity_significant_activity_id_fkey")
+
+  @@unique([process_id, significant_activity_id], map: "uq_map_process_significant_activity_pair")
+  @@schema("linear_risk")
+}
+
+model map_significant_activity_element {
+  map_significant_activity_element_id String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  significant_activity_id            String                 @db.Uuid
+  element_id                         String                 @db.Uuid
+  is_primary                         Boolean                @default(true)
+  link_strength                      Decimal?               @db.Decimal(5, 4)
+  rationale                          Json?                  @db.JsonB
+  sequence_order                     Int?
+  created_at                         DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at                         DateTime               @default(now()) @db.Timestamptz(6)
+
+  significant_activity               significant_activity   @relation(fields: [significant_activity_id], references: [significant_activity_id], onDelete: Restrict, onUpdate: Cascade, map: "map_significant_activity_element_significant_activity_id_fkey")
+  element                            core_domain_elements   @relation(fields: [element_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "map_significant_activity_element_element_id_fkey")
+
+  @@unique([significant_activity_id, element_id], map: "uq_map_significant_activity_element_pair")
+  @@schema("linear_risk")
+}
