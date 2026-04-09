@@ -171,6 +171,15 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
         order: 84,
       },
       {
+        key: 'governance-objectives',
+        label: 'Objetivo',
+        href: '/dashboard/riesgo/registro/objetivos',
+        icon: 'Target',
+        module: 'governance',
+        permission: 'governance.objectives.read',
+        order: 85,
+      },
+      {
         key: 'governance-users',
         label: 'Usuarios',
         href: '/admin/usuarios',

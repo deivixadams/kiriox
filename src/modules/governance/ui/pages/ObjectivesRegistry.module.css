@@ -1,0 +1,345 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 2rem 7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.1;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 1.2rem;
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+/* Speed Add Bar */
+.speedAddContainer {
+  position: relative;
+  top: auto;
+  z-index: 1;
+  margin-bottom: 1rem;
+}
+
+.speedAdd {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem 2rem;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.speedAdd:focus-within {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 25px 60px rgba(59, 130, 246, 0.15);
+}
+
+.speedAddIcon {
+  color: #3b82f6;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+}
+
+.speedAddInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.speedAddInput::placeholder {
+  color: rgba(148, 163, 184, 0.4);
+}
+
+.scopeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 420px;
+  margin-top: -1.5rem;
+}
+
+.companySelect {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #f1f5f9;
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.companySelect:focus {
+  border-color: rgba(59, 130, 246, 0.65);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* List Area */
+.list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+.card {
+  position: relative;
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  overflow: visible;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card:hover {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+}
+
+.statusIndicator {
+  position: absolute;
+  top: 2.5rem;
+  right: 2.5rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.cardIconBox {
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.cardContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.nameInput {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-size: 1.75rem;
+  font-weight: 800;
+  width: 100%;
+  padding: 0;
+  letter-spacing: -0.02em;
+  cursor: text;
+  pointer-events: auto;
+}
+
+.descriptionInput {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  width: 100%;
+  resize: none;
+  cursor: text;
+  pointer-events: auto;
+}
+
+/* Campos Clave Grid */
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  overflow: visible;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 220px;
+}
+
+.fieldLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.fieldInput, .fieldSelect {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f1f5f9;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.3s ease;
+  width: 100%;
+}
+
+.fieldInput:focus, .fieldSelect:focus {
+  border-bottom-color: rgba(59, 130, 246, 0.5);
+}
+
+.fieldSelect option {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.deleteButton {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  cursor: pointer;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.deleteButton:hover {
+  background: rgba(239, 68, 68, 0.15);
+  transform: scale(1.05);
+}
+
+.saveCardButton {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #e2e8f0;
+  cursor: pointer;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.saveCardButton:hover {
+  background: rgba(59, 130, 246, 0.28);
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+.saveCardButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.statusToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.statusToggle.draft {
+  background: rgba(100, 116, 139, 0.1);
+  border-color: rgba(100, 116, 139, 0.2);
+  color: #64748b;
+}
+
+.emptyState {
+  padding: 8rem 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 40px;
+  border: 2px dashed rgba(255, 255, 255, 0.05);
+}
+
+.emptyIcon {
+  width: 100px;
+  height: 100px;
+  color: #3b82f6;
+  opacity: 0.3;
+}

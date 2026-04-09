@@ -44,6 +44,8 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
       "governance.engine.read",
       "governance.license.read",
       "governance.license.write",
+      "governance.objectives.read",
+      "governance.objectives.write",
     ],
   },
   {
