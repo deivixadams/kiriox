@@ -297,23 +297,20 @@ model audit_log {
 }
 
 model company {
-  id                    String                @id(map: "corpus_company_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code                  String                @unique(map: "corpus_company_code_key")
-  name                  String
-  legal_name            String?
-  jurisdiction_id       String?               @db.Uuid
-  status_id             Int                   @db.SmallInt
-  created_at            DateTime              @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime              @default(now()) @db.Timestamptz(6)
-  audit_assessment      audit_assessment[]
-  jurisdiction          jurisdiction?         @relation(fields: [jurisdiction_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_company_jurisdiction_id_fkey")
-  corpus_catalog_status corpus_catalog_status @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_company_status_id_fkey")
+  id               String            @id(map: "corpus_company_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String            @unique(map: "corpus_company_code_key")
+  name             String
+  legal_name       String?
+  jurisdiction_id  String?           @db.Uuid
+  is_active        Boolean           @default(true)
+  created_at       DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime          @default(now()) @db.Timestamptz(6)
+  audit_assessment audit_assessment[]
+  jurisdiction     jurisdiction?      @relation(fields: [jurisdiction_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_company_jurisdiction_id_fkey")
 
-  @@schema("corpus")
+  @@schema("score")
   score_run_draft run_draft[]
-
-  score_run run[]
-
+  score_run       run[]
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

@@ -8,3 +8,6 @@ export * from './ValidateLicenseUseCase';
 export * from './RenewLicenseUseCase';
 export * from './GetOntologyAssignmentContextUseCase';
 export * from './UpsertCompanyOntologyAssignmentUseCase';
+export * from './GetCompanyRealmContextUseCase';
+export * from './GetCompanyRealmSelectionUseCase';
+export * from './SaveCompanyRealmSelectionUseCase';

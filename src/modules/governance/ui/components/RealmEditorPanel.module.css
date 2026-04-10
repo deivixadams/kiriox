@@ -1,0 +1,163 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: grid;
+  gap: 6px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #67e8f9;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 28px;
+}
+
+.subtitle {
+  margin: 0;
+  color: #94a3b8;
+  max-width: 920px;
+}
+
+.card {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 35%),
+    rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.statusRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #93c5fd;
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field span {
+  color: #cbd5e1;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(2, 6, 23, 0.65);
+  color: #e2e8f0;
+  padding: 10px 12px;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.fieldTools {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.switchRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actionsLeft,
+.actionsRight {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.secondaryButton,
+.primaryButton,
+.deleteButton {
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondaryButton {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(30, 41, 59, 0.55);
+  color: #e2e8f0;
+}
+
+.primaryButton {
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.18);
+  color: #ecfdf5;
+}
+
+.deleteButton {
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: rgba(185, 28, 28, 0.25);
+  color: #fee2e2;
+}
+
+.secondaryButton:disabled,
+.primaryButton:disabled,
+.deleteButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error,
+.success {
+  margin: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.error {
+  border: 1px solid rgba(239, 68, 68, 0.38);
+  background: rgba(185, 28, 28, 0.16);
+  color: #fecaca;
+}
+
+.success {
+  border: 1px solid rgba(34, 197, 94, 0.38);
+  background: rgba(22, 163, 74, 0.16);
+  color: #bbf7d0;
+}

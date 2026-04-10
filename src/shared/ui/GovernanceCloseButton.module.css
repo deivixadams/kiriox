@@ -1,0 +1,47 @@
+.closeRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.closeButton {
+  border-radius: 999px;
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(6, 78, 59, 0.72));
+  color: #2dd4bf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: transform 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.closeButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(45, 212, 191, 0.62);
+  color: #5eead4;
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid rgba(45, 212, 191, 0.75);
+  outline-offset: 2px;
+}
+
+.closeButtonIcon {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 999px;
+  border-color: rgba(148, 163, 184, 0.3);
+  background: radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.22), rgba(15, 23, 42, 0.9));
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.closeButtonIcon:hover {
+  border-color: rgba(96, 165, 250, 0.6);
+  color: #ffffff;
+}

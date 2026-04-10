@@ -10,6 +10,7 @@ import {
   BarChart3,
   Bell,
   Binary,
+  Building2,
   BriefcaseBusiness,
   CalendarCheck2,
   CheckSquare,
@@ -60,6 +61,7 @@ const ICON_MAP: Record<string, any> = {
   Activity,
   ShieldX,
   Binary,
+  Building2,
   Target,
 };
 

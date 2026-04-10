@@ -138,12 +138,45 @@
   color: #e2e8f0;
 }
 
-.criteriaList {
-  margin: 8px 0 0;
-  padding-left: 18px;
+.assignmentTableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.assignmentTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.assignmentTable th,
+.assignmentTable td {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 8px;
+}
+
+.assignmentTable th {
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.assignmentTable td {
+  color: #e2e8f0;
+}
+
+.companyCell {
   display: grid;
-  gap: 4px;
-  color: #dbeafe;
+  gap: 2px;
+}
+
+.companyCell span {
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 @media (max-width: 768px) {

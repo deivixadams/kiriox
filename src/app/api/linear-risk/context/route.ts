@@ -12,8 +12,8 @@ export const GET = nextHandler(
     const rows = await prisma.$queryRaw<Array<{ id: string; name: string }>>(
       Prisma.sql`
         SELECT c.id::text AS id, c.name
-        FROM core.company c
-        WHERE COALESCE(c.is_active, true) = true
+        FROM score.company c
+        WHERE c.is_active = true
         ORDER BY c.name ASC
       `
     );

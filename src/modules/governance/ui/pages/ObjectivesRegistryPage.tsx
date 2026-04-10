@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { 
+import Link from 'next/link';
+import {
   Plus, 
   Target, 
   Trash2, 
@@ -298,22 +299,27 @@ export default function ObjectivesRegistryPage() {
       </div>
 
       <div className={styles.scopeRow}>
-        <label className={styles.fieldLabel} htmlFor="companyScope">
-          Empresa
-        </label>
-        <select
-          id="companyScope"
-          className={styles.companySelect}
-          value={selectedCompanyId}
-          onChange={(e) => setSelectedCompanyId(e.target.value)}
-        >
-          {companies.length === 0 && <option value="">Sin empresas</option>}
-          {companies.map((company) => (
-            <option key={company.id} value={company.id}>
-              {company.name}
-            </option>
-          ))}
-        </select>
+        <div className={styles.scopeCompanyBlock}>
+          <label className={styles.fieldLabel} htmlFor="companyScope">
+            Empresa
+          </label>
+          <select
+            id="companyScope"
+            className={styles.companySelect}
+            value={selectedCompanyId}
+            onChange={(e) => setSelectedCompanyId(e.target.value)}
+          >
+            {companies.length === 0 && <option value="">Sin empresas</option>}
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Link href="/score/dashboard" className={styles.scopeCloseButton}>
+          Cerrar
+        </Link>
       </div>
 
       <div className={styles.list}>

@@ -3,3 +3,4 @@ export * from './ParameterRepository';
 export * from './ParameterDefinitionRepository';
 export * from './LicenseManagementRepository';
 export * from './OntologyAssignmentRepository';
+export * from './CompanyRealmAssignmentRepository';

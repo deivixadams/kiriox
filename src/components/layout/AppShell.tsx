@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { buildNavigation, type ResolvedNavigationItem } from '@/shared/navigation';
 import type { AccessContext } from '@/modules/security';
+import { CommandSearchProvider } from '@/shared/ui/command-search/CommandSearchProvider';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -64,13 +65,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="layout-wrapper">
-      <Sidebar items={navigation} loading={loadingAccess} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-        <Topbar access={access} showScopeSelectors={showTopbarScopeSelectors} />
-        <main className="main-content">
-          <div className="content-inner">{children}</div>
-        </main>
-      </div>
+      <CommandSearchProvider>
+        <Sidebar items={navigation} loading={loadingAccess} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+          <Topbar access={access} showScopeSelectors={showTopbarScopeSelectors} />
+          <main className="main-content">
+            <div className="content-inner">{children}</div>
+          </main>
+        </div>
+      </CommandSearchProvider>
     </div>
   );
 }

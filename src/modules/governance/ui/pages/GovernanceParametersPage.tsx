@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { Prisma } from '@prisma/client';
 import styles from './ParametrosPage.module.css';
+import { GovernanceCloseButton } from '@/shared/ui/GovernanceCloseButton';
 
 type ActiveProfile = {
     id: string;
@@ -159,6 +160,7 @@ export default async function ParametrosPage() {
 
     return (
             <div className="animate-fade-in">
+                <GovernanceCloseButton />
                 <div className="section-header">
                     <Link href="/admin" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--muted)', textDecoration: 'none', fontSize: '0.9rem', marginRight: '1rem' }}>
                         <ArrowLeft size={16} /> Volver

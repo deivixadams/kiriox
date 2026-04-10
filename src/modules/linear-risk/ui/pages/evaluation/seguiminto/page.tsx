@@ -177,10 +177,9 @@ export default function SeguimintoDashboardPage() {
         <header className={styles.header}>
           <div>
             <div className={styles.eyebrow}>risk assessment / seguimiento</div>
-            <h1 className={styles.title}>Seguiminto de hallazgos de auditoria</h1>
+            <h1 className={styles.title}>Dashboard evaluación de riesgos</h1>
             <p className={styles.subtitle}>
-              Vista consolidada de seguimiento para auditor: estado, avance y vencimientos
-              de hallazgos provenientes de diferentes auditorias.
+              Vista consolidada del estado, avance y vencimientos de evaluaciones de riesgos.
             </p>
           </div>
         </header>

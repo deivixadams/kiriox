@@ -32,23 +32,6 @@ type ContextPayload = {
   assignments: Assignment[];
 };
 
-function formatSelection(selection: Record<string, unknown>): string[] {
-  const entries = Object.entries(selection ?? {});
-  if (entries.length === 0) return [];
-
-  return entries.map(([key, value]) => {
-    if (Array.isArray(value)) {
-      return `${key}: ${value.map((item) => String(item)).join(', ')}`;
-    }
-
-    if (value && typeof value === 'object') {
-      return `${key}: ${JSON.stringify(value)}`;
-    }
-
-    return `${key}: ${String(value)}`;
-  });
-}
-
 export function OntologyAssignmentPanel() {
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [ontologies, setOntologies] = useState<OntologyOption[]>([]);
@@ -164,10 +147,20 @@ export function OntologyAssignmentPanel() {
     return `${selectedCompany.name} (${selectedCompany.code}) -> ${selectedOntology.name}`;
   }, [selectedCompany, selectedOntology]);
 
-  const selectedOntologyCriteria = useMemo(
-    () => (selectedOntology ? formatSelection(selectedOntology.selection) : []),
-    [selectedOntology]
-  );
+  const companyOntologyGrid = useMemo(() => {
+    return companies.map((company) => {
+      const assignment = assignmentByCompany.get(company.id) ?? null;
+      const ontology = assignment
+        ? ontologies.find((item) => item.id === assignment.ontologyId) ?? null
+        : null;
+
+      return {
+        company,
+        ontology,
+        assignedAt: assignment?.updatedAt ?? assignment?.createdAt ?? null,
+      };
+    });
+  }, [companies, assignmentByCompany, ontologies]);
 
   return (
     <section className={styles.page}>
@@ -257,20 +250,41 @@ export function OntologyAssignmentPanel() {
           <div className={styles.detailGrid}>
             <p><strong>Nombre:</strong> {selectedOntology.name}</p>
             <p><strong>Descripción:</strong> {selectedOntology.description || 'Sin descripción'}</p>
-            <div>
-              <strong>Criterios de selección:</strong>
-              {selectedOntologyCriteria.length === 0 ? (
-                <p className={styles.muted}>Sin criterios registrados.</p>
-              ) : (
-                <ul className={styles.criteriaList}>
-                  {selectedOntologyCriteria.map((criterion) => (
-                    <li key={criterion}>{criterion}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
           </div>
         )}
+      </article>
+
+      <article className={styles.card}>
+        <h2>Empresas y ontologías asignadas</h2>
+        <div className={styles.assignmentTableWrapper}>
+          <table className={styles.assignmentTable}>
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Ontología asignada</th>
+                <th>Detalle / significado</th>
+                <th>Actualizado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {companyOntologyGrid.map((row) => (
+                <tr key={row.company.id}>
+                  <td>
+                    <div className={styles.companyCell}>
+                      <strong>{row.company.name}</strong>
+                      <span>{row.company.code}</span>
+                    </div>
+                  </td>
+                  <td>{row.ontology?.name ?? 'Sin ontología asignada'}</td>
+                  <td>{row.ontology?.description || 'Sin detalle de ontología'}</td>
+                  <td>
+                    {row.assignedAt ? new Date(row.assignedAt).toLocaleString() : 'Sin cambios'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </article>
     </section>
   );

@@ -414,6 +414,25 @@ export default function UserManagementPage() {
                     </div>
                 </div>
             )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <Link
+                    href="/score/dashboard"
+                    style={{
+                        border: '1px solid rgba(148, 163, 184, 0.45)',
+                        background: 'rgba(30, 41, 59, 0.55)',
+                        color: '#e2e8f0',
+                        borderRadius: '10px',
+                        padding: '0.75rem 1.25rem',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                    }}
+                >
+                    Cerrar
+                </Link>
+            </div>
         </div>
     );
 }

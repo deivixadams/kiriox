@@ -16,7 +16,7 @@ select
   column_default,
   object_description,
   refreshed_at
-from schema.framework_doc
+from views.framework_doc
 order by
   object_schema,
   coalesce(parent_name, object_name),

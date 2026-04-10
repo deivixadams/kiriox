@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccessContext } from "@/modules/security";
+import { useCommandSearch } from "@/shared/ui/command-search/CommandSearchProvider";
 
 type TopbarProps = {
     access?: AccessContext | null;
@@ -14,8 +15,11 @@ type TopbarProps = {
 
 export default function Topbar({ access, showScopeSelectors = false }: TopbarProps) {
     const { theme, toggleTheme } = useTheme();
+    const { runSearch, feedback, setFeedback } = useCommandSearch();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [commandQuery, setCommandQuery] = useState('');
     const menuRef = useRef<HTMLDivElement | null>(null);
+    const commandInputRef = useRef<HTMLInputElement | null>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -24,9 +28,30 @@ export default function Topbar({ access, showScopeSelectors = false }: TopbarPro
                 setMenuOpen(false);
             }
         };
+        const handleCommandHotkey = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                commandInputRef.current?.focus();
+            }
+        };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleCommandHotkey);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleCommandHotkey);
+        };
     }, []);
+
+    useEffect(() => {
+        if (!feedback) return;
+        const timeout = window.setTimeout(() => setFeedback(''), 2500);
+        return () => window.clearTimeout(timeout);
+    }, [feedback, setFeedback]);
+
+    const handleCommandSubmit = async () => {
+        const result = await runSearch(commandQuery);
+        setFeedback(result.message || (result.ok ? 'Resultado encontrado.' : 'Sin resultados.'));
+    };
 
     const handleLogout = async () => {
         try {
@@ -62,8 +87,17 @@ export default function Topbar({ access, showScopeSelectors = false }: TopbarPro
                 <div style={{ position: 'relative', flex: 0.5 }}>
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
                     <input
+                        ref={commandInputRef}
                         type="text"
                         placeholder="Comando (Ctrl+K)..."
+                        value={commandQuery}
+                        onChange={(event) => setCommandQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                event.preventDefault();
+                                void handleCommandSubmit();
+                            }
+                        }}
                         style={{
                             width: '100%',
                             padding: '0.6rem 1rem 0.6rem 2.5rem',
@@ -74,6 +108,11 @@ export default function Topbar({ access, showScopeSelectors = false }: TopbarPro
                             outline: 'none'
                         }}
                     />
+                    {feedback ? (
+                        <span style={{ position: 'absolute', left: '12px', top: 'calc(100% + 6px)', fontSize: '0.75rem', color: 'var(--muted)' }}>
+                            {feedback}
+                        </span>
+                    ) : null}
                 </div>
 
                 {showScopeSelectors ? (

@@ -11,10 +11,10 @@ export class PrismaCompanyRepository {
   async findByCode(code: string): Promise<CompanyRow | null> {
     const rows = await prisma.$queryRaw<CompanyRow[]>(
       Prisma.sql`
-        SELECT c.id, c.code, c.name
-        FROM core.company c
+        SELECT c.id, c.code, c.name, c.legal_name
+        FROM score.company c
         WHERE c.code = ${code}
-          AND COALESCE(c.is_active, true) = true
+          AND c.is_active = true
         LIMIT 1
       `
     );
@@ -24,10 +24,10 @@ export class PrismaCompanyRepository {
   async findById(id: string): Promise<CompanyRow | null> {
     const rows = await prisma.$queryRaw<CompanyRow[]>(
       Prisma.sql`
-        SELECT c.id, c.code, c.name
-        FROM core.company c
+        SELECT c.id, c.code, c.name, c.legal_name
+        FROM score.company c
         WHERE c.id = ${id}::uuid
-          AND COALESCE(c.is_active, true) = true
+          AND c.is_active = true
         LIMIT 1
       `
     );
@@ -42,10 +42,11 @@ export class PrismaCompanyRepository {
   }): Promise<CompanyRow> {
     const rows = await prisma.$queryRaw<CompanyRow[]>(
       Prisma.sql`
-        INSERT INTO core.company (code, name, is_active)
+        INSERT INTO score.company (code, name, legal_name, is_active)
         VALUES (
           ${input.code},
           ${input.name},
+          ${input.legalName ?? null},
           true
         )
         RETURNING id, code, name

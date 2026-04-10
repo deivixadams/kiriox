@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const loadCompanies = async () => {
       const securityCompanies = await queryOrEmpty(prisma.$queryRaw`
         SELECT id, name, code
-        FROM core.company
+        FROM score.company
         WHERE is_active = true
         ORDER BY name ASC
       `) as any[];
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     const loadCompanyById = async (id: string) => {
       const securityRows = await queryOrEmpty(prisma.$queryRaw`
         SELECT id, NULL::uuid AS jurisdiction_id
-        FROM core.company
+        FROM score.company
         WHERE id = ${id}::uuid
           AND is_active = true
         LIMIT 1
