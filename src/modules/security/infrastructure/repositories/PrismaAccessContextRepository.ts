@@ -148,14 +148,14 @@ export class PrismaAccessContextRepository implements AccessContextRepository {
       rows = await prisma.$queryRaw<{ id: string; code: string | null; name: string | null }[]>(
         Prisma.sql`
           SELECT c.id, c.code, c.name
-          FROM security.company c
+          FROM core.company c
           WHERE c.id = ${companyId}::uuid
             AND COALESCE(c.is_active, true) = true
           LIMIT 1
         `
       );
     } catch (error) {
-      if (!isMissingRelationError(error, 'security.company')) throw error;
+      if (!isMissingRelationError(error, 'core.company')) throw error;
     }
 
     const row = rows[0];
@@ -166,3 +166,4 @@ export class PrismaAccessContextRepository implements AccessContextRepository {
     };
   }
 }
+

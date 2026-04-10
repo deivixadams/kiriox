@@ -143,7 +143,7 @@ async function getRiskScaleBand(value: number, appliesTo: 'INHERENT' | 'RESIDUAL
   const rows = await prisma.$queryRaw<RiskScaleRow[]>(
     Prisma.sql`
       SELECT code, name, min_value, max_value, severity_rank, color_hex, applies_to, version
-      FROM linear_risk.risk_scale
+      FROM core.risk_scale
       WHERE is_active = true
         AND UPPER(applies_to) IN ('ALL', ${appliesTo})
         AND ${value} BETWEEN min_value AND max_value
@@ -190,7 +190,7 @@ async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: st
   const companyId = String(draft.company_id || '').trim();
   const companyRows = UUID_REGEX.test(companyId)
     ? await prisma.$queryRaw<Array<{ name: string }>>(Prisma.sql`
-        SELECT name FROM security.company WHERE id = ${companyId}::uuid LIMIT 1
+        SELECT name FROM core.company WHERE id = ${companyId}::uuid LIMIT 1
       `)
     : [];
   const companyName = companyRows[0]?.name || modelOfBusiness || '';
@@ -216,12 +216,12 @@ async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: st
       ci.name AS impact_name,
       ci.numeric_value AS impact_value,
       dir.inherent_risk_score
-    FROM linear_risk.risk_assessment_draft_item di
-    JOIN linear_risk.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
-    LEFT JOIN linear_risk.risk_assessment_draft_item_risk dir ON dir.risk_assessment_draft_item_id = di.risk_assessment_draft_item_id
-    LEFT JOIN linear_risk.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
-    LEFT JOIN linear_risk.catalog_probability cp ON cp.catalog_probability_id = dir.catalog_probability_id
-    LEFT JOIN linear_risk.catalog_impact ci ON ci.catalog_impact_id = dir.catalog_impact_id
+    FROM core.risk_assessment_draft_item di
+    JOIN core.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
+    LEFT JOIN core.risk_assessment_draft_item_risk dir ON dir.risk_assessment_draft_item_id = di.risk_assessment_draft_item_id
+    LEFT JOIN core.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
+    LEFT JOIN core.catalog_probability cp ON cp.catalog_probability_id = dir.catalog_probability_id
+    LEFT JOIN core.catalog_impact ci ON ci.catalog_impact_id = dir.catalog_impact_id
     WHERE di.risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
       AND COALESCE(di.is_deleted, false) = false
     ORDER BY di.sort_order ASC, di.risk_assessment_draft_item_id ASC
@@ -244,7 +244,7 @@ async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: st
   const controlRows = controlIds.length
     ? await prisma.$queryRaw<Array<{ control_id: string; name: string; description: string | null }>>(Prisma.sql`
         SELECT control_id::text AS control_id, name, description
-        FROM linear_risk.control_catalog
+        FROM core.control_catalog
         WHERE control_id = ANY(${controlIds}::uuid[])
       `)
     : [];
@@ -317,12 +317,12 @@ async function ensureLinearRiskScaleCatalogs() {
   const [pCountRows, iCountRows] = await Promise.all([
     prisma.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`
       SELECT COUNT(*)::bigint AS count
-      FROM linear_risk.catalog_probability
+      FROM core.catalog_probability
       WHERE is_active = true
     `),
     prisma.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`
       SELECT COUNT(*)::bigint AS count
-      FROM linear_risk.catalog_impact
+      FROM core.catalog_impact
       WHERE is_active = true
     `),
   ]);
@@ -332,7 +332,7 @@ async function ensureLinearRiskScaleCatalogs() {
 
   if (pCount === 0) {
     await prisma.$executeRaw(Prisma.sql`
-      INSERT INTO linear_risk.catalog_probability (code, name, description, numeric_value, ordinal, is_active, created_at, updated_at)
+      INSERT INTO core.catalog_probability (code, name, description, numeric_value, ordinal, is_active, created_at, updated_at)
       SELECT v.code, v.name, v.description, v.numeric_value, v.ordinal, true, now(), now()
       FROM (
         VALUES
@@ -343,14 +343,14 @@ async function ensureLinearRiskScaleCatalogs() {
           ('P5', 'Muy alta', 'Ocurrencia casi cierta.', 5.0::numeric, 5)
       ) AS v(code, name, description, numeric_value, ordinal)
       WHERE NOT EXISTS (
-        SELECT 1 FROM linear_risk.catalog_probability p WHERE p.code = v.code
+        SELECT 1 FROM core.catalog_probability p WHERE p.code = v.code
       )
     `);
   }
 
   if (iCount === 0) {
     await prisma.$executeRaw(Prisma.sql`
-      INSERT INTO linear_risk.catalog_impact (code, name, description, numeric_value, ordinal, is_active, created_at, updated_at)
+      INSERT INTO core.catalog_impact (code, name, description, numeric_value, ordinal, is_active, created_at, updated_at)
       SELECT v.code, v.name, v.description, v.numeric_value, v.ordinal, true, now(), now()
       FROM (
         VALUES
@@ -361,7 +361,7 @@ async function ensureLinearRiskScaleCatalogs() {
           ('I5', 'Crítico', 'Impacto extremo con compromiso significativo.', 5.0::numeric, 5)
       ) AS v(code, name, description, numeric_value, ordinal)
       WHERE NOT EXISTS (
-        SELECT 1 FROM linear_risk.catalog_impact i WHERE i.code = v.code
+        SELECT 1 FROM core.catalog_impact i WHERE i.code = v.code
       )
     `);
   }
@@ -385,7 +385,7 @@ async function isUuidCompany(tableName: 'risk_assessment_draft' | 'significant_a
   const rows = await prisma.$queryRaw<{ data_type: string }[]>(Prisma.sql`
     SELECT data_type
     FROM information_schema.columns
-    WHERE table_schema = 'linear_risk'
+    WHERE table_schema = 'core'
       AND table_name = ${tableName}
       AND column_name = 'company_id'
     LIMIT 1
@@ -399,7 +399,7 @@ async function isUuidCompany(tableName: 'risk_assessment_draft' | 'significant_a
 async function findDraft(id: string, tenantId: string): Promise<LinearDraftRow | null> {
   const rows = await prisma.$queryRaw<LinearDraftRow[]>(Prisma.sql`
     SELECT risk_assessment_draft_id, assessment_code, company_id, notes
-    FROM linear_risk.risk_assessment_draft
+    FROM core.risk_assessment_draft
     WHERE COALESCE(is_deleted, false) = false
       AND (assessment_code = ${id} OR assessment_code = ${`LR-WIZARD-${id}`} OR assessment_code = ${`AUDIT-WIZARD-${id}`})
     ORDER BY risk_assessment_draft_id DESC
@@ -415,8 +415,8 @@ async function findDraft(id: string, tenantId: string): Promise<LinearDraftRow |
 async function getItems(draftPk: bigint): Promise<DraftItemRow[]> {
   return prisma.$queryRaw<DraftItemRow[]>(Prisma.sql`
     SELECT di.risk_assessment_draft_item_id, di.significant_activity_id, sa.activity_code, sa.activity_name
-    FROM linear_risk.risk_assessment_draft_item di
-    JOIN linear_risk.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
+    FROM core.risk_assessment_draft_item di
+    JOIN core.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
     WHERE di.risk_assessment_draft_id = ${draftPk}
       AND COALESCE(di.is_deleted, false) = false
     ORDER BY di.sort_order ASC, di.risk_assessment_draft_item_id ASC
@@ -443,13 +443,13 @@ async function getInherentSeedRows(draftPk: bigint): Promise<DraftInherentSeedRo
       ci.name AS impact_name,
       ci.numeric_value AS impact_value,
       dir.inherent_risk_score
-    FROM linear_risk.risk_assessment_draft_item di
-    JOIN linear_risk.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
-    LEFT JOIN linear_risk.risk_assessment_draft_item_risk dir
+    FROM core.risk_assessment_draft_item di
+    JOIN core.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
+    LEFT JOIN core.risk_assessment_draft_item_risk dir
       ON dir.risk_assessment_draft_item_id = di.risk_assessment_draft_item_id
-    LEFT JOIN linear_risk.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
-    LEFT JOIN linear_risk.catalog_probability cp ON cp.catalog_probability_id = dir.catalog_probability_id
-    LEFT JOIN linear_risk.catalog_impact ci ON ci.catalog_impact_id = dir.catalog_impact_id
+    LEFT JOIN core.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
+    LEFT JOIN core.catalog_probability cp ON cp.catalog_probability_id = dir.catalog_probability_id
+    LEFT JOIN core.catalog_impact ci ON ci.catalog_impact_id = dir.catalog_impact_id
     WHERE di.risk_assessment_draft_id = ${draftPk}
       AND COALESCE(di.is_deleted, false) = false
     ORDER BY di.sort_order ASC, di.risk_assessment_draft_item_id ASC, dir.risk_assessment_draft_item_risk_id ASC
@@ -463,18 +463,18 @@ async function ensureFirstItem(draftPk: bigint, companyId: string): Promise<bigi
   const activityUuid = await isUuidCompany('significant_activity');
   const act = activityUuid
     ? await prisma.$queryRaw<{ significant_activity_id: string }[]>(Prisma.sql`
-        INSERT INTO linear_risk.significant_activity (company_id, activity_code, activity_name, activity_description, is_active, created_at, updated_at)
+        INSERT INTO core.significant_activity (company_id, activity_code, activity_name, activity_description, is_active, created_at, updated_at)
         VALUES (${companyId}::uuid, 'KX-PLACEHOLDER', 'Actividad placeholder', 'Generada automáticamente', true, now(), now())
         RETURNING significant_activity_id
       `)
     : await prisma.$queryRaw<{ significant_activity_id: string }[]>(Prisma.sql`
-        INSERT INTO linear_risk.significant_activity (company_id, activity_code, activity_name, activity_description, is_active, created_at, updated_at)
+        INSERT INTO core.significant_activity (company_id, activity_code, activity_name, activity_description, is_active, created_at, updated_at)
         VALUES (1, 'KX-PLACEHOLDER', 'Actividad placeholder', 'Generada automáticamente', true, now(), now())
         RETURNING significant_activity_id
       `);
 
   const item = await prisma.$queryRaw<{ risk_assessment_draft_item_id: bigint }[]>(Prisma.sql`
-    INSERT INTO linear_risk.risk_assessment_draft_item (
+    INSERT INTO core.risk_assessment_draft_item (
       risk_assessment_draft_id, significant_activity_id, materiality_level, materiality_weight, materiality_justification,
       sort_order, notes, created_at, updated_at, is_deleted
     ) VALUES (
@@ -486,7 +486,7 @@ async function ensureFirstItem(draftPk: bigint, companyId: string): Promise<bigi
 async function updateWizardNotes(draftPk: bigint, patch: any) {
   const rows = await prisma.$queryRaw<LinearDraftRow[]>(Prisma.sql`
     SELECT risk_assessment_draft_id, notes, assessment_code, company_id
-    FROM linear_risk.risk_assessment_draft
+    FROM core.risk_assessment_draft
     WHERE risk_assessment_draft_id = ${draftPk}
     LIMIT 1
   `);
@@ -495,7 +495,7 @@ async function updateWizardNotes(draftPk: bigint, patch: any) {
   const notes = parseNotes(row.notes);
   const next = { ...notes, wizard: { ...(notes?.wizard || {}), ...patch } };
   await prisma.$executeRaw(Prisma.sql`
-    UPDATE linear_risk.risk_assessment_draft
+    UPDATE core.risk_assessment_draft
     SET notes = ${JSON.stringify(next)}, updated_at = now()
     WHERE risk_assessment_draft_id = ${draftPk}
   `);
@@ -520,13 +520,13 @@ export async function getLinearRiskScalesHandler() {
     const [probabilityCatalog, impactCatalog] = await Promise.all([
       prisma.$queryRaw<Array<{ catalog_probability_id: bigint; code: string; name: string; description: string | null; numeric_value: number; ordinal: number }>>(Prisma.sql`
         SELECT catalog_probability_id, code, name, description, numeric_value, ordinal
-        FROM linear_risk.catalog_probability
+        FROM core.catalog_probability
         WHERE is_active = true
         ORDER BY ordinal ASC
       `),
       prisma.$queryRaw<Array<{ catalog_impact_id: bigint; code: string; name: string; description: string | null; numeric_value: number; ordinal: number }>>(Prisma.sql`
         SELECT catalog_impact_id, code, name, description, numeric_value, ordinal
-        FROM linear_risk.catalog_impact
+        FROM core.catalog_impact
         WHERE is_active = true
         ORDER BY ordinal ASC
       `),
@@ -576,7 +576,7 @@ export async function getLinearRiskSignificantActivitiesCatalogHandler(request: 
           sa.activity_name,
           sa.activity_description,
           sa.is_active
-        FROM linear_risk.significant_activity sa
+        FROM core.significant_activity sa
         WHERE sa.significant_activity_id = ${activityId}::uuid
         LIMIT 1
       `);
@@ -604,7 +604,7 @@ export async function getLinearRiskSignificantActivitiesCatalogHandler(request: 
             sa.activity_name,
             sa.activity_description,
             sa.is_active
-          FROM linear_risk.significant_activity sa
+          FROM core.significant_activity sa
           WHERE COALESCE(sa.is_active, true) = true
           ORDER BY sa.activity_code ASC, sa.activity_name ASC
         `)
@@ -616,7 +616,7 @@ export async function getLinearRiskSignificantActivitiesCatalogHandler(request: 
             sa.activity_name,
             sa.activity_description,
             sa.is_active
-          FROM linear_risk.significant_activity sa
+          FROM core.significant_activity sa
           WHERE sa.company_id = ${companyId}::uuid
             AND COALESCE(sa.is_active, true) = true
           ORDER BY sa.activity_code ASC, sa.activity_name ASC
@@ -669,7 +669,7 @@ export async function postLinearRiskSignificantActivitiesCatalogHandler(request:
 
     try {
       const created = await prisma.$queryRaw<SignificantActivityCatalogRow[]>(Prisma.sql`
-        INSERT INTO linear_risk.significant_activity (
+        INSERT INTO core.significant_activity (
           company_id,
           activity_code,
           activity_name,
@@ -756,7 +756,7 @@ export async function putLinearRiskSignificantActivitiesCatalogHandler(request: 
 
     try {
       const updated = await prisma.$queryRaw<SignificantActivityCatalogRow[]>(Prisma.sql`
-        UPDATE linear_risk.significant_activity
+        UPDATE core.significant_activity
         SET
           company_id = ${companyId}::uuid,
           activity_code = ${activityCode},
@@ -812,7 +812,7 @@ export async function deleteLinearRiskSignificantActivitiesCatalogHandler(reques
     }
 
     const rows = await prisma.$queryRaw<Array<{ significant_activity_id: string }>>(Prisma.sql`
-      UPDATE linear_risk.significant_activity
+      UPDATE core.significant_activity
       SET is_active = false, updated_at = now()
       WHERE significant_activity_id = ${id}::uuid
       RETURNING significant_activity_id
@@ -846,7 +846,7 @@ export async function getLinearRiskRisksBySignificantActivityHandler(request: Re
         rc.risk_description,
         rc.risk_category,
         rc.is_active
-      FROM linear_risk.risk_catalog rc
+      FROM core.risk_catalog rc
       WHERE rc.significant_activity_id = ${significantActivityId}::uuid
         AND COALESCE(rc.is_active, true) = true
       ORDER BY rc.risk_name ASC
@@ -888,7 +888,7 @@ export async function getLinearRiskCatalogRiskHandler(request: Request) {
           rc.risk_description,
           rc.risk_category,
           rc.is_active
-        FROM linear_risk.risk_catalog rc
+        FROM core.risk_catalog rc
         WHERE rc.risk_catalog_id = ${riskId}::uuid
         LIMIT 1
       `);
@@ -942,7 +942,7 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
     if (!riskName) return NextResponse.json({ error: 'risk_name es obligatorio.' }, { status: 400 });
 
     const rows = await prisma.$queryRaw<RiskCatalogByActivityRow[]>(Prisma.sql`
-      INSERT INTO linear_risk.risk_catalog (
+      INSERT INTO core.risk_catalog (
         significant_activity_id,
         risk_code,
         risk_name,
@@ -1017,7 +1017,7 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
     if (!riskName) return NextResponse.json({ error: 'risk_name es obligatorio.' }, { status: 400 });
 
     const rows = await prisma.$queryRaw<RiskCatalogByActivityRow[]>(Prisma.sql`
-      UPDATE linear_risk.risk_catalog
+      UPDATE core.risk_catalog
       SET
         significant_activity_id = ${significantActivityId}::uuid,
         risk_code = ${riskCode},
@@ -1064,7 +1064,7 @@ export async function deleteLinearRiskCatalogRiskHandler(request: Request) {
     if (!UUID_REGEX.test(id)) return NextResponse.json({ error: 'id inválido.' }, { status: 400 });
 
     const rows = await prisma.$queryRaw<Array<{ risk_catalog_id: string }>>(Prisma.sql`
-      UPDATE linear_risk.risk_catalog
+      UPDATE core.risk_catalog
       SET is_active = false, updated_at = now()
       WHERE risk_catalog_id = ${id}::uuid
       RETURNING risk_catalog_id::text AS risk_catalog_id
@@ -1116,13 +1116,13 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
     const [probabilityCatalog, impactCatalog, seedRows] = await Promise.all([
       prisma.$queryRaw<Array<{ catalog_probability_id: bigint; code: string; name: string; description: string | null; numeric_value: number; ordinal: number }>>(Prisma.sql`
         SELECT catalog_probability_id, code, name, description, numeric_value, ordinal
-        FROM linear_risk.catalog_probability
+        FROM core.catalog_probability
         WHERE is_active = true
         ORDER BY ordinal ASC
       `),
       prisma.$queryRaw<Array<{ catalog_impact_id: bigint; code: string; name: string; description: string | null; numeric_value: number; ordinal: number }>>(Prisma.sql`
         SELECT catalog_impact_id, code, name, description, numeric_value, ordinal
-        FROM linear_risk.catalog_impact
+        FROM core.catalog_impact
         WHERE is_active = true
         ORDER BY ordinal ASC
       `),
@@ -1135,7 +1135,7 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
         NULL::text AS code,
         c.name AS name,
         c.description AS description
-      FROM linear_risk.control_catalog c
+      FROM core.control_catalog c
       ORDER BY c.name ASC
     `);
 
@@ -1154,8 +1154,8 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
           c.name AS control_name,
           NULL::text AS control_code,
           c.description AS control_description
-        FROM linear_risk.map_lineal_risk_risk_control m
-        JOIN linear_risk.control_catalog c
+        FROM core.map_lineal_risk_risk_control m
+        JOIN core.control_catalog c
           ON c.control_id = m.catalog_lineal_control_id
       `);
       for (const row of rows) {
@@ -1270,14 +1270,14 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
 }
 async function resolveProbId(v: number) {
   const rows = await prisma.$queryRaw<{ catalog_probability_id: bigint }[]>(Prisma.sql`
-    SELECT catalog_probability_id FROM linear_risk.catalog_probability WHERE numeric_value = ${v} AND is_active = true ORDER BY ordinal ASC LIMIT 1
+    SELECT catalog_probability_id FROM core.catalog_probability WHERE numeric_value = ${v} AND is_active = true ORDER BY ordinal ASC LIMIT 1
   `);
   return rows[0]?.catalog_probability_id ?? null;
 }
 
 async function resolveImpactId(v: number) {
   const rows = await prisma.$queryRaw<{ catalog_impact_id: bigint }[]>(Prisma.sql`
-    SELECT catalog_impact_id FROM linear_risk.catalog_impact WHERE numeric_value = ${v} AND is_active = true ORDER BY ordinal ASC LIMIT 1
+    SELECT catalog_impact_id FROM core.catalog_impact WHERE numeric_value = ${v} AND is_active = true ORDER BY ordinal ASC LIMIT 1
   `);
   return rows[0]?.catalog_impact_id ?? null;
 }
@@ -1290,7 +1290,7 @@ async function resolveRiskCatalogId(
 ) {
   const existing = await prisma.$queryRaw<{ risk_catalog_id: string }[]>(Prisma.sql`
     SELECT risk_catalog_id::text AS risk_catalog_id
-    FROM linear_risk.risk_catalog
+    FROM core.risk_catalog
     WHERE risk_code = ${code}
       AND (
         (${significantActivityId ? Prisma.sql`${significantActivityId}::uuid` : Prisma.sql`NULL`} IS NULL AND significant_activity_id IS NULL)
@@ -1301,7 +1301,7 @@ async function resolveRiskCatalogId(
   if (existing[0]) return existing[0].risk_catalog_id;
 
   const inserted = await prisma.$queryRaw<{ risk_catalog_id: string }[]>(Prisma.sql`
-    INSERT INTO linear_risk.risk_catalog (significant_activity_id, risk_code, risk_name, risk_description, risk_category, is_active, created_at, updated_at)
+    INSERT INTO core.risk_catalog (significant_activity_id, risk_code, risk_name, risk_description, risk_category, is_active, created_at, updated_at)
     VALUES (${significantActivityId ? Prisma.sql`${significantActivityId}::uuid` : Prisma.sql`NULL`}, ${code}, ${name}, ${description}, 'general', true, now(), now())
     RETURNING risk_catalog_id::text AS risk_catalog_id
   `);
@@ -1398,15 +1398,15 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
     }
 
     await prisma.$executeRaw(Prisma.sql`
-      DELETE FROM linear_risk.risk_assessment_draft_item_risk
+      DELETE FROM core.risk_assessment_draft_item_risk
       WHERE risk_assessment_draft_item_id IN (
         SELECT risk_assessment_draft_item_id
-        FROM linear_risk.risk_assessment_draft_item
+        FROM core.risk_assessment_draft_item
         WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
       )
     `);
     await prisma.$executeRaw(Prisma.sql`
-      DELETE FROM linear_risk.risk_assessment_draft_item
+      DELETE FROM core.risk_assessment_draft_item
       WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
     `);
 
@@ -1421,7 +1421,7 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
         activity_description: string | null;
       }>>(Prisma.sql`
         SELECT significant_activity_id, activity_code, activity_name, activity_description
-        FROM linear_risk.significant_activity
+        FROM core.significant_activity
         WHERE significant_activity_id = ${significantActivityId}::uuid
           AND company_id = ${selectedCompanyId}::uuid
           AND COALESCE(is_active, true) = true
@@ -1442,7 +1442,7 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
       const materialityWeight = normalizeMaterialityWeight(item.materiality_weight);
 
       const draftItem = await prisma.$queryRaw<{ risk_assessment_draft_item_id: bigint }[]>(Prisma.sql`
-        INSERT INTO linear_risk.risk_assessment_draft_item (
+        INSERT INTO core.risk_assessment_draft_item (
           risk_assessment_draft_id, significant_activity_id, materiality_level, materiality_weight,
           materiality_justification, sort_order, notes, created_at, updated_at, is_deleted
         ) VALUES (
@@ -1476,7 +1476,7 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
           if (item.inherent_risk_catalog_id && UUID_REGEX.test(String(item.inherent_risk_catalog_id))) {
             const existing = await prisma.$queryRaw<Array<{ risk_catalog_id: string }>>(Prisma.sql`
               SELECT risk_catalog_id::text AS risk_catalog_id
-              FROM linear_risk.risk_catalog
+              FROM core.risk_catalog
               WHERE risk_catalog_id = ${String(item.inherent_risk_catalog_id)}::uuid
                 AND significant_activity_id = ${activity.significant_activity_id}::uuid
                 AND COALESCE(is_active, true) = true
@@ -1489,7 +1489,7 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
           }
 
           await prisma.$executeRaw(Prisma.sql`
-            INSERT INTO linear_risk.risk_assessment_draft_item_risk (
+            INSERT INTO core.risk_assessment_draft_item_risk (
               risk_assessment_draft_item_id, risk_catalog_id, catalog_probability_id, catalog_impact_id,
               inherent_risk_score, inherent_risk_level, inherent_risk_trend, rationale, created_at, updated_at
             ) VALUES (
@@ -1522,12 +1522,12 @@ export async function putLinearRiskDraftControlsHandler(request: Request, draftI
     const body = (await request.json()) as { evaluations?: EvaluationInput[] };
     const evaluations = Array.isArray(body.evaluations) ? body.evaluations : [];
 
-    await prisma.$executeRaw(Prisma.sql`DELETE FROM linear_risk.risk_assessment_draft_item_control WHERE risk_assessment_draft_item_id = ${itemId}`);
+    await prisma.$executeRaw(Prisma.sql`DELETE FROM core.risk_assessment_draft_item_control WHERE risk_assessment_draft_item_id = ${itemId}`);
 
     for (const ev of evaluations) {
       if (!ev.status) continue;
       await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO linear_risk.risk_assessment_draft_item_control (
+        INSERT INTO core.risk_assessment_draft_item_control (
           risk_assessment_draft_item_id, evaluation_scope, control_name, control_description,
           effectiveness_level, effectiveness_trend, net_risk_score, net_risk_level, rationale, created_at, updated_at
         ) VALUES (
@@ -1555,8 +1555,8 @@ export async function putLinearRiskDraftFindingsActionsHandler(request: Request,
     const body = (await request.json()) as { extensions?: ExtensionInput[] };
     const extensions = Array.isArray(body.extensions) ? body.extensions : [];
 
-    await prisma.$executeRaw(Prisma.sql`DELETE FROM linear_risk.risk_assessment_draft_item_action WHERE risk_assessment_draft_item_id = ${itemId}`);
-    await prisma.$executeRaw(Prisma.sql`DELETE FROM linear_risk.risk_assessment_draft_item_finding WHERE risk_assessment_draft_item_id = ${itemId}`);
+    await prisma.$executeRaw(Prisma.sql`DELETE FROM core.risk_assessment_draft_item_action WHERE risk_assessment_draft_item_id = ${itemId}`);
+    await prisma.$executeRaw(Prisma.sql`DELETE FROM core.risk_assessment_draft_item_finding WHERE risk_assessment_draft_item_id = ${itemId}`);
 
     for (const ext of extensions) {
       const title = ext.title?.trim();
@@ -1564,14 +1564,14 @@ export async function putLinearRiskDraftFindingsActionsHandler(request: Request,
       if (!title && !desc) continue;
 
       const finding = await prisma.$queryRaw<{ risk_assessment_draft_item_finding_id: bigint }[]>(Prisma.sql`
-        INSERT INTO linear_risk.risk_assessment_draft_item_finding (
+        INSERT INTO core.risk_assessment_draft_item_finding (
           risk_assessment_draft_item_id, finding_type, title, description, severity_level, recommendation, created_at, updated_at
         ) VALUES (${itemId}, 'gap', ${title || 'Hallazgo'}, ${desc || ''}, 'media', ${null}, now(), now())
         RETURNING risk_assessment_draft_item_finding_id
       `);
 
       await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO linear_risk.risk_assessment_draft_item_action (
+        INSERT INTO core.risk_assessment_draft_item_action (
           risk_assessment_draft_item_id, related_finding_id, action_title, action_description,
           owner_manager_id, target_date, status, progress_notes, created_at, updated_at
         ) VALUES (
@@ -1591,14 +1591,14 @@ export async function putLinearRiskDraftFindingsActionsHandler(request: Request,
 async function ensureLinearRiskFinal(auth: { tenantId: string }, draft: LinearDraftRow) {
   const existing = await prisma.$queryRaw<Array<{ risk_assessment_final_id: bigint }>>(Prisma.sql`
     SELECT risk_assessment_final_id
-    FROM linear_risk.risk_assessment_final
+    FROM core.risk_assessment_final
     WHERE source_draft_id = ${draft.risk_assessment_draft_id}
     LIMIT 1
   `);
   if (existing[0]) return existing[0].risk_assessment_final_id;
 
   const source = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT * FROM linear_risk.risk_assessment_draft
+    SELECT * FROM core.risk_assessment_draft
     WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
     LIMIT 1
   `);
@@ -1608,7 +1608,7 @@ async function ensureLinearRiskFinal(auth: { tenantId: string }, draft: LinearDr
   const companyUuidRows = await prisma.$queryRaw<{ data_type: string }[]>(Prisma.sql`
     SELECT data_type
     FROM information_schema.columns
-    WHERE table_schema = 'linear_risk'
+    WHERE table_schema = 'core'
       AND table_name = 'risk_assessment_final'
       AND column_name = 'company_id'
     LIMIT 1
@@ -1617,7 +1617,7 @@ async function ensureLinearRiskFinal(auth: { tenantId: string }, draft: LinearDr
 
   const inserted = finalCompanyUuid
     ? await prisma.$queryRaw<{ risk_assessment_final_id: bigint }[]>(Prisma.sql`
-        INSERT INTO linear_risk.risk_assessment_final (
+        INSERT INTO core.risk_assessment_final (
           source_draft_id, assessment_code, title, company_id, assessment_period_label,
           scope_description, business_context, model_of_business, methodology_version,
           root_assessment_code, version_no, is_current_version, concluded_at,
@@ -1631,7 +1631,7 @@ async function ensureLinearRiskFinal(auth: { tenantId: string }, draft: LinearDr
         ) RETURNING risk_assessment_final_id
       `)
     : await prisma.$queryRaw<{ risk_assessment_final_id: bigint }[]>(Prisma.sql`
-        INSERT INTO linear_risk.risk_assessment_final (
+        INSERT INTO core.risk_assessment_final (
           source_draft_id, assessment_code, title, company_id, assessment_period_label,
           scope_description, business_context, model_of_business, methodology_version,
           root_assessment_code, version_no, is_current_version, concluded_at,
@@ -1646,7 +1646,7 @@ async function ensureLinearRiskFinal(auth: { tenantId: string }, draft: LinearDr
       `);
 
   await prisma.$executeRaw(Prisma.sql`
-    UPDATE linear_risk.risk_assessment_draft
+    UPDATE core.risk_assessment_draft
     SET status = 'concluded', concluded_at = now(), updated_at = now()
     WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
   `);
@@ -1693,3 +1693,6 @@ export async function postLinearRiskDraftReportHandler(request: Request, { param
     return NextResponse.json({ error: 'No se pudo generar el informe' }, { status: 500 });
   }
 }
+
+
+

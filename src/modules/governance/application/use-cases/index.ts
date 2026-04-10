@@ -6,3 +6,5 @@ export * from './GetLicenseDashboardUseCase';
 export * from './UploadLicenseUseCase';
 export * from './ValidateLicenseUseCase';
 export * from './RenewLicenseUseCase';
+export * from './GetOntologyAssignmentContextUseCase';
+export * from './UpsertCompanyOntologyAssignmentUseCase';

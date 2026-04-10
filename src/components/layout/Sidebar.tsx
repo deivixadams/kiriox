@@ -14,8 +14,6 @@ import {
   CalendarCheck2,
   CheckSquare,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ClipboardCheck,
   Clock3,
   Cpu,
@@ -82,7 +80,8 @@ type SidebarProps = {
 
 export default function Sidebar({ items, loading = false }: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const collapsed = !isHovering;
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -260,6 +259,8 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
   return (
     <aside
       className="glass-card"
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
       style={{
         width: collapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)",
         height: "100vh",
@@ -276,32 +277,26 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 0.75rem", marginBottom: "2rem" }}>
-        {!collapsed && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <div
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
-                background: "var(--primary-glow)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Shield size={20} color="white" />
-            </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "8px",
+              background: "var(--primary-glow)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Shield size={20} color="white" />
+          </div>
+          {!collapsed && (
             <h1 className="gradient-text" style={{ fontSize: "1.25rem", fontWeight: "bold", letterSpacing: "0.1rem" }}>
               {APP_SHORT_NAME}
             </h1>
-          </div>
-        )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          style={{ background: "none", border: "none", color: "var(--foreground)", cursor: "pointer", padding: "0.5rem" }}
-        >
-          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
+          )}
+        </div>
       </div>
 
       <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.5rem", overflowY: "auto", overflowX: "hidden" }}>

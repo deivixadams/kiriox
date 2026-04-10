@@ -21,7 +21,7 @@ export async function getFullQuestionGraphHandler(request: Request) {
     Array<{ node_id: string; node_type: string; node_code: string | null; node_name: string | null }>
   >(
     `SELECT node_id, node_type, node_code, node_name
-     FROM "views-schema"._v_graph_nodes_master
+     FROM views._v_graph_nodes_master
      WHERE ${nodeWhere}`,
     ...nodeParams
   );
@@ -37,7 +37,7 @@ export async function getFullQuestionGraphHandler(request: Request) {
     Array<{ edge_id: string; src_node_id: string; dst_node_id: string; edge_type: string | null }>
   >(
     `SELECT edge_id, src_node_id, dst_node_id, edge_type
-     FROM "views-schema"._v_graph_edges_master
+     FROM views._v_graph_edges_master
      WHERE ${edgeWhere}`,
     ...edgeParams
   );
@@ -71,3 +71,4 @@ export async function getFullQuestionGraphHandler(request: Request) {
 
   return elements;
 }
+

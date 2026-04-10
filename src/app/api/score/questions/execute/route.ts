@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { PrismaStructuralQuestionRepository } from '@/modules/structural-risk/infrastructure/repositories/PrismaStructuralQuestionRepository';
 import { ExecuteMainQuestionUseCase } from '@/modules/structural-risk/application/use-cases/ExecuteMainQuestionUseCase';
 import { withModuleAccess } from '@/shared/http';
 
-export const POST = withModuleAccess('structural-risk', 'risk.structural.run', async function POST(req: NextRequest) {
+export const POST = withModuleAccess('structural-risk', 'risk.structural.run', async function POST(req: Request) {
   try {
     const { code, context, debug } = await req.json();
     

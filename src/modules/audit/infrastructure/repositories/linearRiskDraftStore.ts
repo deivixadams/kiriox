@@ -22,7 +22,7 @@ async function isDraftCompanyUuidColumn(): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ data_type: string }[]>(Prisma.sql`
     SELECT data_type
     FROM information_schema.columns
-    WHERE table_schema = 'linear_risk'
+    WHERE table_schema = 'core'
       AND table_name = 'risk_assessment_draft'
       AND column_name = 'company_id'
     LIMIT 1
@@ -125,7 +125,7 @@ export async function getCanonicalAuditDraftById(auditDraftId: string, tenantId:
   const rows = await prisma.$queryRaw<LinearRiskDraftRow[]>(
     Prisma.sql`
       SELECT assessment_code, notes, created_at, updated_at
-      FROM linear_risk.risk_assessment_draft
+      FROM core.risk_assessment_draft
       WHERE assessment_code = ${assessmentCode}
         AND COALESCE(is_deleted, false) = false
       LIMIT 1
@@ -167,7 +167,7 @@ export async function upsertCanonicalAuditDraft(input: {
 
   await prisma.$executeRaw(
     Prisma.sql`
-      INSERT INTO linear_risk.risk_assessment_draft (
+      INSERT INTO core.risk_assessment_draft (
         assessment_code,
         title,
         company_id,
@@ -220,3 +220,5 @@ export async function upsertCanonicalAuditDraft(input: {
     `
   );
 }
+
+

@@ -32,7 +32,7 @@ export const GET = nextHandler(
         is_active,
         created_at,
         updated_at
-      FROM linear_risk.risk_appetite_catalog
+      FROM core.risk_appetite_catalog
       WHERE is_active = true
       ORDER BY sequence_order NULLS LAST, appetite_level NULLS LAST, risk_appetite_catalog_id
     `);
@@ -40,3 +40,4 @@ export const GET = nextHandler(
     return Response.json({ data: toJsonSafe(rows) });
   })
 );
+

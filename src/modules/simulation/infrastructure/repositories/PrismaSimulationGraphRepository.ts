@@ -56,7 +56,7 @@ export class PrismaSimulationGraphRepository {
       `SELECT 
         failed_node_id as node_id, 
         failure_impact_score
-      FROM "views-schema"._v_graph_failure_impact
+      FROM views._v_graph_failure_impact
       WHERE reino_id = $1::uuid 
         AND (failed_node_type = 'ELEMENT' OR failed_node_type = 'OBLIGATION')
       ORDER BY failure_impact_score DESC NULLS LAST
@@ -129,9 +129,9 @@ export class PrismaSimulationGraphRepository {
           COALESCE(d.total_degree, 0) as total_degree,
           n.is_hard_gate,
           n.structural_weight
-        FROM "views-schema"._v_graph_nodes_master n
-        LEFT JOIN "views-schema"._v_graph_failure_impact f ON f.failed_node_id = n.node_id AND f.reino_id = $1::uuid
-        LEFT JOIN "views-schema"._v_graph_node_degree d ON d.node_id = n.node_id
+        FROM views._v_graph_nodes_master n
+        LEFT JOIN views._v_graph_failure_impact f ON f.failed_node_id = n.node_id AND f.reino_id = $1::uuid
+        LEFT JOIN views._v_graph_node_degree d ON d.node_id = n.node_id
         WHERE n.node_id IN (SELECT id FROM all_node_ids)
           AND n.node_type IN ('ELEMENT', 'RISK', 'CONTROL', 'OBLIGATION')
       )
@@ -162,3 +162,4 @@ export class PrismaSimulationGraphRepository {
     };
   }
 }
+

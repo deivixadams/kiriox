@@ -22,7 +22,7 @@ export class PrismaMonteCarloRepository {
       `SELECT 
         failed_node_id as node_id, 
         failure_impact_score
-      FROM "views-schema"._v_graph_failure_impact
+      FROM views._v_graph_failure_impact
       WHERE reino_id = $1::uuid 
         AND (failed_node_type = 'ELEMENT' OR failed_node_type = 'OBLIGATION')
       ORDER BY failure_impact_score DESC NULLS LAST
@@ -94,8 +94,8 @@ export class PrismaMonteCarloRepository {
         SELECT n_src.node_id as src, n_dst.node_id as dst, 'ELEMENT_DEPENDS_ON_ELEMENT'::text as type, gen_random_uuid() as id,
                m.propagation_multiplier::float as propagation_multiplier
         FROM core.obligation_graph m
-        JOIN "views-schema"._v_graph_nodes_master n_src ON n_src.node_code = m.parent_obligation_code
-        JOIN "views-schema"._v_graph_nodes_master n_dst ON n_dst.node_code = m.child_obligation_code
+        JOIN views._v_graph_nodes_master n_src ON n_src.node_code = m.parent_obligation_code
+        JOIN views._v_graph_nodes_master n_dst ON n_dst.node_code = m.child_obligation_code
         WHERE n_src.node_id IN (SELECT node_id FROM seeds)
       ),
       -- Final Edges list
@@ -121,8 +121,8 @@ export class PrismaMonteCarloRepository {
           0.7::float as operating_score,
           0.8::float as evidence_score, -- Baseline cuando no hay score
           1.0::float as design_score
-        FROM "views-schema"._v_graph_nodes_master n
-        LEFT JOIN "views-schema"._v_graph_failure_impact f ON f.failed_node_id = n.node_id AND f.reino_id = $1::uuid
+        FROM views._v_graph_nodes_master n
+        LEFT JOIN views._v_graph_failure_impact f ON f.failed_node_id = n.node_id AND f.reino_id = $1::uuid
         WHERE n.node_id IN (SELECT id FROM all_node_ids)
           AND n.node_type IN ('ELEMENT', 'RISK', 'CONTROL', 'OBLIGATION')
       )
@@ -152,8 +152,8 @@ export class PrismaMonteCarloRepository {
         SELECT n_src.node_id as src, n_dst.node_id as dst, 'ELEMENT_DEPENDS_ON_ELEMENT'::text as type, gen_random_uuid() as id,
                m.propagation_multiplier::float as propagation_multiplier
         FROM core.obligation_graph m
-        JOIN "views-schema"._v_graph_nodes_master n_src ON n_src.node_code = m.parent_obligation_code
-        JOIN "views-schema"._v_graph_nodes_master n_dst ON n_dst.node_code = m.child_obligation_code
+        JOIN views._v_graph_nodes_master n_src ON n_src.node_code = m.parent_obligation_code
+        JOIN views._v_graph_nodes_master n_dst ON n_dst.node_code = m.child_obligation_code
         WHERE n_src.node_id IN (SELECT node_id FROM seeds)
       ),
       -- Final Edges list
@@ -186,8 +186,8 @@ export class PrismaMonteCarloRepository {
           COALESCE(NULLIF(ls.score, 0), 0.7)::float as operating_score,
           0.8::float as evidence_score, -- Placeholder for V1
           1.0::float as design_score
-        FROM "views-schema"._v_graph_nodes_master n
-        LEFT JOIN "views-schema"._v_graph_failure_impact f ON f.failed_node_id = n.node_id AND f.reino_id = $1::uuid
+        FROM views._v_graph_nodes_master n
+        LEFT JOIN views._v_graph_failure_impact f ON f.failed_node_id = n.node_id AND f.reino_id = $1::uuid
         LEFT JOIN latest_scores ls ON ls.control_id = n.node_id
         WHERE n.node_id IN (SELECT id FROM all_node_ids)
           AND n.node_type IN ('ELEMENT', 'RISK', 'CONTROL', 'OBLIGATION')
@@ -226,3 +226,4 @@ export class PrismaMonteCarloRepository {
     };
   }
 }
+

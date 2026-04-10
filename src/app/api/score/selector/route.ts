@@ -33,6 +33,10 @@ export async function POST(request: Request) {
       ? frameworkVersionIdInput
       : null;
 
+    if (!frameworkVersionId) {
+      return NextResponse.json({ error: 'framework_version_id es requerido' }, { status: 400 });
+    }
+
     const selectedReinoId = typeof reinoId === 'string' && reinoId.trim().length > 0
       ? reinoId.trim()
       : null;
@@ -69,7 +73,7 @@ export async function POST(request: Request) {
         risk_span,
         global_rank,
         bucket
-      FROM "views-schema".dashboard_top10_controls
+      FROM views.dashboard_top10_controls
     `).catch(() => [] as any[]);
 
     if (Array.isArray(viewRows) && viewRows.length > 0) {
@@ -83,7 +87,7 @@ export async function POST(request: Request) {
           description: row.bucket || null,
           score: toNumber(row.propagation_impact_score ?? row.structural_score ?? 0),
           rank: Number.isFinite(Number(row.global_rank)) ? Number(row.global_rank) : idx + 1,
-          reasons: ['views-schema.dashboard_top10_controls'],
+          reasons: ['views.dashboard_top10_controls'],
         })),
         tests: [] as any[],
       };
@@ -103,9 +107,8 @@ export async function POST(request: Request) {
             })
           : await tx.run_draft.create({
               data: {
-                company_id: companyId,
                 company: { connect: { id: companyId } },
-                framework_version_id: frameworkVersionId as any,
+                framework_version: { connect: { id: frameworkVersionId } },
                 period_start: new Date(periodStart),
                 period_end: new Date(periodEnd),
                 mode,
@@ -138,10 +141,6 @@ export async function POST(request: Request) {
         draftId: run.id,
         selection,
       });
-    }
-
-    if (!frameworkVersionId) {
-      return NextResponse.json({ error: 'framework_version_id es requerido' }, { status: 400 });
     }
 
     if (mode === 'top20') {
@@ -246,9 +245,8 @@ export async function POST(request: Request) {
               })
             : await tx.run_draft.create({
                 data: {
-                  company_id: companyId,
                   company: { connect: { id: companyId } },
-                  framework_version_id: frameworkVersionId as any,
+                  framework_version: { connect: { id: frameworkVersionId } },
                   period_start: new Date(periodStart),
                   period_end: new Date(periodEnd),
                   mode,
@@ -691,9 +689,8 @@ export async function POST(request: Request) {
           })
         : await tx.run_draft.create({
             data: {
-              company_id: companyId,
               company: { connect: { id: companyId } },
-              framework_version_id: frameworkVersionId as any,
+              framework_version: { connect: { id: frameworkVersionId } },
               period_start: new Date(periodStart),
               period_end: new Date(periodEnd),
               mode,
@@ -764,5 +761,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to build selection' }, { status: 500 });
   }
 }
+
 
 

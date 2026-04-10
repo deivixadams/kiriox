@@ -84,7 +84,7 @@ export default async function NuevaVersionPage() {
     const prisma = (await import('@/lib/prisma')).default;
     const activeProfiles = await (prisma as any).$queryRaw(Prisma.sql`
         SELECT id, code, name, version_no, activated_at
-        FROM params.profile
+        FROM governance.profile
         WHERE is_active = true
         LIMIT 1
     `) as ActiveProfile[];
@@ -108,8 +108,8 @@ export default async function NuevaVersionPage() {
                   ppv.text_value,
                   ppv.jsonb_value,
                   pd.info
-              FROM params.profile_parameter_value ppv
-              JOIN params.parameter_definition pd
+              FROM governance.profile_parameter_value ppv
+              JOIN governance.parameter_definition pd
                 ON pd.id = ppv.parameter_definition_id
               WHERE ppv.profile_id = ${activeProfile.id}::uuid
               ORDER BY pd.group_code NULLS LAST, pd.sort_order NULLS LAST, pd.code
@@ -272,3 +272,5 @@ export default async function NuevaVersionPage() {
         </ParametrosGate>
     );
 }
+
+

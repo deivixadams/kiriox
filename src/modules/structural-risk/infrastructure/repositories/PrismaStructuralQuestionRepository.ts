@@ -37,7 +37,7 @@ export class PrismaStructuralQuestionRepository implements StructuralQuestionRep
           decision_use,
           business_meaning,
           graph_design
-        FROM structural_risk.main_question
+        FROM core.main_question
         ORDER BY question_no ASC, code ASC
       `;
 
@@ -145,7 +145,7 @@ export class PrismaStructuralQuestionRepository implements StructuralQuestionRep
       }>
     >`
       SELECT code, question, source_of_truth, graph_design
-      FROM structural_risk.main_question
+      FROM core.main_question
       WHERE code = ${code}
       LIMIT 1
     `;
@@ -282,7 +282,7 @@ async function buildEdgesAmong(nodeIds: string[]) {
     edge_type: string | null;
   }>>(
     `SELECT edge_id, src_node_id, dst_node_id, edge_type
-     FROM "views-schema"._v_graph_edges_master
+     FROM views._v_graph_edges_master
      WHERE src_node_id = ANY($1::uuid[])
        AND dst_node_id = ANY($1::uuid[])`,
     nodeIds
@@ -310,7 +310,7 @@ async function buildDomainImpactGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `SELECT failed_node_id as node_id, failed_node_code as node_code, failed_node_name as node_name, failed_node_type as node_type
-     FROM "views-schema"._v_graph_failure_impact
+     FROM views._v_graph_failure_impact
      WHERE ${where}
      ORDER BY failure_impact_score DESC
      LIMIT 3`,
@@ -335,7 +335,7 @@ async function buildDependencyRootGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `SELECT node_id, node_code, node_name, node_type
-     FROM "views-schema"._v_graph_nodes_master
+     FROM views._v_graph_nodes_master
      WHERE ${where}
      ORDER BY structural_weight DESC NULLS LAST
      LIMIT 3`,
@@ -360,7 +360,7 @@ async function buildHardGateGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `SELECT node_id, node_code, node_name, node_type
-     FROM "views-schema"._v_graph_nodes_master
+     FROM views._v_graph_nodes_master
      WHERE ${where}
      ORDER BY structural_weight DESC NULLS LAST
      LIMIT 3`,
@@ -385,7 +385,7 @@ async function buildHardGateDependenciesGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `SELECT hard_gate_node_id as node_id, hard_gate_code as node_code, hard_gate_name as node_name, hard_gate_type as node_type
-     FROM "views-schema"._v_graph_hard_gate_coverage
+     FROM views._v_graph_hard_gate_coverage
      WHERE ${where}
      GROUP BY hard_gate_node_id, hard_gate_code, hard_gate_name, hard_gate_type
      ORDER BY count(distinct covered_node_id) DESC
@@ -415,13 +415,13 @@ async function buildCollapseTriggerGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `SELECT n.node_id, n.node_code, n.node_name, n.node_type
-     FROM "views-schema"._v_graph_edges_master e
-     JOIN "views-schema"._v_graph_nodes_master n on n.node_id = e.src_node_id
+     FROM views._v_graph_edges_master e
+     JOIN views._v_graph_nodes_master n on n.node_id = e.src_node_id
      WHERE ${where}
      UNION
      SELECT n.node_id, n.node_code, n.node_name, n.node_type
-     FROM "views-schema"._v_graph_edges_master e
-     JOIN "views-schema"._v_graph_nodes_master n on n.node_id = e.dst_node_id
+     FROM views._v_graph_edges_master e
+     JOIN views._v_graph_nodes_master n on n.node_id = e.dst_node_id
      WHERE ${where}
      LIMIT 3`,
     ...params
@@ -446,7 +446,7 @@ async function buildBridgeGraph(context: ExecutionContext) {
   }>>(
     `with exploded as (
         select unnest(path_node_ids[2:cardinality(path_node_ids)-1]) as bridge_node_id
-        from "views-schema"._v_graph_paths
+        from views._v_graph_paths
         where ${where}
      ), ranked as (
         select bridge_node_id, count(*) as hits
@@ -457,7 +457,7 @@ async function buildBridgeGraph(context: ExecutionContext) {
      )
      select n.node_id, n.node_code, n.node_name, n.node_type
      from ranked r
-     join "views-schema"._v_graph_nodes_master n on n.node_id = r.bridge_node_id`,
+     join views._v_graph_nodes_master n on n.node_id = r.bridge_node_id`,
     ...params
   );
   const nodes = buildNodes(rows);
@@ -479,7 +479,7 @@ async function buildPropagationPathsGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `select start_node_id as node_id, start_node_code as node_code, start_node_name as node_name, start_node_type as node_type
-     from "views-schema"._v_graph_paths
+     from views._v_graph_paths
      where ${where}
      order by cumulative_propagation_multiplier desc
      limit 3`,
@@ -504,7 +504,7 @@ async function buildExcessiveDependencyGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `select node_id, node_code, node_name, node_type
-     from "views-schema"._v_graph_node_degree
+     from views._v_graph_node_degree
      where ${where}
      order by weighted_total_degree desc
      limit 3`,
@@ -529,7 +529,7 @@ async function buildResilienceGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `select node_id, node_code, node_name, node_type
-     from "views-schema"._v_graph_node_redundancy
+     from views._v_graph_node_redundancy
      where ${where}
      order by weighted_total_degree desc
      limit 3`,
@@ -554,7 +554,7 @@ async function buildFragilityPriorityGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `select failed_node_id as node_id, failed_node_code as node_code, failed_node_name as node_name, failed_node_type as node_type
-     from "views-schema"._v_graph_failure_impact
+     from views._v_graph_failure_impact
      where ${where}
      order by failure_impact_score desc
      limit 3`,
@@ -579,7 +579,7 @@ async function buildInterventionsGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `select failed_node_id as node_id, failed_node_code as node_code, failed_node_name as node_name, failed_node_type as node_type
-     from "views-schema"._v_graph_failure_impact
+     from views._v_graph_failure_impact
      where ${where}
      order by failure_impact_score desc
      limit 3`,
@@ -604,8 +604,8 @@ async function buildHighImpactLowRedundancyGraph(context: ExecutionContext) {
     node_type: string | null;
   }>>(
     `select f.failed_node_id as node_id, f.failed_node_code as node_code, f.failed_node_name as node_name, f.failed_node_type as node_type
-     from "views-schema"._v_graph_failure_impact f
-     join "views-schema"._v_graph_node_redundancy r on r.node_id = f.failed_node_id
+     from views._v_graph_failure_impact f
+     join views._v_graph_node_redundancy r on r.node_id = f.failed_node_id
      where ${where}
      order by f.failure_impact_score desc
      limit 3`,
@@ -629,7 +629,7 @@ async function buildControlFocusedGraph(context: ExecutionContext) {
     node_name: string | null;
   }>>(
     `SELECT failed_node_id as node_id, failed_node_code as node_code, failed_node_name as node_name
-     FROM "views-schema"._v_graph_failure_impact
+     FROM views._v_graph_failure_impact
      WHERE ${where}
      ORDER BY failure_impact_score DESC
      LIMIT 3`,
@@ -713,7 +713,7 @@ async function buildElementFocusedGraph(context: ExecutionContext) {
     node_name: string | null;
   }>>(
     `SELECT failed_node_id as node_id, failed_node_code as node_code, failed_node_name as node_name
-     FROM "views-schema"._v_graph_failure_impact
+     FROM views._v_graph_failure_impact
      WHERE ${where}
      ORDER BY failure_impact_score DESC
      LIMIT 3`,
@@ -854,3 +854,5 @@ function toElements(
   }));
   return [...nodeElements, ...edgeElements];
 }
+
+

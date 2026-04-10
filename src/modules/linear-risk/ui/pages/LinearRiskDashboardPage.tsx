@@ -39,9 +39,9 @@ async function loadDashboardRows() {
   const prisma = (await import('@/lib/prisma')).default;
   try {
     const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
-      SELECT * FROM "views-schema".dashboard_top_control
+      SELECT * FROM views.dashboard_top_control
     `);
-    return { rows, source: '"views-schema".dashboard_top_control' };
+    return { rows, source: 'views.dashboard_top_control' };
   } catch {
     try {
       const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
@@ -482,3 +482,4 @@ export default async function ScoreDashboardPage() {
     </div>
   );
 }
+

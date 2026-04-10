@@ -153,7 +153,7 @@ class WaveMeshManager {
         const j = Math.floor(Math.random() * sphereCount);
         if (i === j) continue;
         const numStrands = Math.floor(Math.random() * 8) + 1;
-        const strands = [];
+        const strands: SphereConnect['strands'] = [];
         for (let s = 0; s < numStrands; s++) {
           const geo = new THREE.BufferGeometry();
           geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));

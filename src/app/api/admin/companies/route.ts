@@ -27,7 +27,7 @@ export async function GET() {
             updated_at: Date;
         }>>(Prisma.sql`
             SELECT id, name, code, is_active, created_at, updated_at
-            FROM security.company
+            FROM core.company
             ORDER BY name ASC
         `);
         return NextResponse.json(companies);
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
         const existing = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
             SELECT id
-            FROM security.company
+            FROM core.company
             WHERE code = ${code}
             LIMIT 1
         `);
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         }
 
         const inserted = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-            INSERT INTO security.company (name, code, is_active)
+            INSERT INTO core.company (name, code, is_active)
             VALUES (${name}, ${code}, true)
             RETURNING id
         `);
@@ -79,3 +79,4 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
+

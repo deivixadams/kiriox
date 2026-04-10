@@ -112,7 +112,7 @@ export default async function ParametrosPage() {
 
     const activeProfiles = await (prisma as any).$queryRaw(Prisma.sql`
         SELECT id, code, name, activated_at, version_no, info
-        FROM params.profile
+        FROM governance.profile
         WHERE is_active = true
         LIMIT 1
     `) as ActiveProfile[];
@@ -135,8 +135,8 @@ export default async function ParametrosPage() {
                   ppv.text_value,
                   ppv.jsonb_value,
                   pd.info
-              FROM params.profile_parameter_value ppv
-              JOIN params.parameter_definition pd
+              FROM governance.profile_parameter_value ppv
+              JOIN governance.parameter_definition pd
                 ON pd.id = ppv.parameter_definition_id
               WHERE ppv.profile_id = ${activeProfile.id}::uuid
               ORDER BY pd.group_code NULLS LAST, pd.sort_order NULLS LAST, pd.code
@@ -145,7 +145,7 @@ export default async function ParametrosPage() {
 
     const snapshots = await (prisma as any).$queryRaw(Prisma.sql`
         SELECT profile_code, release_version, parameters_hash, created_at
-        FROM params.profile_snapshot
+        FROM governance.profile_snapshot
         ORDER BY created_at DESC
         LIMIT 20
     `) as SnapshotRow[];
@@ -254,7 +254,7 @@ export default async function ParametrosPage() {
                             <div className="glass-card" style={{ padding: '1rem', border: '1px solid rgba(244, 63, 94, 0.35)', background: 'rgba(244,63,94,0.08)' }}>
                                 <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>No hay perfil activo</div>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-                                    Activa un perfil en `params.profile` para visualizar parámetros.
+                                    Activa un perfil en `governance.profile` para visualizar parámetros.
                                 </div>
                             </div>
                         )}
@@ -374,3 +374,5 @@ export default async function ParametrosPage() {
             </div>
     );
 }
+
+

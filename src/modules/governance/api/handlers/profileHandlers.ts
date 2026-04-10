@@ -102,7 +102,7 @@ export async function getActiveParamsProfileHandler() {
   try {
     const profiles = await prisma.$queryRaw<Array<{ id: string; code: string; name: string | null }>>(Prisma.sql`
       SELECT id, code, name
-      FROM params.profile
+      FROM governance.profile
       WHERE is_active = true
       LIMIT 1
     `);
@@ -114,8 +114,8 @@ export async function getActiveParamsProfileHandler() {
 
     const parameters = await prisma.$queryRaw<Array<{ code: string; numeric_value: number | null }>>(Prisma.sql`
       SELECT pd.code, ppv.numeric_value
-      FROM params.profile_parameter_value ppv
-      JOIN params.parameter_definition pd
+      FROM governance.profile_parameter_value ppv
+      JOIN governance.parameter_definition pd
         ON pd.id = ppv.parameter_definition_id
       WHERE ppv.profile_id = ${profile.id}::uuid
       ORDER BY pd.sort_order NULLS LAST, pd.code
@@ -138,7 +138,7 @@ export async function postCreateParamsSnapshotHandler(request: Request) {
   try {
     const activeProfile = await prisma.$queryRaw<Array<{ id: string; code: string }>>(Prisma.sql`
       SELECT id, code
-      FROM params.profile
+      FROM governance.profile
       WHERE is_active = true
       LIMIT 1
     `);
@@ -150,7 +150,7 @@ export async function postCreateParamsSnapshotHandler(request: Request) {
     const profile = activeProfile[0];
 
     await prisma.$queryRaw(Prisma.sql`
-      INSERT INTO params.profile_snapshot (
+      INSERT INTO governance.profile_snapshot (
         profile_id,
         profile_code,
         release_version,
@@ -169,10 +169,10 @@ export async function postCreateParamsSnapshotHandler(request: Request) {
         md5(jsonb_object_agg(d.code, v.numeric_value)::text),
         jsonb_object_agg(d.code, v.numeric_value),
         now()
-      FROM params.profile p
-      JOIN params.profile_parameter_value v
+      FROM governance.profile p
+      JOIN governance.profile_parameter_value v
         ON v.profile_id = p.id
-      JOIN params.parameter_definition d
+      JOIN governance.parameter_definition d
         ON d.id = v.parameter_definition_id
       WHERE p.id = ${profile.id}::uuid
       GROUP BY p.id, p.code
@@ -201,7 +201,7 @@ export async function postCreateParamsVersionHandler(request: Request) {
 
     const activeProfile = await prisma.$queryRaw<Array<{ id: string; code: string; version_no: number | null }>>(Prisma.sql`
       SELECT id, code, version_no
-      FROM params.profile
+      FROM governance.profile
       WHERE is_active = true
       LIMIT 1
     `);
@@ -221,7 +221,7 @@ export async function postCreateParamsVersionHandler(request: Request) {
         default_boolean,
         default_text,
         default_jsonb
-      FROM params.parameter_definition
+      FROM governance.parameter_definition
       WHERE is_active = true
       ORDER BY group_code NULLS LAST, sort_order NULLS LAST, code
     `);
@@ -286,7 +286,7 @@ export async function postCreateParamsVersionHandler(request: Request) {
 
     await prisma.$transaction(async (tx) => {
       const inserted = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-        INSERT INTO params.profile (
+        INSERT INTO governance.profile (
           code,
           name,
           description,
@@ -320,7 +320,7 @@ export async function postCreateParamsVersionHandler(request: Request) {
 
       for (const value of values) {
         await tx.$executeRaw(Prisma.sql`
-          INSERT INTO params.profile_parameter_value (
+          INSERT INTO governance.profile_parameter_value (
             profile_id,
             parameter_definition_id,
             numeric_value,
@@ -340,7 +340,7 @@ export async function postCreateParamsVersionHandler(request: Request) {
       }
 
       await tx.$executeRaw(Prisma.sql`
-        INSERT INTO params.profile_snapshot (
+        INSERT INTO governance.profile_snapshot (
           profile_id,
           profile_code,
           release_version,
@@ -359,10 +359,10 @@ export async function postCreateParamsVersionHandler(request: Request) {
           md5(jsonb_object_agg(d.code, v.numeric_value)::text),
           jsonb_object_agg(d.code, v.numeric_value),
           now()
-        FROM params.profile p
-        JOIN params.profile_parameter_value v
+        FROM governance.profile p
+        JOIN governance.profile_parameter_value v
           ON v.profile_id = p.id
-        JOIN params.parameter_definition d
+        JOIN governance.parameter_definition d
           ON d.id = v.parameter_definition_id
         WHERE p.id = ${newProfileId}::uuid
         GROUP BY p.id, p.code
@@ -370,13 +370,13 @@ export async function postCreateParamsVersionHandler(request: Request) {
 
       if (activateProfile) {
         await tx.$executeRaw(Prisma.sql`
-          UPDATE params.profile
+          UPDATE governance.profile
           SET is_active = false
           WHERE id <> ${newProfileId}::uuid
         `);
 
         await tx.$executeRaw(Prisma.sql`
-          UPDATE params.profile
+          UPDATE governance.profile
           SET is_active = true,
               activated_at = now()
           WHERE id = ${newProfileId}::uuid
@@ -391,3 +391,6 @@ export async function postCreateParamsVersionHandler(request: Request) {
     return NextResponse.json({ error: error?.message || 'Failed to create version' }, { status: 500 });
   }
 }
+
+
+
