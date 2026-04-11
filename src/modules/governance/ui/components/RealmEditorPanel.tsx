@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import styles from './RealmEditorPanel.module.css';
 import { useRegisterCommandSearch } from '@/shared/ui/command-search/useRegisterCommandSearch';
+import { CrudModelActionBar } from '@/shared/ui/crud-model';
 
 type RealmRecord = {
   id: string;
@@ -393,62 +394,29 @@ export function RealmEditorPanel() {
         {error && <p className={styles.error}>{error}</p>}
         {success && <p className={styles.success}>{success}</p>}
 
-        <div className={styles.actions}>
-          <div className={styles.actionsLeft}>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => navigate('first')}
-              disabled={saving || !canNavigate || cursor <= 0}
-            >
-              Primero
-            </button>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => navigate('prev')}
-              disabled={saving || !canNavigate || cursor <= 0}
-            >
-              Anterior
-            </button>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => navigate('next')}
-              disabled={saving || !canNavigate || cursor >= records.length - 1 || cursor < 0}
-            >
-              Siguiente
-            </button>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => navigate('last')}
-              disabled={saving || !canNavigate || cursor >= records.length - 1}
-            >
-              Final
-            </button>
-          </div>
-
-          <div className={styles.actionsRight}>
-            <button type="button" className={styles.secondaryButton} onClick={() => router.push('/modelo/gobernanza/company-reino')}>
-              Cerrar
-            </button>
-            <button
-              type="button"
-              className={styles.deleteButton}
-              onClick={() => void removeCurrent()}
-              disabled={deleting || saving || loading || !form.id}
-            >
-              {deleting ? 'Eliminando...' : 'Delete'}
-            </button>
-            <button type="button" className={styles.secondaryButton} onClick={() => router.push('/modelo/gobernanza/company-reino')}>
-              Cancelar
-            </button>
-            <button type="button" className={styles.primaryButton} onClick={() => void save()} disabled={saving || loading}>
-              {saving ? 'Grabando...' : 'Grabar'}
-            </button>
-          </div>
-        </div>
+        <CrudModelActionBar
+          onFirst={() => navigate('first')}
+          onPrevious={() => navigate('prev')}
+          onNext={() => navigate('next')}
+          onLast={() => navigate('last')}
+          onClose={() => router.push('/modelo/gobernanza/company-reino')}
+          onDelete={() => void removeCurrent()}
+          onCancel={() => router.push('/modelo/gobernanza/company-reino')}
+          onSave={() => void save()}
+          disableFirst={saving || !canNavigate || cursor <= 0}
+          disablePrevious={saving || !canNavigate || cursor <= 0}
+          disableNext={saving || !canNavigate || cursor >= records.length - 1 || cursor < 0}
+          disableLast={saving || !canNavigate || cursor >= records.length - 1}
+          disableClose={saving || deleting}
+          disableDelete={deleting || saving || loading || !form.id}
+          disableCancel={saving || deleting}
+          disableSave={saving || loading || deleting}
+          deleteLabel="Delete"
+          saveLabel="Grabar"
+          savingLabel="Grabando..."
+          deleting={deleting}
+          saving={saving}
+        />
       </article>
     </section>
   );

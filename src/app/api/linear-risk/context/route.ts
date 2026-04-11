@@ -12,7 +12,7 @@ export const GET = nextHandler(
     const rows = await prisma.$queryRaw<Array<{ id: string; name: string }>>(
       Prisma.sql`
         SELECT c.id::text AS id, c.name
-        FROM score.company c
+        FROM core.company c
         WHERE c.is_active = true
         ORDER BY c.name ASC
       `

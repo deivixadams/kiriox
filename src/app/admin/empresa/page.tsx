@@ -68,7 +68,7 @@ export default function EmpresaPage() {
     };
 
     const handleDelete = async (companyId: string) => {
-        if (!window.confirm('¿Desea inactivar esta empresa?')) return;
+        if (!window.confirm('¿Desea borrar esta empresa permanentemente? Esta acción no se puede deshacer.')) return;
         
         try {
             const csrf = getCsrfTokenFromDocument();
@@ -78,7 +78,7 @@ export default function EmpresaPage() {
                     ...(csrf ? { 'x-csrf-token': csrf } : {})
                 }
             });
-            if (!res.ok) throw new Error('Error al inactivar');
+            if (!res.ok) throw new Error('Error al borrar la empresa');
             load();
         } catch (err: any) {
             alert(err.message);
@@ -197,7 +197,7 @@ export default function EmpresaPage() {
                                                 <button 
                                                     onClick={() => handleDelete(company.id)}
                                                     style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', color: '#f87171' }}
-                                                    title="Inactivar"
+                                                    title="Borrar"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>

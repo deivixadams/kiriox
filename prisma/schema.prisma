@@ -309,8 +309,10 @@ model company {
   jurisdiction     jurisdiction?      @relation(fields: [jurisdiction_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_company_jurisdiction_id_fkey")
 
   @@schema("score")
-  score_run_draft run_draft[]
-  score_run       run[]
+  score_run_draft         run_draft[]
+  score_run               run[]
+  corpus_catalog_status   corpus_catalog_status? @relation(fields: [status_id], references: [id])
+  status_id               Int?                   @db.SmallInt
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

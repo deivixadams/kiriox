@@ -1,486 +1,472 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Lock, Check, Loader2, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import styles from '@/modules/governance/ui/components/RealmEditorPanel.module.css';
 
-interface User {
-    id: string;
-    name: string;
-    lastName: string | null;
-    email: string;
-    role?: {
-        roleCode: string;
-        roleName: string;
-    };
+/* ──────────────────── Types ──────────────────── */
+type RoleRecord = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+type AssignedUser = {
+  assignment_id: string;
+  user_id: string;
+  company_id: string;
+  name: string | null;
+  last_name: string | null;
+  email: string;
+  is_active: boolean;
+};
+
+type UserOption = {
+  id: string;
+  name: string | null;
+  last_name: string | null;
+  email: string;
+};
+
+/* ──────────── helpers ──────────── */
+function emptyForm(): RoleRecord {
+  return { id: '', code: '', name: '', description: '', is_active: true, created_at: '', updated_at: '' };
 }
 
-interface Role {
-    id: string;
-    roleCode: string;
-    roleName: string;
-    description: string | null;
-}
-
+/* ════════════════════════════════════
+   PAGE
+═════════════════════════════════════ */
 export default function RolesPage() {
-    const [users, setUsers] = useState<User[]>([]);
-    const [dbRoles, setDbRoles] = useState<Role[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [assigning, setAssigning] = useState(false);
-    const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+  const router = useRouter();
+  const codeInputRef = useRef<HTMLInputElement | null>(null);
 
-    const [selectedUserId, setSelectedUserId] = useState<string>('');
-    const [selectedRoleCodes, setSelectedRoleCodes] = useState<string[]>([]);
-    const [roleMenuOpen, setRoleMenuOpen] = useState(false);
-    const [roleQuery, setRoleQuery] = useState('');
+  /* ── list state ── */
+  const [records, setRecords] = useState<RoleRecord[]>([]);
+  const [cursor, setCursor] = useState(-1);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (message) {
-            const timer = setTimeout(() => setMessage(null), 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [message]);
+  /* ── form state ── */
+  const [form, setForm] = useState<RoleRecord>(emptyForm());
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-    // Predefined roles for the matrix (consistent with original design)
-    const displayRoles = [
-        { code: 'ADMIN', label: 'Administrador' },
-        { code: 'LEAD_AUDITOR', label: 'Auditor Líder' },
-        { code: 'AUDITOR', label: 'Auditor' },
-        { code: 'AML_SENIOR', label: 'AML Senior' },
-        { code: 'AML_JUNIOR', label: 'AML Junior' },
-        { code: 'READER', label: 'Lector' }
-    ];
+  /* ── assigned users ── */
+  const [assignedUsers, setAssignedUsers] = useState<AssignedUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [removingId, setRemovingId] = useState('');
 
-    const permissions = [
-        { label: 'Administración (usuarios, roles, facturación)', values: ['ADMIN'] },
-        { label: 'Corpus y versiones (configurar / seleccionar)', values: ['ADMIN', 'LEAD_AUDITOR'] },
-        { label: 'Dashboards y métricas (crear / editar / mover)', values: ['ADMIN'] },
-        { label: 'Datos y conexiones (configurar / exportar)', values: ['ADMIN'] },
-        { label: 'Auditorías (crear / editar / asignar equipo)', values: ['ADMIN', 'LEAD_AUDITOR', 'AUDITOR', 'AML_SENIOR', 'AML_JUNIOR'] },
-        { label: 'Hallazgos y evidencia (registrar / subir)', values: ['ADMIN', 'LEAD_AUDITOR', 'AUDITOR', 'AML_SENIOR', 'AML_JUNIOR'] },
-        { label: 'Informes (borrador / final / cierre)', values: ['ADMIN', 'LEAD_AUDITOR', 'AML_SENIOR'] },
-        { label: 'Lectura operativa (ver dashboards / informes)', values: ['ADMIN', 'LEAD_AUDITOR', 'AUDITOR', 'AML_SENIOR', 'AML_JUNIOR', 'READER'] }
-    ];
+  /* ── assign-new-user ── */
+  const [allUsers, setAllUsers] = useState<UserOption[]>([]);
+  const [addUserId, setAddUserId] = useState('');
+  const [assigning, setAssigning] = useState(false);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [usersRes, rolesRes] = await Promise.all([
-                    fetch('/api/admin/users'),
-                    fetch('/api/admin/rbac')
-                ]);
+  /* ─────────────────────────────────────────────
+     LOAD ALL ROLES
+  ───────────────────────────────────────────── */
+  async function loadRecords(preferredId?: string) {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/rbac');
+      if (!res.ok) throw new Error('No se pudo cargar roles');
+      const data: RoleRecord[] = await res.json();
+      setRecords(data);
 
-                const usersData = await usersRes.json();
-                const rolesData = await rolesRes.json();
+      if (data.length === 0) {
+        setCursor(-1);
+        setForm(emptyForm());
+        setAssignedUsers([]);
+        return;
+      }
 
-                // Ensure rolesData is an array
-                const rolesArray = Array.isArray(rolesData) ? rolesData : [];
-
-                setUsers(Array.isArray(usersData) ? usersData : []);
-                setDbRoles(rolesArray);
-            } catch (error) {
-                console.error('Error loading roles data:', error);
-                setMessage({ text: 'Error al cargar datos reales', type: 'error' });
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, []);
-
-    const handleAssign = async () => {
-        if (!selectedUserId || selectedRoleCodes.length === 0) return;
-
-        setAssigning(true);
-        try {
-            const res = await fetch(`/api/admin/users/${selectedUserId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roleCodes: selectedRoleCodes })
-            });
-
-            if (res.ok) {
-                setMessage({ text: 'Roles asignados correctamente', type: 'success' });
-                // Refresh users data
-                const usersRes = await fetch('/api/admin/users');
-                const usersData = await usersRes.json();
-                setUsers(Array.isArray(usersData) ? usersData : []);
-            } else {
-                setMessage({ text: 'Error al asignar los roles', type: 'error' });
-            }
-        } catch (error) {
-            setMessage({ text: 'Error de red', type: 'error' });
-        } finally {
-            setAssigning(false);
-        }
-    };
-
-    const toggleRole = (code: string) => {
-        setSelectedRoleCodes(prev =>
-            prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
-        );
-    };
-
-    const filteredDbRoles = useMemo(() => {
-        const q = roleQuery.toLowerCase().trim();
-        if (!q) return dbRoles;
-        return dbRoles.filter(r => r.roleName.toLowerCase().includes(q) || r.roleCode.toLowerCase().includes(q));
-    }, [dbRoles, roleQuery]);
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-20">
-                <Loader2 className="animate-spin text-blue-500" size={40} />
-            </div>
-        );
+      const idx = preferredId ? data.findIndex((r) => r.id === preferredId) : -1;
+      applyRecord(data[idx >= 0 ? idx : 0], idx >= 0 ? idx : 0);
+    } catch (e: any) {
+      setError(e?.message || 'Error cargando roles');
+    } finally {
+      setLoading(false);
     }
+  }
 
+  async function loadAllUsers() {
+    try {
+      const res = await fetch('/api/admin/users');
+      if (!res.ok) return;
+      const data = await res.json();
+      setAllUsers(Array.isArray(data) ? data : []);
+    } catch {}
+  }
+
+  useEffect(() => {
+    void loadRecords();
+    void loadAllUsers();
+  }, []);
+
+  /* ─────────────────────────────────────────────
+     LOAD USERS FOR CURRENT ROLE
+  ───────────────────────────────────────────── */
+  async function loadAssignedUsers(roleId: string) {
+    if (!roleId) { setAssignedUsers([]); return; }
+    setLoadingUsers(true);
+    try {
+      const res = await fetch(`/api/admin/rbac?id=${encodeURIComponent(roleId)}`);
+      if (!res.ok) { setAssignedUsers([]); return; }
+      const data = await res.json();
+      setAssignedUsers(Array.isArray(data.users) ? data.users : []);
+    } catch {
+      setAssignedUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     NAVIGATION
+  ───────────────────────────────────────────── */
+  function applyRecord(record: RoleRecord, index: number) {
+    setCursor(index);
+    setForm({ ...record });
+    setError('');
+    setSuccess('');
+    void loadAssignedUsers(record.id);
+  }
+
+  const canNavigate = records.length > 0;
+
+  function navigate(action: 'first' | 'prev' | 'next' | 'last') {
+    if (!canNavigate) return;
+    const cur = cursor >= 0 ? cursor : 0;
+    const next =
+      action === 'first'  ? 0 :
+      action === 'prev'   ? Math.max(0, cur - 1) :
+      action === 'next'   ? Math.min(records.length - 1, cur + 1) :
+      records.length - 1;
+    applyRecord(records[next], next);
+  }
+
+  function clearForNew() {
+    setCursor(-1);
+    setForm(emptyForm());
+    setAssignedUsers([]);
+    setError('');
+    setSuccess('');
+    setTimeout(() => codeInputRef.current?.focus(), 0);
+  }
+
+  /* ─────────────────────────────────────────────
+     SAVE
+  ───────────────────────────────────────────── */
+  async function save() {
+    setError('');
+    setSuccess('');
+    if (!form.code.trim()) { setError('El código del rol es obligatorio.'); return; }
+    if (!form.name.trim()) { setError('El nombre del rol es obligatorio.'); return; }
+
+    setSaving(true);
+    try {
+      const method = form.id ? 'PUT' : 'POST';
+      const res = await fetch('/api/admin/rbac', {
+        method,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          id:          form.id || undefined,
+          code:        form.code,
+          name:        form.name,
+          description: form.description,
+          isActive:    form.is_active,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'No se pudo guardar el rol');
+
+      await loadRecords(form.id || data.id);
+      setSuccess('Rol guardado correctamente.');
+    } catch (e: any) {
+      setError(e?.message || 'Error guardando rol');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     DELETE ROLE
+  ───────────────────────────────────────────── */
+  async function deleteRole() {
+    if (!form.id) { setError('No hay rol seleccionado.'); return; }
+    if (!window.confirm(`¿Eliminar el rol "${form.name}"? Esta acción es irreversible.`)) return;
+    setDeleting(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch(`/api/admin/rbac?id=${encodeURIComponent(form.id)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'No se pudo eliminar el rol');
+      await loadRecords();
+      setSuccess('Rol eliminado.');
+    } catch (e: any) {
+      setError(e?.message || 'Error eliminando rol');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     REMOVE USER FROM ROLE
+  ───────────────────────────────────────────── */
+  async function removeUserFromRole(assignmentId: string, userName: string) {
+    if (!window.confirm(`¿Quitar el acceso de "${userName}" a este rol?`)) return;
+    setRemovingId(assignmentId);
+    try {
+      const res = await fetch(`/api/admin/rbac?assignment_id=${encodeURIComponent(assignmentId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Error removiendo usuario');
+      await loadAssignedUsers(form.id);
+      setSuccess(`Usuario "${userName}" removido del rol.`);
+    } catch (e: any) {
+      setError(e?.message || 'Error removiendo usuario');
+    } finally {
+      setRemovingId('');
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     ASSIGN USER TO ROLE
+  ───────────────────────────────────────────── */
+  async function assignUser() {
+    if (!addUserId || !form.id) return;
+    setAssigning(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/rbac/assign', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userId: addUserId, roleId: form.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'No se pudo asignar usuario');
+      setAddUserId('');
+      await loadAssignedUsers(form.id);
+      setSuccess('Usuario asignado correctamente.');
+    } catch (e: any) {
+      setError(e?.message || 'Error asignando usuario');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     HELPERS
+  ───────────────────────────────────────────── */
+  const statusLabel = useMemo(() => {
+    if (cursor < 0) return 'Nuevo registro';
+    return `Registro ${cursor + 1} de ${records.length}`;
+  }, [cursor, records.length]);
+
+  const availableUsers = useMemo(() => {
+    const assignedIds = new Set(assignedUsers.map((u) => u.user_id));
+    return allUsers.filter((u) => !assignedIds.has(u.id));
+  }, [allUsers, assignedUsers]);
+
+  /* ════════════════════════════════════
+     RENDER
+  ════════════════════════════════════ */
+  if (loading) {
     return (
-        <div className="animate-fade-in" onClick={() => setRoleMenuOpen(false)}>
-            {/* Notification Toast */}
-            {message && (
-                <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl animate-in slide-in-from-right-10 duration-300 ${message.type === 'success'
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                    : 'bg-red-500/10 border-red-500/20 text-red-400'
-                    }`}>
-                    {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-                    <span className="text-sm font-medium">{message.text}</span>
-                </div>
-            )}
-
-            <div className="section-header" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div className="roles-icon">
-                        <Lock size={20} />
-                    </div>
-                    <div>
-                        <h1 className="gradient-text" style={{ fontSize: '1.9rem', margin: 0 }}>Permisos de Usuario</h1>
-                        <p style={{ color: 'var(--muted)', margin: '0.35rem 0 0 0' }}>
-                            Gestiona la asignación de roles y visualiza la matriz de permisos.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Assignment Bar */}
-            <div className="glass-card assignment-card" style={{ marginBottom: '1.5rem', padding: '1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'flex-end', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.6rem', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Usuario</label>
-                    <select
-                        className="form-control"
-                        value={selectedUserId}
-                        onChange={(e) => {
-                            const userId = e.target.value;
-                            setSelectedUserId(userId);
-                            const user = users.find(u => u.id === userId);
-                            if (user) {
-                                // Assume multi-roles are handled in User interface now
-                                const userRoles = (user as any).roles?.map((r: any) => r.roleCode) || [];
-                                setSelectedRoleCodes(userRoles);
-                            } else {
-                                setSelectedRoleCodes([]);
-                            }
-                        }}
-                        style={{ width: '100%', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff', padding: '0.75rem', borderRadius: '12px', fontSize: '0.9rem' }}
-                    >
-                        <option value="">Seleccionar Usuario...</option>
-                        {users.map(u => (
-                            <option key={u.id} value={u.id}>
-                                {u.name} {u.lastName} — {(u as any).roles?.map((r: any) => r.roleName).join(', ') || 'Sin Rol'}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.6rem', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Roles Asignados</label>
-                    <div style={{ position: 'relative' }}>
-                        <div
-                            className="form-control"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setRoleMenuOpen(!roleMenuOpen);
-                            }}
-                            style={{
-                                minHeight: '48px',
-                                background: 'rgba(15, 23, 42, 0.6)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                color: '#fff',
-                                padding: '0.5rem 0.75rem',
-                                borderRadius: '12px',
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '0.5rem',
-                                alignItems: 'center'
-                            }}
-                        >
-                            {selectedRoleCodes.length === 0 && <span style={{ color: '#64748b' }}>Seleccionar Roles...</span>}
-                            {selectedRoleCodes.map(code => {
-                                const role = dbRoles.find(r => r.roleCode === code);
-                                return (
-                                    <span key={code} style={{
-                                        background: 'rgba(59, 130, 246, 0.2)',
-                                        border: '1px solid rgba(59, 130, 246, 0.3)',
-                                        color: '#3b82f6',
-                                        padding: '0.2rem 0.6rem',
-                                        borderRadius: '6px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.35rem'
-                                    }}>
-                                        {role?.roleName || code}
-                                        <span
-                                            onClick={(e) => { e.stopPropagation(); toggleRole(code); }}
-                                            style={{ cursor: 'pointer', opacity: 0.7, fontSize: '0.9rem' }}
-                                        >×</span>
-                                    </span>
-                                );
-                            })}
-                            <span style={{ marginLeft: 'auto', color: '#64748b' }}>▾</span>
-                        </div>
-                        {roleMenuOpen && (
-                            <div
-                                onClick={(e) => e.stopPropagation()}
-                                style={{
-                                    position: 'absolute',
-                                    top: '110%',
-                                    left: 0,
-                                    right: 0,
-                                    background: '#131c31',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    borderRadius: '12px',
-                                    zIndex: 100,
-                                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                                    maxHeight: '250px',
-                                    overflowY: 'auto'
-                                }}
-                            >
-                                <input
-                                    type="text"
-                                    placeholder="Buscar rol..."
-                                    value={roleQuery}
-                                    onChange={(e) => setRoleQuery(e.target.value)}
-                                    style={{ width: '100%', padding: '0.75rem', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff', fontSize: '0.85rem' }}
-                                    autoFocus
-                                />
-                                <div style={{ padding: '0.5rem' }}>
-                                    {filteredDbRoles.map(r => (
-                                        <div
-                                            key={r.id}
-                                            onClick={() => toggleRole(r.roleCode)}
-                                            style={{
-                                                padding: '0.6rem 0.75rem',
-                                                borderRadius: '8px',
-                                                cursor: 'pointer',
-                                                fontSize: '0.85rem',
-                                                background: selectedRoleCodes.includes(r.roleCode) ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                                                color: selectedRoleCodes.includes(r.roleCode) ? '#3b82f6' : '#94a3b8',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                marginBottom: '2px'
-                                            }}
-                                        >
-                                            {r.roleName}
-                                            {selectedRoleCodes.includes(r.roleCode) && <Check size={14} />}
-                                        </div>
-                                    ))}
-                                    {filteredDbRoles.length === 0 && <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>Sin resultados</div>}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <button
-                    className={`btn-primary ${(!selectedUserId || selectedRoleCodes.length === 0 || assigning) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onClick={handleAssign}
-                    disabled={!selectedUserId || selectedRoleCodes.length === 0 || assigning}
-                    style={{
-                        height: '48px',
-                        padding: '0 2rem',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontWeight: 600,
-                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                    }}
-                >
-                    {assigning ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}
-                    {assigning ? 'Asignando...' : 'Aplicar Cambios'}
-                </button>
-            </div>
-
-            <div className="glass-card roles-card">
-                <div className="roles-table">
-                    <div className="roles-header">
-                        <div className="roles-header-label">Matriz de Permisos</div>
-                        {displayRoles.map((role) => (
-                            <div
-                                key={role.code}
-                                className={`roles-header-role ${selectedRoleCodes.includes(role.code) ? 'role-active' : ''}`}
-                            >
-                                {role.label}
-                                {selectedRoleCodes.includes(role.code) && (
-                                    <div className="active-badge">Activo</div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    {permissions.map((perm, idx) => (
-                        <div key={perm.label} className={`roles-row ${idx % 2 === 0 ? 'row-alt' : ''}`}>
-                            <div className="roles-permission">{perm.label}</div>
-                            {displayRoles.map((role) => {
-                                const isUserRole = selectedRoleCodes.includes(role.code);
-                                return (
-                                    <div
-                                        key={`${perm.label}-${role.code}`}
-                                        className={`roles-cell ${isUserRole ? 'role-active-column' : ''}`}
-                                    >
-                                        {perm.values.includes(role.code) && (
-                                            <span className={`roles-check ${isUserRole ? 'check-active' : ''}`}>
-                                                <Check size={16} />
-                                            </span>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-                <Link
-                    href="/score/dashboard"
-                    style={{
-                        border: '1px solid rgba(148, 163, 184, 0.45)',
-                        background: 'rgba(30, 41, 59, 0.55)',
-                        color: '#e2e8f0',
-                        borderRadius: '10px',
-                        padding: '0.75rem 1.25rem',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                    }}
-                >
-                    Cerrar
-                </Link>
-            </div>
-
-            <style jsx>{`
-                .roles-card {
-                    padding: 1.5rem;
-                    border-radius: 16px;
-                    border: 1px solid rgba(255, 255, 255, 0.05);
-                }
-                .roles-icon {
-                    height: 48px;
-                    width: 48px;
-                    border-radius: 14px;
-                    background: rgba(59, 130, 246, 0.15);
-                    border: 1px solid rgba(59, 130, 246, 0.25);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #3b82f6;
-                    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
-                }
-                .roles-table {
-                    display: grid;
-                    gap: 0.35rem;
-                    overflow-x: auto;
-                }
-                .roles-header,
-                .roles-row {
-                    display: grid;
-                    grid-template-columns: 320px repeat(6, minmax(130px, 1fr));
-                    align-items: center;
-                }
-                .roles-header {
-                    padding: 1rem 0.5rem;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-                    margin-bottom: 0.75rem;
-                }
-                .roles-header-label {
-                    color: #94a3b8;
-                    font-size: 0.8rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.1em;
-                    font-weight: 700;
-                    padding-left: 0.5rem;
-                }
-                .roles-header-role {
-                    text-align: center;
-                    font-size: 0.9rem;
-                    color: #94a3b8;
-                    font-weight: 600;
-                    padding: 0.5rem;
-                    border-radius: 8px;
-                    transition: all 0.2s ease;
-                }
-                .role-active {
-                    color: #3b82f6;
-                    background: rgba(59, 130, 246, 0.1);
-                }
-                .active-badge {
-                    font-size: 0.65rem;
-                    text-transform: uppercase;
-                    margin-top: 0.25rem;
-                    font-weight: 800;
-                    letter-spacing: 0.05em;
-                }
-                .roles-row {
-                    padding: 0.85rem 0.5rem;
-                    border-radius: 12px;
-                    background: rgba(255, 255, 255, 0.015);
-                    transition: background 0.2s ease;
-                }
-                .roles-row:hover {
-                    background: rgba(255, 255, 255, 0.03);
-                }
-                .roles-row.row-alt {
-                    background: rgba(255, 255, 255, 0.025);
-                }
-                .roles-permission {
-                    color: #e2e8f0;
-                    font-size: 0.85rem;
-                    font-weight: 500;
-                    padding-left: 0.5rem;
-                }
-                .roles-cell {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100%;
-                    border-radius: 8px;
-                    transition: all 0.2s ease;
-                }
-                .role-active-column {
-                    background: rgba(59, 130, 246, 0.04);
-                }
-                .roles-check {
-                    height: 28px;
-                    width: 28px;
-                    border-radius: 9px;
-                    background: rgba(255, 255, 255, 0.05);
-                    color: #64748b;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                .check-active {
-                    background: rgba(59, 130, 246, 0.2);
-                    color: #3b82f6;
-                    border: 1px solid rgba(59, 130, 246, 0.3);
-                }
-            `}</style>
-        </div>
+      <section className={styles.page}>
+        <header className={styles.header}>
+          <p className={styles.eyebrow}>Administración</p>
+          <h1 className={styles.title}>Gestión de Roles</h1>
+        </header>
+        <p style={{ color: '#94a3b8' }}>Cargando roles…</p>
+      </section>
     );
+  }
+
+  return (
+    <section className={styles.page}>
+      {/* ── Header ── */}
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>Administración</p>
+        <h1 className={styles.title}>Gestión de Roles</h1>
+        <p className={styles.subtitle}>
+          Crea, edita y elimina roles del sistema (<code>security.role</code>).
+          Gestiona los usuarios asignados a cada rol.
+        </p>
+      </header>
+
+      {/* ── Role editor card ── */}
+      <article className={styles.card}>
+        <div className={styles.statusRow}>
+          <span>{statusLabel}</span>
+          <button type="button" className={styles.secondaryButton}
+            onClick={clearForNew} disabled={saving || loading}>
+            Nuevo
+          </button>
+        </div>
+
+        <label className={styles.field}>
+          <span>Nombre</span>
+          <input
+            ref={codeInputRef}
+            className={styles.input}
+            value={form.name}
+            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            placeholder="Nombre visible del rol"
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span>Descripción</span>
+          <textarea
+            className={styles.textarea}
+            rows={3}
+            value={form.description ?? ''}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            placeholder="Descripción del rol y sus responsabilidades"
+          />
+        </label>
+
+        <label className={styles.switchRow}>
+          <input
+            type="checkbox"
+            checked={form.is_active ?? true}
+            onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
+          />
+          <span>Rol activo</span>
+        </label>
+
+        {error   && <p className={styles.error}>{error}</p>}
+        {success && <p className={styles.success}>{success}</p>}
+      </article>
+
+      {/* ── Assigned users (only when a role is selected) ── */}
+      {form.id && (
+        <article className={styles.card}>
+          <div className={styles.statusRow}>
+            <span style={{ fontWeight: 700 }}>
+              Usuarios asignados — <em style={{ color: '#93c5fd' }}>{form.name}</em>
+            </span>
+            <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+              {assignedUsers.length} usuario{assignedUsers.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Assign new user */}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+            <label className={styles.field} style={{ flex: 1, marginBottom: 0 }}>
+              <span>Agregar usuario al rol</span>
+              <select
+                className={styles.input}
+                value={addUserId}
+                onChange={(e) => setAddUserId(e.target.value)}
+                disabled={assigning}
+              >
+                <option value="">Seleccionar usuario…</option>
+                {availableUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {[u.name, u.last_name].filter(Boolean).join(' ')} — {u.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => void assignUser()}
+              disabled={!addUserId || assigning}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {assigning ? 'Asignando…' : 'Asignar'}
+            </button>
+          </div>
+
+          {/* User list */}
+          {loadingUsers ? (
+            <p style={{ color: '#94a3b8', fontSize: '13px' }}>Cargando usuarios…</p>
+          ) : assignedUsers.length === 0 ? (
+            <p style={{ color: '#64748b', fontSize: '13px' }}>Sin usuarios asignados a este rol.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: '6px' }}>
+              {assignedUsers.map((u) => {
+                const fullName = [u.name, u.last_name].filter(Boolean).join(' ') || u.email;
+                return (
+                  <div key={u.assignment_id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '14px' }}>{fullName}</span>
+                      <span style={{ color: '#64748b', fontSize: '12px' }}>{u.email}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.deleteButton}
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                      onClick={() => void removeUserFromRole(u.assignment_id, fullName)}
+                      disabled={removingId === u.assignment_id}
+                    >
+                      {removingId === u.assignment_id ? 'Removiendo…' : 'Remover'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </article>
+      )}
+
+      {/* ── Navigation + Actions (siempre al final) ── */}
+      <div className={styles.actions}>
+        <div className={styles.actionsLeft}>
+          <button type="button" className={styles.secondaryButton}
+            onClick={() => navigate('first')}
+            disabled={saving || !canNavigate || cursor <= 0}>
+            Primero
+          </button>
+          <button type="button" className={styles.secondaryButton}
+            onClick={() => navigate('prev')}
+            disabled={saving || !canNavigate || cursor <= 0}>
+            Anterior
+          </button>
+          <button type="button" className={styles.secondaryButton}
+            onClick={() => navigate('next')}
+            disabled={saving || !canNavigate || cursor >= records.length - 1 || cursor < 0}>
+            Siguiente
+          </button>
+          <button type="button" className={styles.secondaryButton}
+            onClick={() => navigate('last')}
+            disabled={saving || !canNavigate || cursor >= records.length - 1}>
+            Final
+          </button>
+        </div>
+
+        <div className={styles.actionsRight}>
+          <button type="button" className={styles.secondaryButton}
+            onClick={() => router.push('/score/dashboard')}>
+            Cerrar
+          </button>
+          <button type="button" className={styles.deleteButton}
+            onClick={() => void deleteRole()}
+            disabled={deleting || saving || !form.id}>
+            {deleting ? 'Eliminando…' : 'Eliminar Rol'}
+          </button>
+          <button type="button" className={styles.primaryButton}
+            onClick={() => void save()} disabled={saving || loading}>
+            {saving ? 'Guardando…' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
 }

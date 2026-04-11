@@ -150,7 +150,7 @@ export class PrismaAccessContextRepository implements AccessContextRepository {
           SELECT c.id, c.code, c.name
           FROM core.company c
           WHERE c.id = ${companyId}::uuid
-            AND COALESCE(c.is_active, true) = true
+            AND c.is_active = true
           LIMIT 1
         `
       );

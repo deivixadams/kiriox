@@ -28,7 +28,7 @@ export async function GET() {
             updatedAt: Date;
         }>>(Prisma.sql`
             SELECT id, name, code, legal_name as "legalName", is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt"
-            FROM score.company
+            FROM core.company
             WHERE is_active = true
             ORDER BY name ASC
         `);
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
         const existing = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
             SELECT id
-            FROM score.company
+            FROM core.company
             WHERE code = ${code}
             LIMIT 1
         `);
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
         }
 
         const inserted = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-            INSERT INTO score.company (name, code, legal_name, is_active)
+            INSERT INTO core.company (name, code, legal_name, is_active)
             VALUES (${name}, ${code}, ${legalName || null}, true)
             RETURNING id
         `);
@@ -97,7 +97,7 @@ export async function PUT(request: Request) {
         }
 
         await prisma.$executeRaw(Prisma.sql`
-            UPDATE score.company
+            UPDATE core.company
             SET name = ${name}, 
                 code = ${code}, 
                 legal_name = ${legalName || null}, 
@@ -127,15 +127,13 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Missing company ID' }, { status: 400 });
         }
 
-        // Soft delete: set is_active = false
+        // Hard delete: remove the record permanently
         await prisma.$executeRaw(Prisma.sql`
-            UPDATE score.company
-            SET is_active = false,
-                updated_at = NOW()
+            DELETE FROM core.company
             WHERE id = ${id}::uuid
         `);
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, deleted: true });
     } catch (error: any) {
         console.error('Error deleting company:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

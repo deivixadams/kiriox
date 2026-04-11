@@ -123,7 +123,7 @@ export async function POST(request: Request) {
     }
 
     const companyRows = await prisma.$queryRaw<{ id: string }[]>(
-      Prisma.sql`SELECT id FROM score.company WHERE id = ${tenantId}::uuid LIMIT 1`
+      Prisma.sql`SELECT id FROM core.company WHERE id = ${tenantId}::uuid LIMIT 1`
     );
     if (companyRows.length === 0) {
       return NextResponse.json({ error: 'Company not found' }, { status: 400 });

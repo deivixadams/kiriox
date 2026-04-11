@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -60,7 +60,8 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
     const [whatsapp, setWhatsapp] = useState('');
     const [password, setPassword] = useState('');
     const [mustChangePassword, setMustChangePassword] = useState(true);
-    const [roleCode, setRoleCode] = useState('OPERATOR');
+    const [roleCode, setRoleCode] = useState('');
+    const [roles, setRoles] = useState<{ id: string; code: string; name: string }[]>([]);
 
     const [rolePermissions, setRolePermissions] = useState<string[]>([]);
 
@@ -109,6 +110,20 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
             }
         };
         loadCompanies();
+    }, []);
+
+    useEffect(() => {
+        const loadRoles = async () => {
+            try {
+                const res = await fetch('/api/admin/rbac');
+                if (!res.ok) return;
+                const data = await res.json();
+                setRoles(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error('Error loading roles:', err);
+            }
+        };
+        loadRoles();
     }, []);
 
     useEffect(() => {
@@ -444,9 +459,10 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
                                 onChange={(e) => setRoleCode(e.target.value)}
                                 style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }}
                             >
-                                <option value="ADMIN">Administrador</option>
-                                <option value="OPERATOR">Operador</option>
-                                <option value="AUDITOR">Auditor</option>
+                                <option value="">Seleccione...</option>
+                                {roles.map((r) => (
+                                    <option key={r.id} value={r.code}>{r.name}</option>
+                                ))}
                             </select>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
