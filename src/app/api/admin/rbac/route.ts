@@ -108,21 +108,27 @@ export async function POST(request: Request) {
 
         const rows = await prisma.$queryRaw<{ id: string }[]>(
             Prisma.sql`
-                INSERT INTO security.role (code, name, description, is_active)
-                VALUES (${code.trim().toUpperCase()}, ${name.trim()},
+                INSERT INTO security.role (id, code, name, description, is_active)
+                VALUES (gen_random_uuid(), ${code.trim()}, ${name.trim()}, 
                         ${description?.trim() || null}, ${isActive !== false})
                 RETURNING id
             `
         );
+
+        if (!rows || rows.length === 0) {
+            throw new Error('No se pudo obtener el ID del rol creado');
+        }
+
         return NextResponse.json({ id: rows[0].id }, { status: 201 });
 
     } catch (error: any) {
         console.error('Error creating role:', error);
-        const msg = String(error?.meta?.message || '');
-        if (msg.includes('unique') || msg.includes('duplicate')) {
+        const errorMsg = error?.message || 'Error desconocido';
+        
+        if (errorMsg.includes('unique') || errorMsg.includes('duplicate')) {
             return NextResponse.json({ error: 'Ya existe un rol con ese código' }, { status: 409 });
         }
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: `Error al crear rol: ${errorMsg}` }, { status: 500 });
     }
 }
 
@@ -143,7 +149,7 @@ export async function PUT(request: Request) {
         await prisma.$executeRaw(
             Prisma.sql`
                 UPDATE security.role
-                SET code        = ${code.trim().toUpperCase()},
+                SET code        = ${code.trim()},
                     name        = ${name.trim()},
                     description = ${description?.trim() || null},
                     is_active   = ${isActive !== false},

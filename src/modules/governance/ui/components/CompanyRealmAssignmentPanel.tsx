@@ -208,9 +208,28 @@ export function CompanyRealmAssignmentPanel() {
               </option>
             ))}
           </select>
-          <Link href="/modelo/gobernanza/company-reino/crear-reino" className={styles.saveButton}>
-            Crear Macroprocesos
-          </Link>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Link href="/modelo/gobernanza/company-reino/crear-reino" className={styles.saveButton}>
+              Crear Macroprocesos
+            </Link>
+            {selectedCompanyId ? (
+              <Link
+                href={`/modelo/gobernanza/company-reino/crear-proceso?companyId=${encodeURIComponent(selectedCompanyId)}`}
+                className={styles.saveButton}
+              >
+                Crear Proceso
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className={`${styles.saveButton} ${styles.saveButtonDisabled}`}
+                disabled
+                title="Selecciona una empresa para crear proceso"
+              >
+                Crear Proceso
+              </button>
+            )}
+          </div>
         </div>
 
         {!selectedCompanyId && <p className={styles.muted}>Sin empresa seleccionada.</p>}

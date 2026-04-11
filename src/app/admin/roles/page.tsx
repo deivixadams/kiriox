@@ -310,9 +310,19 @@ export default function RolesPage() {
         </div>
 
         <label className={styles.field}>
-          <span>Nombre</span>
+          <span>Código</span>
           <input
             ref={codeInputRef}
+            className={styles.input}
+            value={form.code}
+            onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
+            placeholder="ej: admin_basico (en minúsculas)"
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span>Nombre</span>
+          <input
             className={styles.input}
             value={form.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -343,87 +353,6 @@ export default function RolesPage() {
         {error   && <p className={styles.error}>{error}</p>}
         {success && <p className={styles.success}>{success}</p>}
       </article>
-
-      {/* ── Assigned users (only when a role is selected) ── */}
-      {form.id && (
-        <article className={styles.card}>
-          <div className={styles.statusRow}>
-            <span style={{ fontWeight: 700 }}>
-              Usuarios asignados — <em style={{ color: '#93c5fd' }}>{form.name}</em>
-            </span>
-            <span style={{ color: '#94a3b8', fontSize: '12px' }}>
-              {assignedUsers.length} usuario{assignedUsers.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-
-          {/* Assign new user */}
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
-            <label className={styles.field} style={{ flex: 1, marginBottom: 0 }}>
-              <span>Agregar usuario al rol</span>
-              <select
-                className={styles.input}
-                value={addUserId}
-                onChange={(e) => setAddUserId(e.target.value)}
-                disabled={assigning}
-              >
-                <option value="">Seleccionar usuario…</option>
-                {availableUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {[u.name, u.last_name].filter(Boolean).join(' ')} — {u.email}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              className={`${styles.button} ${styles.primary}`}
-              onClick={() => void assignUser()}
-              disabled={!addUserId || assigning}
-              style={{ whiteSpace: 'nowrap' }}
-            >
-              {assigning ? 'Asignando…' : 'Asignar'}
-            </button>
-          </div>
-
-          {/* User list */}
-          {loadingUsers ? (
-            <p style={{ color: '#94a3b8', fontSize: '13px' }}>Cargando usuarios…</p>
-          ) : assignedUsers.length === 0 ? (
-            <p style={{ color: '#64748b', fontSize: '13px' }}>Sin usuarios asignados a este rol.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: '6px' }}>
-              {assignedUsers.map((u) => {
-                const fullName = [u.name, u.last_name].filter(Boolean).join(' ') || u.email;
-                return (
-                  <div key={u.assignment_id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    borderRadius: '10px',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '14px' }}>{fullName}</span>
-                      <span style={{ color: '#64748b', fontSize: '12px' }}>{u.email}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className={`${styles.button} ${styles.delete}`}
-                      style={{ padding: '6px 12px', fontSize: '12px', minHeight: '30px' }}
-                      onClick={() => void removeUserFromRole(u.assignment_id, fullName)}
-                      disabled={removingId === u.assignment_id}
-                    >
-                      {removingId === u.assignment_id ? 'Removiendo…' : 'Remover'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </article>
-      )}
 
       {/* ── Navigation + Actions (siempre al final) ── */}
       <CrudModelActionBar
