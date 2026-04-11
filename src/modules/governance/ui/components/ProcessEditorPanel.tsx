@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import styles from './RealmEditorPanel.module.css'; // Reusing styles from RealmEditor
 import { useRegisterCommandSearch } from '@/shared/ui/command-search/useRegisterCommandSearch';
 import { CrudModelActionBar } from '@/shared/ui/crud-model';
@@ -31,6 +31,30 @@ type UserOption = {
   lastName: string | null;
 };
 
+type CompanyOption = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+type RealmOption = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+};
+
+type CompanySelectionPayload = {
+  companyId: string;
+  activeRealmIds: string[];
+};
+
+type AssignmentContextPayload = {
+  companies: CompanyOption[];
+  realms: RealmOption[];
+  selection: CompanySelectionPayload | null;
+};
+
 function toLocalDateTimeInput(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
@@ -51,8 +75,26 @@ function nowInputValue(): string {
 export function ProcessEditorPanel() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   
+  const companyName = searchParams.get('companyName')?.trim() || '';
+  const companyId = searchParams.get('companyId')?.trim() || '';
+
+  function buildEmptyForm() {
+    return {
+      id: '',
+      code: '',
+      name: '',
+      description: '',
+      categoryId: '',
+      ownerId: '',
+      isActive: true,
+      createdAt: nowInputValue(),
+      updatedAt: nowInputValue(),
+    };
+  }
+
   const [records, setRecords] = useState<ProcessRecord[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -60,20 +102,13 @@ export function ProcessEditorPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [headerCompanyName, setHeaderCompanyName] = useState(companyName || 'Sin empresa');
+  const [headerMacroprocessLabel, setHeaderMacroprocessLabel] = useState('Sin macroproceso vinculado');
 
-  const [form, setForm] = useState({
-    id: '',
-    code: '',
-    name: '',
-    description: '',
-    categoryId: '',
-    ownerId: '',
-    isActive: true,
-    createdAt: nowInputValue(),
-    updatedAt: nowInputValue(),
-  });
+  const [form, setForm] = useState(buildEmptyForm);
 
   async function loadData(preferredId?: string) {
     setLoading(true);
@@ -92,7 +127,10 @@ export function ProcessEditorPanel() {
       setUsers(userList);
 
       // 2. Load Processes
-      const procRes = await fetch('/api/governance/process-editor', { cache: 'no-store' });
+      const endpoint = companyId
+        ? `/api/governance/process-editor?companyId=${encodeURIComponent(companyId)}`
+        : '/api/governance/process-editor';
+      const procRes = await fetch(endpoint, { cache: 'no-store' });
       if (!procRes.ok) throw new Error('No se pudo cargar catálogo de procesos');
 
       const procPayload = (await procRes.json()) as { items?: ProcessRecord[] };
@@ -101,16 +139,14 @@ export function ProcessEditorPanel() {
 
       if (items.length === 0) {
         setCursor(-1);
-        setForm({
-          id: '',
-          code: '',
-          name: '',
-          description: '',
-          categoryId: '',
-          isActive: true,
-          createdAt: nowInputValue(),
-          updatedAt: nowInputValue(),
-        });
+        setForm(buildEmptyForm());
+        return;
+      }
+
+      if (!preferredId) {
+        // Enter this screen in "create new process" mode by default.
+        setCursor(-1);
+        setForm(buildEmptyForm());
         return;
       }
 
@@ -126,7 +162,44 @@ export function ProcessEditorPanel() {
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [companyId]);
+
+  useEffect(() => {
+    async function loadHeaderContext() {
+      if (!companyId) {
+        setHeaderCompanyName(companyName || 'Sin empresa');
+        setHeaderMacroprocessLabel('Sin macroproceso vinculado');
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/governance/company-realm/assignment?companyId=${encodeURIComponent(companyId)}`,
+          { cache: 'no-store' }
+        );
+        if (!response.ok) {
+          setHeaderCompanyName(companyName || 'Sin empresa');
+          setHeaderMacroprocessLabel('Sin macroproceso vinculado');
+          return;
+        }
+
+        const payload = (await response.json()) as AssignmentContextPayload;
+        const company = payload.companies?.find((item) => item.id === companyId);
+        const selectedIds = payload.selection?.activeRealmIds ?? [];
+        const names = selectedIds
+          .map((id) => payload.realms?.find((realm) => realm.id === id)?.name)
+          .filter((value): value is string => Boolean(value));
+
+        setHeaderCompanyName(company?.name || companyName || 'Sin empresa');
+        setHeaderMacroprocessLabel(names.length > 0 ? names.join(', ') : 'Sin macroproceso vinculado');
+      } catch {
+        setHeaderCompanyName(companyName || 'Sin empresa');
+        setHeaderMacroprocessLabel('Sin macroproceso vinculado');
+      }
+    }
+
+    void loadHeaderContext();
+  }, [companyId, companyName]);
 
   function applyRecord(record: ProcessRecord, index: number) {
     setCursor(index);
@@ -166,20 +239,33 @@ export function ProcessEditorPanel() {
     setCursor(-1);
     setError('');
     setSuccess('');
-    setForm({
-      id: '',
-      code: '',
-      name: '',
-      description: '',
-      categoryId: '',
-      ownerId: '',
-      isActive: true,
-      createdAt: nowInputValue(),
-      updatedAt: nowInputValue(),
-    });
+    setForm(buildEmptyForm());
     window.setTimeout(() => {
       nameInputRef.current?.focus();
     }, 0);
+  }
+
+  async function refineDescriptionWithIA() {
+    setAiDescriptionLoading(true);
+    try {
+      const response = await fetch('/api/ai/refine-text', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          text: form.description,
+          field: 'proceso_descripcion',
+          promptCode: 'GOV_PROCESS_DESCRIPTION',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      const refined = String(payload?.refinedText ?? '').trim();
+      if (refined) {
+        setForm((prev) => ({ ...prev, description: refined }));
+      }
+    } finally {
+      setAiDescriptionLoading(false);
+    }
   }
 
   async function save() {
@@ -188,6 +274,14 @@ export function ProcessEditorPanel() {
 
     if (!form.name.trim()) {
       setError('El nombre del proceso es obligatorio.');
+      return;
+    }
+    if (!companyId) {
+      setError('No hay empresa seleccionada para asociar el proceso.');
+      return;
+    }
+    if (!form.ownerId) {
+      setError('Selecciona un líder para el proceso.');
       return;
     }
 
@@ -203,6 +297,7 @@ export function ProcessEditorPanel() {
           description: form.description.trim(),
           categoryId: form.categoryId || null,
           ownerId: form.ownerId || null,
+          companyId,
           isActive: form.isActive,
           createdAt: form.createdAt,
           updatedAt: form.updatedAt,
@@ -252,38 +347,66 @@ export function ProcessEditorPanel() {
   }
 
   const statusLabel = useMemo(() => {
-    if (cursor < 0) return 'Nuevo proceso';
+    if (cursor < 0) return companyName || 'Nuevo proceso';
     return `Proceso ${cursor + 1} de ${records.length}`;
-  }, [cursor, records.length]);
+  }, [cursor, records.length, companyName]);
+
+  useRegisterCommandSearch({
+    id: 'governance-process-editor',
+    priority: 100,
+    isActive: () => pathname === '/modelo/gobernanza/company-reino/crear-proceso',
+    search: (query) => {
+      const term = query.trim().toLowerCase();
+      if (!term) return { ok: false, message: 'Ingresa un término para buscar.' };
+      if (records.length === 0) return { ok: false, message: 'No hay procesos registrados en esta pantalla.' };
+
+      const index = records.findIndex((item) => item.name.toLowerCase().includes(term));
+      if (index < 0) {
+        return { ok: false, message: `No se encontró "${query}" por nombre de proceso.` };
+      }
+
+      applyRecord(records[index], index);
+      setError('');
+      setSuccess(`Resultado encontrado: ${records[index].name}.`);
+      return { ok: true, message: `Encontrado: ${records[index].name}` };
+    },
+  });
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>Gobierno</p>
-        <h1 className={styles.title}>Definición de Proceso</h1>
-        <p className={styles.subtitle}>
-          Registra y actualiza el catálogo de procesos en `core.process` vinculándolos a una categoría.
-        </p>
+      <header className={styles.headerSplit}>
+        <div className={styles.header}>
+          <p className={styles.eyebrow}>Gobierno</p>
+          <h1 className={styles.title}>Definición de Proceso</h1>
+          <p className={styles.subtitle}>
+            Registra y actualiza el catálogo de procesos en `core.domain` vinculando empresa, líder y proceso.
+          </p>
+        </div>
+        <aside className={styles.headerContextCard}>
+          <p className={styles.headerContextNote}>Contexto recibido (solo lectura)</p>
+          <div className={styles.headerContextRow}>
+            <span>Empresa</span>
+            <strong>{headerCompanyName}</strong>
+          </div>
+          <div className={styles.headerContextRow}>
+            <span>Macroproceso</span>
+            <strong>{headerMacroprocessLabel}</strong>
+          </div>
+        </aside>
       </header>
 
       <article className={styles.card}>
-        <div className={styles.statusRow}>
-          <span>{statusLabel}</span>
-          <button type="button" className={styles.secondaryButton} onClick={clearForNew} disabled={saving || loading}>
-            Nuevo
-          </button>
-        </div>
-
-        <div className={styles.grid}>
-          <label className={styles.field}>
-            <span>Id</span>
-            <input className={styles.input} value={form.id || 'Se generará automáticamente (UUID)'} readOnly disabled />
-          </label>
-          <label className={styles.field}>
-            <span>Code</span>
-            <input className={styles.input} value={form.code || 'Se genera al grabar desde el nombre'} readOnly disabled />
-          </label>
-        </div>
+        <p
+          className={styles.info}
+          style={{
+            margin: 0,
+            fontSize: cursor < 0 && companyName ? '200%' : undefined,
+            lineHeight: cursor < 0 && companyName ? 1.1 : undefined,
+            fontWeight: cursor < 0 && companyName ? 700 : undefined,
+          }}
+        >
+          {statusLabel}
+        </p>
 
         <div className={styles.grid}>
           <label className={styles.field}>
@@ -335,6 +458,16 @@ export function ProcessEditorPanel() {
 
         <label className={styles.field}>
           <span>Descripción</span>
+          <div className={styles.fieldTools}>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={refineDescriptionWithIA}
+              disabled={aiDescriptionLoading || saving}
+            >
+              {aiDescriptionLoading ? 'IA...' : 'IA'}
+            </button>
+          </div>
           <textarea
             className={styles.textarea}
             rows={4}
@@ -383,6 +516,7 @@ export function ProcessEditorPanel() {
           onNext={() => navigate('next')}
           onLast={() => navigate('last')}
           onClose={() => router.push('/modelo/gobernanza/company-reino')}
+          onNew={clearForNew}
           onDelete={() => void removeCurrent()}
           onCancel={() => router.push('/modelo/gobernanza/company-reino')}
           onSave={() => void save()}
@@ -391,9 +525,11 @@ export function ProcessEditorPanel() {
           disableNext={saving || !canNavigate || cursor >= records.length - 1 || cursor < 0}
           disableLast={saving || !canNavigate || cursor >= records.length - 1}
           disableClose={saving || deleting}
+          disableNew={saving || deleting || loading}
           disableDelete={deleting || saving || loading || !form.id}
           disableCancel={saving || deleting}
           disableSave={saving || loading || deleting}
+          showNew
           deleteLabel="Eliminar"
           saveLabel="Grabar"
           savingLabel="Grabando..."

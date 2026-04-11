@@ -85,8 +85,9 @@ export function CompanyRealmAssignmentPanel() {
 
       const payload = (await response.json()) as ContextPayload;
       const activeRealmIds = payload.selection?.activeRealmIds ?? [];
-      setBaseRealmIds(activeRealmIds);
-      setSelectedRealmIds(activeRealmIds);
+      const normalized = activeRealmIds.length > 0 ? [activeRealmIds[0]] : [];
+      setBaseRealmIds(normalized);
+      setSelectedRealmIds(normalized);
     } catch (error: any) {
       setErrorMessage(error?.message || 'No se pudo cargar la selección actual');
       setBaseRealmIds([]);
@@ -109,9 +110,9 @@ export function CompanyRealmAssignmentPanel() {
 
     setSelectedRealmIds((previous) => {
       if (previous.includes(realmId)) {
-        return previous.filter((id) => id !== realmId);
+        return [];
       }
-      return [...previous, realmId];
+      return [realmId];
     });
   }
 
@@ -184,7 +185,7 @@ export function CompanyRealmAssignmentPanel() {
         <p className={styles.eyebrow}>Paso 1 de Gobernanza</p>
         <h1 className={styles.title}>Macroprocesos</h1>
         <p className={styles.subtitle}>
-          Escoger un macroproceso para la empresa del catálogo o cree uno nuevo
+          Escoge un macroproceso para la empresa del catálogo o crea uno nuevo.
         </p>
       </header>
 
@@ -214,7 +215,7 @@ export function CompanyRealmAssignmentPanel() {
             </Link>
             {selectedCompanyId ? (
               <Link
-                href={`/modelo/gobernanza/company-reino/crear-proceso?companyId=${encodeURIComponent(selectedCompanyId)}`}
+                href={`/modelo/gobernanza/company-reino/crear-proceso?companyId=${encodeURIComponent(selectedCompanyId)}&companyName=${encodeURIComponent(selectedCompany?.name ?? '')}`}
                 className={styles.saveButton}
               >
                 Crear Proceso
@@ -243,8 +244,8 @@ export function CompanyRealmAssignmentPanel() {
             <strong>{selectedCompany ? `${selectedCompany.name} (${selectedCompany.code})` : 'Sin selección'}</strong>
           </div>
           <div className={styles.summaryBlock}>
-            <span>Reinos vinculados</span>
-            <strong>{selectedCompanyId ? selectedRealmIds.length : 0}</strong>
+            <span>Macroproceso seleccionado</span>
+            <strong>{selectedCompanyId ? (selectedRealmIds.length > 0 ? 'Sí' : 'No') : 'No'}</strong>
           </div>
           <div className={styles.summaryBlock}>
             <span>Estado</span>
@@ -258,11 +259,11 @@ export function CompanyRealmAssignmentPanel() {
       </article>
 
       <article className={styles.card}>
-        <h2>Catálogo de reinos disponibles</h2>
+        <h2>Catálogo de macroprocesos disponibles</h2>
         {!selectedCompanyId && (
-          <p className={styles.muted}>Selecciona una empresa para habilitar la configuración de reinos.</p>
+          <p className={styles.muted}>Selecciona una empresa para habilitar la configuración de macroprocesos.</p>
         )}
-        {selectedCompanyId && loadingSelection && <p className={styles.info}>Cargando vínculos actuales...</p>}
+        {selectedCompanyId && loadingSelection && <p className={styles.info}>Cargando selección actual...</p>}
         {selectedCompanyId && !loadingSelection && (
           <div className={styles.realmGrid}>
             {realms.map((realm) => {
@@ -300,9 +301,9 @@ export function CompanyRealmAssignmentPanel() {
         {selectedCompanyId && hasPendingChanges && (
           <div className={styles.pendingGrid}>
             <div className={styles.pendingBlock}>
-              <p className={styles.pendingTitle}>Se agregarán</p>
+              <p className={styles.pendingTitle}>Se asignará</p>
               {pendingAdd.length === 0 ? (
-                <p className={styles.muted}>Ningún reino</p>
+                <p className={styles.muted}>Ningún macroproceso</p>
               ) : (
                 <ul className={styles.pendingList}>
                   {pendingAdd.map((realm) => (
@@ -312,9 +313,9 @@ export function CompanyRealmAssignmentPanel() {
               )}
             </div>
             <div className={styles.pendingBlock}>
-              <p className={styles.pendingTitle}>Se removerán</p>
+              <p className={styles.pendingTitle}>Se removerá</p>
               {pendingRemove.length === 0 ? (
-                <p className={styles.muted}>Ningún reino</p>
+                <p className={styles.muted}>Ningún macroproceso</p>
               ) : (
                 <ul className={styles.pendingList}>
                   {pendingRemove.map((realm) => (

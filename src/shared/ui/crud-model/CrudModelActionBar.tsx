@@ -9,6 +9,7 @@ type CrudModelActionBarProps = {
   onLast?: () => void;
   onClose?: () => void;
   onDelete?: () => void;
+  onNew?: () => void;
   onCancel?: () => void;
   onSave?: () => void;
   disableFirst?: boolean;
@@ -17,8 +18,10 @@ type CrudModelActionBarProps = {
   disableLast?: boolean;
   disableClose?: boolean;
   disableDelete?: boolean;
+  disableNew?: boolean;
   disableCancel?: boolean;
   disableSave?: boolean;
+  showNew?: boolean;
   showDelete?: boolean;
   firstLabel?: string;
   previousLabel?: string;
@@ -26,6 +29,7 @@ type CrudModelActionBarProps = {
   lastLabel?: string;
   closeLabel?: string;
   deleteLabel?: string;
+  newLabel?: string;
   deletingLabel?: string;
   cancelLabel?: string;
   saveLabel?: string;
@@ -41,6 +45,7 @@ export function CrudModelActionBar({
   onLast,
   onClose,
   onDelete,
+  onNew,
   onCancel,
   onSave,
   disableFirst = false,
@@ -49,15 +54,18 @@ export function CrudModelActionBar({
   disableLast = false,
   disableClose = false,
   disableDelete = false,
+  disableNew = false,
   disableCancel = false,
   disableSave = false,
   showDelete = true,
+  showNew = false,
   firstLabel = "Primero",
   previousLabel = "Anterior",
   nextLabel = "Siguiente",
   lastLabel = "Final",
   closeLabel = "Cerrar",
   deleteLabel = "Eliminar",
+  newLabel = "Nuevo",
   deletingLabel = "Eliminando...",
   cancelLabel = "Cancelar",
   saveLabel = "Guardar",
@@ -86,6 +94,11 @@ export function CrudModelActionBar({
         <button type="button" className={`${styles.button} ${styles.close}`} onClick={onClose} disabled={disableClose}>
           {closeLabel}
         </button>
+        {showNew ? (
+          <button type="button" className={`${styles.button} ${styles.new}`} onClick={onNew} disabled={disableNew}>
+            {newLabel}
+          </button>
+        ) : null}
         {showDelete ? (
           <button type="button" className={`${styles.button} ${styles.delete}`} onClick={onDelete} disabled={disableDelete}>
             {deleting ? deletingLabel : deleteLabel}
@@ -101,4 +114,3 @@ export function CrudModelActionBar({
     </div>
   );
 }
-
