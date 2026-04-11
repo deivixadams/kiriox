@@ -11,9 +11,10 @@ function isAdmin(roleCode: string) {
 }
 
 function normalizeRoleCode(code?: string): string {
-  if (!code) return 'super_admin';
-  if (code === 'ADMIN') return 'super_admin';
-  return code.toLowerCase();
+  const value = String(code || '').trim();
+  if (!value) return 'super_admin';
+  if (value.toUpperCase() === 'ADMIN') return 'super_admin';
+  return value.toLowerCase();
 }
 
 export async function GET() {
@@ -50,11 +51,11 @@ export async function GET() {
         r.code AS role_code,
         r.name AS role_name
       FROM security.security_users u
-      LEFT JOIN security.company_user_role cur
-        ON cur.user_id = u.id
-       AND COALESCE(cur.is_active, true) = true
+      LEFT JOIN security.map_users_x_roles mur
+        ON mur.user_id = u.id
+       AND COALESCE(mur.is_active, true) = true
       LEFT JOIN security.role r
-        ON r.id = cur.role_id
+        ON r.id = mur.role_id
        AND COALESCE(r.is_active, true) = true
       ORDER BY u.created_at DESC NULLS LAST
     `);
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { tenantId, email, name, lastName, whatsapp, roleCode, scopes, password, mustChangePassword } = body;
+    const { tenantId, email, name, lastName, whatsapp, roleCode, roleCodes, scopes, password, mustChangePassword } = body;
 
     if (!email || !name || !tenantId || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -134,18 +135,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User already exists', userId: existingUser.id }, { status: 409 });
     }
 
-    const canonicalRoleCode = normalizeRoleCode(roleCode);
+    const requestedRoleCodes = Array.from(
+      new Set(
+        (Array.isArray(roleCodes) && roleCodes.length > 0 ? roleCodes : [roleCode])
+          .map((code: string) => normalizeRoleCode(code))
+          .filter((code: string) => Boolean(code))
+      )
+    );
+    if (requestedRoleCodes.length === 0) {
+      return NextResponse.json({ error: 'At least one role is required' }, { status: 400 });
+    }
+
+    const normalizedLookupCodes = requestedRoleCodes.map((code) => code.toLowerCase());
     const roleRows = await prisma.$queryRaw<{ id: string; code: string }[]>(
       Prisma.sql`
         SELECT id, code
         FROM security.role
-        WHERE code = ${canonicalRoleCode}
+        WHERE LOWER(code) IN (${Prisma.join(normalizedLookupCodes)})
           AND COALESCE(is_active, true) = true
-        LIMIT 1
       `
     );
     if (roleRows.length === 0) {
-      return NextResponse.json({ error: `Role not found: ${canonicalRoleCode}` }, { status: 400 });
+      return NextResponse.json({ error: `Roles not found: ${requestedRoleCodes.join(', ')}` }, { status: 400 });
     }
 
     const passwordHash = await hashPassword(password);
@@ -173,14 +184,26 @@ export async function POST(request: Request) {
       `
     );
 
-    await prisma.$executeRaw(
-      Prisma.sql`
-        INSERT INTO security.company_user_role (company_id, user_id, role_id, is_active)
-        VALUES (${tenantId}::uuid, ${userId}::uuid, ${roleRows[0].id}::uuid, true)
-        ON CONFLICT (company_id, user_id, role_id)
-        DO UPDATE SET is_active = true, updated_at = NOW()
-      `
-    );
+    for (const role of roleRows) {
+      await prisma.$executeRaw(
+        Prisma.sql`
+          INSERT INTO security.map_users_x_roles (user_id, role_id, is_active, created_at, updated_at)
+          VALUES (${userId}::uuid, ${role.id}::uuid, true, NOW(), NOW())
+        `
+      );
+    }
+
+    // Keep legacy table aligned to avoid breaking existing authorization queries.
+    for (const role of roleRows) {
+      await prisma.$executeRaw(
+        Prisma.sql`
+          INSERT INTO security.company_user_role (company_id, user_id, role_id, is_active)
+          VALUES (${tenantId}::uuid, ${userId}::uuid, ${role.id}::uuid, true)
+          ON CONFLICT (company_id, user_id, role_id)
+          DO UPDATE SET is_active = true, updated_at = NOW()
+        `
+      );
+    }
 
     if (Array.isArray(scopes) && scopes.length > 0) {
       await prisma.securityUserScope.createMany({
@@ -197,25 +220,30 @@ export async function POST(request: Request) {
     }
 
     const meta = getRequestMeta(request);
-    await prisma.corpusAuditLog.create({
-      data: {
-        tenantId,
-        entityName: 'security_users',
-        entityId: userId,
-        action: 'create',
-        newData: {
-          email,
-          name,
-          lastName: lastName || null,
-          roleCode: canonicalRoleCode,
-          isActive: true,
-          activationStatus: 'active',
+    try {
+      await prisma.corpusAuditLog.create({
+        data: {
+          tenant_id: tenantId,
+          entity_name: 'security_users',
+          entity_id: userId,
+          action: 'create',
+          new_data: {
+            email,
+            name,
+            lastName: lastName || null,
+            roleCodes: requestedRoleCodes,
+            isActive: true,
+            activationStatus: 'active',
+          },
+          changed_by: auth.userId,
+          ip_address: meta.ipAddress,
+          user_agent: meta.userAgent,
         },
-        changedBy: auth.userId,
-        ipAddress: meta.ipAddress,
-        userAgent: meta.userAgent,
-      },
-    });
+      });
+    } catch (auditError: any) {
+      // Audit logging is best-effort in environments where corpus.audit_log is unavailable.
+      console.warn('Skipping audit log for user create:', auditError?.code || auditError?.message || auditError);
+    }
 
     return NextResponse.json({ success: true, userId });
   } catch (error: any) {

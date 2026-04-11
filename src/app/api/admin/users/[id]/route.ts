@@ -10,8 +10,10 @@ function isAdmin(roleCode: string) {
 }
 
 function normalizeRoleCode(code: string): string {
-  if (code === 'ADMIN') return 'super_admin';
-  return code.toLowerCase();
+  const value = String(code || '').trim();
+  if (!value) return '';
+  if (value.toUpperCase() === 'ADMIN') return 'super_admin';
+  return value.toLowerCase();
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -68,19 +70,33 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Try to get roles from the RBAC table
+    // Primary source: new user-role mapping table
     let roles = await prisma.$queryRaw<{ roleCode: string; roleName: string | null }[]>(
       Prisma.sql`
         SELECT DISTINCT r.code AS "roleCode", r.name AS "roleName"
-        FROM security.company_user_role cur
-        JOIN security.role r ON r.id = cur.role_id
-        WHERE cur.user_id = ${id}::uuid
-          AND COALESCE(cur.is_active, true) = true
+        FROM security.map_users_x_roles mur
+        JOIN security.role r ON r.id = mur.role_id
+        WHERE mur.user_id = ${id}::uuid
+          AND COALESCE(mur.is_active, true) = true
           AND COALESCE(r.is_active, true) = true
       `
     );
 
-    // Fallback: If no roles in RBAC table, check direct role_id column
+    // Backward-compat fallback with legacy table.
+    if (roles.length === 0) {
+      roles = await prisma.$queryRaw<{ roleCode: string; roleName: string | null }[]>(
+        Prisma.sql`
+          SELECT DISTINCT r.code AS "roleCode", r.name AS "roleName"
+          FROM security.company_user_role cur
+          JOIN security.role r ON r.id = cur.role_id
+          WHERE cur.user_id = ${id}::uuid
+            AND COALESCE(cur.is_active, true) = true
+            AND COALESCE(r.is_active, true) = true
+        `
+      );
+    }
+
+    // Final fallback: direct role_id column on security_users.
     if (roles.length === 0 && user.direct_role_id) {
        const directRoles = await prisma.$queryRaw<{ roleCode: string; roleName: string | null }[]>(
          Prisma.sql`SELECT code as "roleCode", name as "roleName" FROM security.role WHERE id = ${user.direct_role_id}::uuid`
@@ -177,16 +193,45 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
 
       if (Array.isArray(roleCodes)) {
-        const canonicalRoleCodes = roleCodes.map((code: string) => normalizeRoleCode(code));
-        const roleRows = (await tx.$queryRaw(
-          Prisma.sql`
-            SELECT id, code
-            FROM security.role
-            WHERE code IN (${Prisma.join(canonicalRoleCodes)})
-              AND COALESCE(is_active, true) = true
-          `
-        )) as { id: string; code: string }[];
+        const canonicalRoleCodes = Array.from(
+          new Set(
+            roleCodes
+              .map((code: string) => normalizeRoleCode(code))
+              .filter((code: string) => Boolean(code))
+          )
+        );
 
+        const normalizedLookupCodes = canonicalRoleCodes.map((code: string) => code.toLowerCase());
+        const roleRows = normalizedLookupCodes.length
+          ? ((await tx.$queryRaw(
+              Prisma.sql`
+                SELECT id, code
+                FROM security.role
+                WHERE LOWER(code) IN (${Prisma.join(normalizedLookupCodes)})
+                  AND COALESCE(is_active, true) = true
+              `
+            )) as { id: string; code: string }[])
+          : [];
+
+        await tx.$executeRaw(
+          Prisma.sql`
+            DELETE FROM security.map_users_x_roles
+            WHERE user_id = ${id}::uuid
+          `
+        );
+
+        if (roleRows.length > 0) {
+          for (const role of roleRows) {
+            await tx.$executeRaw(
+              Prisma.sql`
+                INSERT INTO security.map_users_x_roles (user_id, role_id, is_active, created_at, updated_at)
+                VALUES (${id}::uuid, ${role.id}::uuid, true, NOW(), NOW())
+              `
+            );
+          }
+        }
+
+        // Keep legacy table aligned to avoid breaking existing authorization queries.
         await tx.$executeRaw(
           Prisma.sql`
             DELETE FROM security.company_user_role
@@ -229,24 +274,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
 
     const meta = getRequestMeta(request);
-    await prisma.corpusAuditLog.create({
-      data: {
-        tenantId: auth.tenantId,
-        entityName: 'security_users',
-        entityId: id,
-        action: 'update',
-        newData: {
-          email,
-          name,
-          lastName,
-          roleCodes,
-          isActive,
+    try {
+      await prisma.corpusAuditLog.create({
+        data: {
+          tenant_id: auth.tenantId,
+          entity_name: 'security_users',
+          entity_id: id,
+          action: 'update',
+          new_data: {
+            email,
+            name,
+            lastName,
+            roleCodes: roleCodes ?? null,
+            isActive: typeof isActive === 'boolean' ? isActive : null,
+          },
+          changed_by: auth.userId,
+          ip_address: meta.ipAddress,
+          user_agent: meta.userAgent,
         },
-        changedBy: auth.userId,
-        ipAddress: meta.ipAddress,
-        userAgent: meta.userAgent,
-      },
-    });
+      });
+    } catch (auditError: any) {
+      // Audit logging is best-effort in environments where corpus.audit_log is unavailable.
+      console.warn('Skipping audit log for user update:', auditError?.code || auditError?.message || auditError);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

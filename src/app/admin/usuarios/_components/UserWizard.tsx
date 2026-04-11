@@ -33,10 +33,9 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
     const [whatsapp, setWhatsapp] = useState('');
     const [password, setPassword] = useState('');
     const [mustChangePassword, setMustChangePassword] = useState(true);
-    const [roleCode, setRoleCode] = useState('');
+    const [isActive, setIsActive] = useState(true);
+    const [selectedRoleCodes, setSelectedRoleCodes] = useState<string[]>([]);
     const [roles, setRoles] = useState<{ id: string; code: string; name: string }[]>([]);
-
-    const [rolePermissions, setRolePermissions] = useState<string[]>([]);
 
     useEffect(() => {
         const loadContext = async () => {
@@ -88,21 +87,6 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
     }, []);
 
     useEffect(() => {
-        if (!roleCode) return;
-        const loadPermissions = async () => {
-            try {
-                const res = await fetch(`/api/admin/rbac?role_code=${encodeURIComponent(roleCode)}`);
-                if (!res.ok) return;
-                const data = await res.json();
-                setRolePermissions(data.permissions || []);
-            } catch (err) {
-                console.error('Error loading permissions:', err);
-            }
-        };
-        loadPermissions();
-    }, [roleCode]);
-
-    useEffect(() => {
         if (mode !== 'edit' || !userId) return;
         const loadUser = async () => {
             setLoading(true);
@@ -122,18 +106,22 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
                 setLastName(data.user.lastName || '');
                 setWhatsapp(data.user.whatsapp || '');
                 
-                // Handle roles array from API
-                const firstRole = data.user.roles?.[0];
-                if (firstRole) {
-                    setRoleCode(firstRole.roleCode);
+                const incomingRoleCodes = Array.isArray(data.user.roles)
+                    ? data.user.roles.map((role: { roleCode: string }) => role.roleCode).filter(Boolean)
+                    : [];
+                if (incomingRoleCodes.length > 0) {
+                    setSelectedRoleCodes(incomingRoleCodes);
                 } else if (data.user.roleCode) {
-                    setRoleCode(data.user.roleCode);
+                    setSelectedRoleCodes([data.user.roleCode]);
                 } else {
-                    setRoleCode('OPERATOR');
+                    setSelectedRoleCodes([]);
                 }
 
                 if (typeof data.user.mustChangePassword === 'boolean') {
                     setMustChangePassword(data.user.mustChangePassword);
+                }
+                if (typeof data.user.isActive === 'boolean') {
+                    setIsActive(data.user.isActive);
                 }
                 if (data.user.tenantId) {
                     setTenantId(data.user.tenantId);
@@ -179,7 +167,8 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
                 name,
                 lastName,
                 whatsapp,
-                roleCode,
+                roleCodes: selectedRoleCodes,
+                isActive,
                 mustChangePassword
             };
             if (mode === 'create') {
@@ -226,9 +215,21 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
     const formError = useMemo(() => {
         if (!tenantId) return 'Seleccione una empresa.';
         if (!name || !email) return 'Nombre y email son obligatorios.';
+        if (selectedRoleCodes.length === 0) return 'Seleccione al menos un rol.';
         if (mode === 'create' && !password) return 'El password inicial es obligatorio.';
         return null;
-    }, [tenantId, name, email, mode, password]);
+    }, [tenantId, name, email, selectedRoleCodes, mode, password]);
+
+    const selectedRolesSet = useMemo(() => new Set(selectedRoleCodes), [selectedRoleCodes]);
+
+    const toggleRole = (roleCode: string) => {
+        setSelectedRoleCodes((prev) => {
+            if (prev.includes(roleCode)) {
+                return prev.filter((code) => code !== roleCode);
+            }
+            return [...prev, roleCode];
+        });
+    };
 
     return (
         <div className="glass-card" style={{ padding: '2rem' }}>
@@ -324,42 +325,108 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
                                 style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }}
                             />
                         </div>
-                        <div>
-                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Rol</label>
-                            <select
-                                value={roleCode}
-                                onChange={(e) => setRoleCode(e.target.value)}
-                                style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }}
-                            >
-                                <option value="">Seleccione...</option>
-                                {roles.map((r) => (
-                                    <option key={r.id} value={r.code}>{r.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        {/* Removing Siguiente button */}
+                        {/* Selector de roles se gestiona en panel derecho */}
                     </div>
                     <div className="glass-card" style={{ padding: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--primary)' }}>
                             <ShieldCheck size={18} />
                             <h3 style={{ margin: 0, fontSize: '1rem' }}>Permisos incluidos</h3>
                         </div>
-                        {rolePermissions.length === 0 ? (
-                            <p style={{ color: 'var(--muted)' }}>No hay permisos asignados para este rol.</p>
+                        <p style={{ margin: '0 0 0.75rem', color: 'var(--muted)', fontSize: '0.8rem' }}>
+                            Seleccione uno o más roles para este usuario.
+                        </p>
+                        {roles.length === 0 ? (
+                            <p style={{ color: 'var(--muted)' }}>No hay roles activos disponibles.</p>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {rolePermissions.map((perm) => (
-                                    <div key={perm} style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--glass-border)', borderRadius: '8px' }}>
-                                        {perm}
-                                    </div>
-                                ))}
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                    gap: '0.65rem',
+                                    maxHeight: '320px',
+                                    overflowY: 'auto',
+                                }}
+                            >
+                                {roles.map((role) => {
+                                    const selected = selectedRolesSet.has(role.code);
+                                    return (
+                                        <button
+                                            key={role.id}
+                                            type="button"
+                                            onClick={() => toggleRole(role.code)}
+                                            style={{
+                                                textAlign: 'left',
+                                                padding: '0.7rem 0.75rem',
+                                                borderRadius: '8px',
+                                                border: selected ? '1px solid rgba(16,185,129,0.55)' : '1px solid var(--glass-border)',
+                                                background: selected ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.02)',
+                                                color: selected ? '#d1fae5' : 'var(--foreground)',
+                                                cursor: 'pointer',
+                                                display: 'grid',
+                                                gap: '0.2rem',
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{role.name}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
+                        )}
+                        <p style={{ margin: '0.85rem 0 0', color: 'var(--muted)', fontSize: '0.75rem' }}>
+                            Seleccionados: {selectedRoleCodes.length}
+                        </p>
+                        {formError === 'Seleccione al menos un rol.' && (
+                            <p style={{ margin: '0.45rem 0 0', color: '#f87171', fontSize: '0.8rem' }}>
+                                Debe seleccionar al menos un rol.
+                            </p>
                         )}
                     </div>
                 </div>
 
                 {/* Section 2: Security */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingTop: '2rem', borderTop: '1px solid var(--glass-border)' }}>
+                    {mode === 'edit' && (
+                        <div className="glass-card" style={{ padding: '1rem' }}>
+                            <div style={{ display: 'grid', gap: '0.75rem' }}>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                                    Estado del usuario
+                                </label>
+                                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsActive(true)}
+                                        style={{
+                                            border: isActive ? '1px solid rgba(16,185,129,0.55)' : '1px solid var(--glass-border)',
+                                            background: isActive ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.03)',
+                                            color: isActive ? '#d1fae5' : 'var(--foreground)',
+                                            borderRadius: '10px',
+                                            padding: '0.6rem 1rem',
+                                            fontWeight: 700,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Activo
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsActive(false)}
+                                        style={{
+                                            border: !isActive ? '1px solid rgba(239,68,68,0.55)' : '1px solid var(--glass-border)',
+                                            background: !isActive ? 'rgba(239,68,68,0.14)' : 'rgba(255,255,255,0.03)',
+                                            color: !isActive ? '#fecaca' : 'var(--foreground)',
+                                            borderRadius: '10px',
+                                            padding: '0.6rem 1rem',
+                                            fontWeight: 700,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Inactivo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {mode === 'create' && (
                         <div className="glass-card" style={{ padding: '1rem' }}>
                             <div style={{ display: 'grid', gap: '0.75rem' }}>

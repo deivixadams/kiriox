@@ -59,20 +59,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
 
         const meta = getRequestMeta(request);
-        await prisma.corpusAuditLog.create({
-            data: {
-                tenantId: auth.tenantId,
-                entityName: 'security_users',
-                entityId: id,
-                action: 'reset_password',
-                newData: {
-                    mustChangePassword: true
-                },
-                changedBy: auth.userId,
-                ipAddress: meta.ipAddress,
-                userAgent: meta.userAgent
-            }
-        });
+        try {
+            await prisma.corpusAuditLog.create({
+                data: {
+                    tenant_id: auth.tenantId,
+                    entity_name: 'security_users',
+                    entity_id: id,
+                    action: 'reset_password',
+                    new_data: {
+                        mustChangePassword: true
+                    },
+                    changed_by: auth.userId,
+                    ip_address: meta.ipAddress,
+                    user_agent: meta.userAgent
+                }
+            });
+        } catch (auditError: any) {
+            // Audit logging is best-effort in environments where corpus.audit_log is unavailable.
+            console.warn('Skipping audit log for password reset:', auditError?.code || auditError?.message || auditError);
+        }
 
         return NextResponse.json({ success: true, tempPassword });
     } catch (error: any) {

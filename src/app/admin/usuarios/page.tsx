@@ -85,9 +85,8 @@ export default function UserManagementPage() {
     }, [users, search]);
 
     const getStatusLabel = (user: UserRow) => {
-        if (!user.isActive) return { label: 'Suspendido', color: '#64748b' };
-        if (user.activationStatus !== 'active') return { label: 'Pendiente', color: '#f59e0b' };
-        return { label: 'Activo', color: '#10b981' };
+        if (user.isActive) return { label: 'true', color: '#10b981' };
+        return { label: 'false', color: '#64748b' };
     };
 
     const openRolePermissions = async (roleCode: string) => {
