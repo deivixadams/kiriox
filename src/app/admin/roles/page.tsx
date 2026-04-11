@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import styles from '@/modules/governance/ui/components/RealmEditorPanel.module.css';
+import styles from './roles.module.css';
+
+import { CrudModelActionBar } from '@/shared/ui/crud-model/CrudModelActionBar';
 
 /* ──────────────────── Types ──────────────────── */
+// ... existing types remain the same ...
 type RoleRecord = {
   id: string;
   code: string;
@@ -304,10 +307,6 @@ export default function RolesPage() {
       <article className={styles.card}>
         <div className={styles.statusRow}>
           <span>{statusLabel}</span>
-          <button type="button" className={styles.secondaryButton}
-            onClick={clearForNew} disabled={saving || loading}>
-            Nuevo
-          </button>
         </div>
 
         <label className={styles.field}>
@@ -377,7 +376,7 @@ export default function RolesPage() {
             </label>
             <button
               type="button"
-              className={styles.primaryButton}
+              className={`${styles.button} ${styles.primary}`}
               onClick={() => void assignUser()}
               disabled={!addUserId || assigning}
               style={{ whiteSpace: 'nowrap' }}
@@ -411,8 +410,8 @@ export default function RolesPage() {
                     </div>
                     <button
                       type="button"
-                      className={styles.deleteButton}
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                      className={`${styles.button} ${styles.delete}`}
+                      style={{ padding: '6px 12px', fontSize: '12px', minHeight: '30px' }}
                       onClick={() => void removeUserFromRole(u.assignment_id, fullName)}
                       disabled={removingId === u.assignment_id}
                     >
@@ -427,46 +426,27 @@ export default function RolesPage() {
       )}
 
       {/* ── Navigation + Actions (siempre al final) ── */}
-      <div className={styles.actions}>
-        <div className={styles.actionsLeft}>
-          <button type="button" className={styles.secondaryButton}
-            onClick={() => navigate('first')}
-            disabled={saving || !canNavigate || cursor <= 0}>
-            Primero
-          </button>
-          <button type="button" className={styles.secondaryButton}
-            onClick={() => navigate('prev')}
-            disabled={saving || !canNavigate || cursor <= 0}>
-            Anterior
-          </button>
-          <button type="button" className={styles.secondaryButton}
-            onClick={() => navigate('next')}
-            disabled={saving || !canNavigate || cursor >= records.length - 1 || cursor < 0}>
-            Siguiente
-          </button>
-          <button type="button" className={styles.secondaryButton}
-            onClick={() => navigate('last')}
-            disabled={saving || !canNavigate || cursor >= records.length - 1}>
-            Final
-          </button>
-        </div>
-
-        <div className={styles.actionsRight}>
-          <button type="button" className={styles.secondaryButton}
-            onClick={() => router.push('/score/dashboard')}>
-            Cerrar
-          </button>
-          <button type="button" className={styles.deleteButton}
-            onClick={() => void deleteRole()}
-            disabled={deleting || saving || !form.id}>
-            {deleting ? 'Eliminando…' : 'Eliminar Rol'}
-          </button>
-          <button type="button" className={styles.primaryButton}
-            onClick={() => void save()} disabled={saving || loading}>
-            {saving ? 'Guardando…' : 'Guardar'}
-          </button>
-        </div>
-      </div>
+      <CrudModelActionBar
+        onFirst={() => navigate('first')}
+        onPrevious={() => navigate('prev')}
+        onNext={() => navigate('next')}
+        onLast={() => navigate('last')}
+        onClose={() => router.push('/score/dashboard')}
+        onDelete={() => void deleteRole()}
+        onCancel={clearForNew}
+        onSave={() => void save()}
+        disableFirst={saving || !canNavigate || cursor <= 0}
+        disablePrevious={saving || !canNavigate || cursor <= 0}
+        disableNext={saving || !canNavigate || cursor >= records.length - 1 || cursor < 0}
+        disableLast={saving || !canNavigate || cursor >= records.length - 1}
+        disableClose={saving || deleting}
+        disableDelete={deleting || saving || !form.id}
+        disableCancel={saving || deleting}
+        disableSave={saving || loading}
+        deleting={deleting}
+        saving={saving}
+        cancelLabel="Nuevo"
+      />
     </section>
   );
 }

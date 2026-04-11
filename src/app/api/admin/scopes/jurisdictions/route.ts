@@ -9,7 +9,7 @@ export async function GET() {
     }
 
     try {
-        const jurisdictions = await prisma.corpusJurisdiction.findMany({
+        const jurisdictions = await prisma.jurisdiction.findMany({
             select: { id: true, code: true, name: true },
             orderBy: { name: 'asc' }
         });

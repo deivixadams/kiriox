@@ -15,14 +15,18 @@ export async function GET(request: Request) {
     }
 
     try {
-        const versions = await prisma.corpusFrameworkVersion.findMany({
-            where: { frameworkId },
-            select: { id: true, version: true, status: true, statusId: true, createdAt: true },
-            orderBy: { createdAt: 'desc' }
+        const versions = await prisma.frameworkVersion.findMany({
+            where: { framework_id: frameworkId },
+            select: { id: true, version: true, status: true, status_id: true, created_at: true },
+            orderBy: { created_at: 'desc' }
         });
         const response = versions.map((v: any) => ({
-            ...v,
-            isActive: v.statusId === 1 || v.status === 'active'
+            id: v.id,
+            version: v.version,
+            status: v.status,
+            statusId: v.status_id,
+            createdAt: v.created_at,
+            isActive: v.status_id === 1 || v.status === 'active'
         }));
         return NextResponse.json(response);
     } catch (error: any) {

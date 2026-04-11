@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
     try {
         const frameworks = await prisma.corpusFramework.findMany({
-            where: { jurisdictionId },
+            where: { jurisdiction_id: jurisdictionId },
             select: { id: true, code: true, name: true },
             orderBy: { name: 'asc' }
         });

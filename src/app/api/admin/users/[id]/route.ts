@@ -38,6 +38,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         created_at: Date | null;
         updated_at: Date | null;
         company_id: string | null;
+        direct_role_id: string | null;
       }[]
     >(Prisma.sql`
       SELECT
@@ -51,6 +52,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         u.must_change_password,
         u.created_at,
         u.updated_at,
+        u.role_id as direct_role_id,
         cu.company_id
       FROM security.security_users u
       LEFT JOIN security.company_user cu
@@ -66,7 +68,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const roles = await prisma.$queryRaw<{ roleCode: string; roleName: string | null }[]>(
+    // Try to get roles from the RBAC table
+    let roles = await prisma.$queryRaw<{ roleCode: string; roleName: string | null }[]>(
       Prisma.sql`
         SELECT DISTINCT r.code AS "roleCode", r.name AS "roleName"
         FROM security.company_user_role cur
@@ -77,15 +80,30 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       `
     );
 
-    const scopes = await prisma.securityUserScope.findMany({
-      where: { userId: id },
+    // Fallback: If no roles in RBAC table, check direct role_id column
+    if (roles.length === 0 && user.direct_role_id) {
+       const directRoles = await prisma.$queryRaw<{ roleCode: string; roleName: string | null }[]>(
+         Prisma.sql`SELECT code as "roleCode", name as "roleName" FROM security.role WHERE id = ${user.direct_role_id}::uuid`
+       );
+       if (directRoles.length > 0) roles = directRoles;
+    }
+
+    const rawScopes = await prisma.securityUserScope.findMany({
+      where: { user_id: id },
       select: {
-        jurisdictionId: true,
-        frameworkVersionId: true,
-        domainId: true,
-        isAllowed: true,
+        jurisdiction_id: true,
+        framework_version_id: true,
+        domain_id: true,
+        is_allowed: true,
       },
     });
+
+    const scopes = rawScopes.map(s => ({
+      jurisdictionId: s.jurisdiction_id,
+      frameworkVersionId: s.framework_version_id,
+      domainId: s.domain_id,
+      isAllowed: s.is_allowed
+    }));
 
     return NextResponse.json({
       user: {
@@ -101,6 +119,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         createdAt: user.created_at,
         updatedAt: user.updated_at,
         roles,
+        roleCode: roles[0]?.roleCode || 'OPERATOR' // Add a direct roleCode field for convenience
       },
       scopes,
     });
@@ -190,18 +209,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
       if (Array.isArray(scopes)) {
         await tx.securityUserScope.deleteMany({
-          where: { userId: id },
+          where: { user_id: id },
         });
 
         if (scopes.length > 0) {
           await tx.securityUserScope.createMany({
             data: scopes.map((scope: any) => ({
-              userId: id,
-              jurisdictionId: scope.jurisdictionId || null,
-              frameworkVersionId: scope.frameworkVersionId || null,
-              domainId: scope.domainId || null,
-              isAllowed: scope.isAllowed !== false,
-              createdBy: auth.userId,
+              user_id: id,
+              jurisdiction_id: scope.jurisdictionId || null,
+              framework_version_id: scope.frameworkVersionId || null,
+              domain_id: scope.domainId || null,
+              is_allowed: scope.isAllowed !== false,
+              created_by: auth.userId,
             })),
             skipDuplicates: true,
           });
