@@ -12,12 +12,45 @@ type CompanyOption = {
   name: string;
 };
 
+type UserOption = {
+  id: string;
+  name: string;
+  last_name?: string;
+  email: string;
+};
+
+type FrequencyOption = {
+  id: string;
+  name: string;
+};
+
+type ReinoOption = {
+  id: string;
+  name: string;
+};
+
+type DomainOption = {
+  id: string;
+  name: string;
+};
+
+type ProcessOption = {
+  id: string;
+  name: string;
+};
+
 type ActivityRecord = {
   id: string;
   companyId: string;
   code: string;
   name: string;
   description: string;
+  responsible: string;
+  frequency: string;
+  riskWeight: string;
+  cascadeFactor: string;
+  isCascade: boolean;
+  isHardGate: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -45,7 +78,15 @@ export function KeyActivitiesEditorPanel() {
   const pathname = usePathname();
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [reinos, setReinos] = useState<ReinoOption[]>([]);
+  const [domains, setDomains] = useState<DomainOption[]>([]);
+  const [processes, setProcesses] = useState<ProcessOption[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [frequencies, setFrequencies] = useState<FrequencyOption[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [selectedReinoId, setSelectedReinoId] = useState('');
+  const [selectedDomainId, setSelectedDomainId] = useState('');
+  const [selectedProcessId, setSelectedProcessId] = useState('');
   const [records, setRecords] = useState<ActivityRecord[]>([]);
   const [cursor, setCursor] = useState(-1);
   const [loading, setLoading] = useState(true);
@@ -60,11 +101,20 @@ export function KeyActivitiesEditorPanel() {
     code: '',
     name: '',
     description: '',
+    responsible: '',
+    frequency: '',
+    riskWeight: '1',
+    cascadeFactor: '0',
+    isCascade: false,
+    isHardGate: false,
     isActive: true,
     createdAt: nowInputValue(),
     updatedAt: nowInputValue(),
   });
 
+  const [localActivities, setLocalActivities] = useState<ActivityRecord[]>([]);
+
+  // Load Companies (Bootstrapping)
   useEffect(() => {
     async function loadCompanies() {
       try {
@@ -77,69 +127,151 @@ export function KeyActivitiesEditorPanel() {
           setSelectedCompanyId(items[0].id);
         }
       } catch {
-        // ignore bootstrap errors; UI will show message on data load.
+        // ignore bootstrap errors
       }
     }
-    void loadCompanies();
-  }, [selectedCompanyId]);
 
-  async function loadRecords(preferredId?: string) {
-    if (!selectedCompanyId) {
-      setRecords([]);
-      setCursor(-1);
-      setForm({
-        id: '',
-        code: '',
-        name: '',
-        description: '',
-        isActive: true,
-        createdAt: nowInputValue(),
-        updatedAt: nowInputValue(),
-      });
-      setLoading(false);
-      return;
+    async function loadUsers() {
+      try {
+        const response = await fetch('/api/admin/users');
+        if (!response.ok) return;
+        const payload = await response.json();
+        // Check if payload is array or has as specific key
+        const items = Array.isArray(payload) ? payload : (payload.users || payload.items || []);
+        setUsers(items);
+      } catch {
+        // ignore
+      }
     }
 
-    setLoading(true);
-    setError('');
-    try {
-      const response = await fetch(
-        `/api/governance/key-activities?companyId=${encodeURIComponent(selectedCompanyId)}`,
-        { cache: 'no-store' }
-      );
-      if (!response.ok) throw new Error('No se pudo cargar catálogo de actividades claves');
+    async function loadFrequencies() {
+      try {
+        const response = await fetch('/api/governance/frequency-catalog');
+        if (!response.ok) return;
+        const payload = (await response.json()) as { items?: FrequencyOption[] };
+        setFrequencies(payload.items || []);
+      } catch {
+        // ignore
+      }
+    }
 
-      const payload = (await response.json()) as { items?: ActivityRecord[] };
-      const items = Array.isArray(payload.items) ? payload.items : [];
-      setRecords(items);
+    void loadCompanies();
+    void loadUsers();
+    void loadFrequencies();
+  }, []);
 
-      if (items.length === 0) {
-        setCursor(-1);
-        setForm({
-          id: '',
-          code: '',
-          name: '',
-          description: '',
-          isActive: true,
-          createdAt: nowInputValue(),
-          updatedAt: nowInputValue(),
-        });
+  // Load Reinos when Company changes
+  useEffect(() => {
+    async function loadReinos() {
+      if (!selectedCompanyId) {
+        setReinos([]);
+        setSelectedReinoId('');
         return;
       }
-
-      const targetIndex = preferredId ? items.findIndex((item) => item.id === preferredId) : -1;
-      const index = targetIndex >= 0 ? targetIndex : 0;
-      applyRecord(items[index], index);
-    } catch (err: any) {
-      setError(err?.message || 'No se pudo cargar catálogo de actividades claves');
-    } finally {
-      setLoading(false);
+      try {
+        const response = await fetch(`/api/governance/reino-catalog?companyId=${encodeURIComponent(selectedCompanyId)}`, { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { items?: ReinoOption[] };
+        setReinos(payload.items || []);
+        if (!payload.items?.some(r => r.id === selectedReinoId)) {
+          setSelectedReinoId('');
+        }
+      } catch {
+        // ignore
+      }
     }
+    void loadReinos();
+  }, [selectedCompanyId]);
+
+  // Load Domains (Macroproceso) when Reino changes
+  useEffect(() => {
+    async function loadDomains() {
+      if (!selectedCompanyId || !selectedReinoId) {
+        setDomains([]);
+        setSelectedDomainId('');
+        return;
+      }
+      try {
+        const response = await fetch(
+          `/api/governance/domain-catalog?companyId=${encodeURIComponent(selectedCompanyId)}&reinoId=${encodeURIComponent(selectedReinoId)}`,
+          { cache: 'no-store' }
+        );
+        if (!response.ok) return;
+        const payload = (await response.json()) as { items?: DomainOption[] };
+        setDomains(payload.items || []);
+        if (!payload.items?.some(d => d.id === selectedDomainId)) {
+          setSelectedDomainId('');
+        }
+      } catch {
+        // ignore
+      }
+    }
+    void loadDomains();
+  }, [selectedCompanyId, selectedReinoId]);
+
+  // Load Processes when Macroproceso changes
+  useEffect(() => {
+    async function loadProcesses() {
+      if (!selectedCompanyId || !selectedReinoId || !selectedDomainId) {
+        setProcesses([]);
+        setSelectedProcessId('');
+        return;
+      }
+      try {
+        const response = await fetch(
+          `/api/governance/process-catalog?companyId=${encodeURIComponent(selectedCompanyId)}&reinoId=${encodeURIComponent(selectedReinoId)}&domainId=${encodeURIComponent(selectedDomainId)}`,
+          { cache: 'no-store' }
+        );
+        if (!response.ok) return;
+        const payload = (await response.json()) as { items?: ProcessOption[] };
+        setProcesses(payload.items || []);
+        if (!payload.items?.some(p => p.id === selectedProcessId)) {
+          setSelectedProcessId('');
+        }
+      } catch {
+        // ignore
+      }
+    }
+    void loadProcesses();
+  }, [selectedCompanyId, selectedReinoId, selectedDomainId]);
+
+  // Local State Management (No remote loading of catalog)
+  function addToLocalGrid() {
+    if (!form.name.trim()) {
+      setError('Debes ingresar un nombre para la actividad.');
+      return;
+    }
+    setError('');
+    const newActivity: ActivityRecord = {
+      ...form,
+      id: crypto.randomUUID(), // Temp ID for grid
+      companyId: selectedCompanyId,
+      code: form.code || `ACT-${Date.now()}`,
+    };
+    setLocalActivities((prev) => [...prev, newActivity]);
+    
+    // Reset ALL fields of Tarjeta 2
+    setForm({
+      id: '',
+      code: '',
+      name: '',
+      description: '',
+      responsible: '',
+      frequency: '',
+      riskWeight: '1',
+      cascadeFactor: '0',
+      isCascade: false,
+      isHardGate: false,
+      isActive: true,
+      createdAt: nowInputValue(),
+      updatedAt: nowInputValue(),
+    });
+    setSuccess('Actividad añadida a la lista local. No olvides Grabar al finalizar.');
   }
 
-  useEffect(() => {
-    void loadRecords();
-  }, [selectedCompanyId]);
+  function removeFromLocalGrid(id: string) {
+    setLocalActivities((prev) => prev.filter(a => a.id !== id));
+  }
 
   function applyRecord(record: ActivityRecord, index: number) {
     setCursor(index);
@@ -148,6 +280,11 @@ export function KeyActivitiesEditorPanel() {
       code: record.code,
       name: record.name,
       description: record.description || '',
+      responsible: record.responsible || '',
+      frequency: record.frequency || '',
+      riskWeight: record.riskWeight || '',
+      cascadeFactor: record.cascadeFactor || '',
+      isCascade: !!record.isCascade,
       isActive: record.isActive,
       createdAt: toLocalDateTimeInput(record.createdAt) || nowInputValue(),
       updatedAt: toLocalDateTimeInput(record.updatedAt) || nowInputValue(),
@@ -173,23 +310,6 @@ export function KeyActivitiesEditorPanel() {
     setSuccess('');
   }
 
-  function clearForNew() {
-    setCursor(-1);
-    setError('');
-    setSuccess('');
-    setForm({
-      id: '',
-      code: '',
-      name: '',
-      description: '',
-      isActive: true,
-      createdAt: nowInputValue(),
-      updatedAt: nowInputValue(),
-    });
-    window.setTimeout(() => {
-      nameInputRef.current?.focus();
-    }, 0);
-  }
 
   async function refineDescriptionWithIA() {
     setAiDescriptionLoading(true);
@@ -218,78 +338,48 @@ export function KeyActivitiesEditorPanel() {
     setError('');
     setSuccess('');
 
-    if (!selectedCompanyId) {
-      setError('Selecciona una empresa.');
+    if (!selectedCompanyId || !selectedProcessId) {
+      setError('Selecciona empresa y proceso.');
       return;
     }
-    if (!form.name.trim()) {
-      setError('El nombre de la actividad clave es obligatorio.');
+    if (localActivities.length === 0) {
+      setError('No hay actividades en la lista para guardar.');
       return;
     }
 
     setSaving(true);
     try {
-      const method = form.id ? 'PUT' : 'POST';
       const response = await fetch('/api/governance/key-activities', {
-        method,
+        method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          id: form.id || undefined,
+          batch: true,
           companyId: selectedCompanyId,
-          name: form.name.trim(),
-          description: form.description.trim(),
-          isActive: form.isActive,
-          createdAt: form.createdAt,
-          updatedAt: form.updatedAt,
+          processId: selectedProcessId,
+          activities: localActivities.map(a => ({
+            ...a,
+            id: undefined, // Let backend generate real IDs in domain_elements
+          }))
         }),
       });
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload?.message || payload?.error || 'No se pudo guardar la actividad clave');
+        throw new Error(payload?.message || payload?.error || 'No se pudieron guardar las actividades');
       }
 
-      const savedId = String(payload?.item?.id ?? '');
-      await loadRecords(savedId || undefined);
-      setSuccess('Actividad clave guardada correctamente.');
+      setLocalActivities([]);
+      setSuccess('Todas las actividades se guardaron correctamente en core.domain_elements.');
     } catch (err: any) {
-      setError(err?.message || 'No se pudo guardar la actividad clave');
+      setError(err?.message || 'No se pudo guardar');
     } finally {
       setSaving(false);
     }
   }
 
-  async function removeCurrent() {
-    if (!form.id) {
-      setError('No hay actividad clave seleccionada para eliminar.');
-      return;
-    }
-    if (!window.confirm('¿Eliminar esta actividad clave?')) return;
-
-    setDeleting(true);
-    setError('');
-    setSuccess('');
-    try {
-      const response = await fetch(`/api/governance/key-activities?id=${encodeURIComponent(form.id)}`, {
-        method: 'DELETE',
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload?.message || payload?.error || 'No se pudo eliminar la actividad clave');
-      }
-      await loadRecords();
-      setSuccess('Actividad clave eliminada correctamente.');
-    } catch (err: any) {
-      setError(err?.message || 'No se pudo eliminar la actividad clave');
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   const statusLabel = useMemo(() => {
-    if (cursor < 0) return 'Nuevo registro';
-    return `Registro ${cursor + 1} de ${records.length}`;
-  }, [cursor, records.length]);
+    return `Actividades por procesar: ${localActivities.length}`;
+  }, [localActivities.length]);
 
   useRegisterCommandSearch({
     id: 'governance-key-activities-editor',
@@ -298,19 +388,17 @@ export function KeyActivitiesEditorPanel() {
     search: (query) => {
       const term = query.trim().toLowerCase();
       if (!term) return { ok: false, message: 'Ingresa un término para buscar.' };
-      if (records.length === 0) return { ok: false, message: 'No hay actividades registradas en esta pantalla.' };
+      if (localActivities.length === 0) return { ok: false, message: 'No hay actividades en la lista local.' };
 
-      const index = records.findIndex((item) =>
-        `${item.code} ${item.name} ${item.description || ''}`.toLowerCase().includes(term)
+      const found = localActivities.find((item) =>
+        `${item.name} ${item.description || ''}`.toLowerCase().includes(term)
       );
-      if (index < 0) {
-        return { ok: false, message: `No se encontró "${query}" en actividades claves.` };
+      if (!found) {
+        return { ok: false, message: `No se encontró "${query}" en la lista.` };
       }
 
-      applyRecord(records[index], index);
-      setError('');
-      setSuccess(`Resultado encontrado: ${records[index].name}.`);
-      return { ok: true, message: `Encontrado: ${records[index].name}` };
+      setForm({ ...found });
+      return { ok: true, message: `Encontrado local: ${found.name}` };
     },
   });
 
@@ -324,63 +412,246 @@ export function KeyActivitiesEditorPanel() {
         </p>
       </header>
 
-      <article className={styles.card}>
+      <article className={styles.card} id="actividad_clave_tarjeta1">
         <div className={styles.statusRow}>
-          <span>{statusLabel}</span>
-          <button type="button" className={styles.secondaryButton} onClick={clearForNew} disabled={saving || loading}>
-            Nuevo
-          </button>
+          <span>Contexto de Selección</span>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button 
+              type="button" 
+              className={styles.saveButton} 
+              style={{ padding: '10px 28px', fontSize: '14px' }}
+              onClick={() => {}}
+            >
+              Cargar proceso
+            </button>
+          </div>
         </div>
-
-        <label className={styles.field}>
-          <span>Empresa</span>
-          <select
-            className={styles.input}
-            value={selectedCompanyId}
-            onChange={(event) => setSelectedCompanyId(event.target.value)}
-            disabled={saving}
-          >
-            <option value="">Selecciona empresa...</option>
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name} ({company.code})
-              </option>
-            ))}
-          </select>
-        </label>
 
         <div className={styles.grid}>
           <label className={styles.field}>
-            <span>Id</span>
-            <input className={styles.input} value={form.id || 'Se generará automáticamente (UUID)'} readOnly disabled />
+            <span>Empresa</span>
+            <select
+              className={styles.input}
+              value={selectedCompanyId}
+              onChange={(event) => setSelectedCompanyId(event.target.value)}
+              disabled={saving}
+            >
+              <option value="">Selecciona empresa...</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name} ({company.code})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.field}>
+            <span>Reino</span>
+            <select
+              className={styles.input}
+              value={selectedReinoId}
+              onChange={(event) => setSelectedReinoId(event.target.value)}
+              disabled={saving}
+            >
+              <option value="">Selecciona...</option>
+              {reinos.map((reino) => (
+                <option key={reino.id} value={reino.id}>
+                  {reino.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.field}>
+            <span>Macroproceso</span>
+            <select
+              className={styles.input}
+              value={selectedDomainId}
+              onChange={(event) => setSelectedDomainId(event.target.value)}
+              disabled={saving}
+            >
+              <option value="">Selecciona...</option>
+              {domains.map((domain) => (
+                <option key={domain.id} value={domain.id}>
+                  {domain.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.field}>
+            <span>Proceso</span>
+            <select
+              className={styles.input}
+              value={selectedProcessId}
+              onChange={(event) => setSelectedProcessId(event.target.value)}
+              disabled={saving}
+            >
+              <option value="">Selecciona...</option>
+              {processes.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </article>
+
+      <article className={styles.card} id="actividad_clave_tarjeta2">
+        <div className={styles.statusRow}>
+          <span>{statusLabel}</span>
+        </div>
+
+        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+          <label className={styles.field}>
+            <span>Responsable</span>
+            <select
+              className={styles.input}
+              value={form.responsible}
+              onChange={(e) => setForm((prev) => ({ ...prev, responsible: e.target.value }))}
+            >
+              <option value="">Selecciona responsable...</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} {user.last_name || ''}
+                </option>
+              ))}
+            </select>
           </label>
           <label className={styles.field}>
-            <span>Code</span>
-            <input className={styles.input} value={form.code || 'Se genera al grabar desde el nombre'} readOnly disabled />
+            <span>Frecuencia</span>
+            <select
+              className={styles.input}
+              value={form.frequency}
+              onChange={(e) => setForm((prev) => ({ ...prev, frequency: e.target.value }))}
+            >
+              <option value="">Selecciona frecuencia...</option>
+              {frequencies.map((freq) => (
+                <option key={freq.id} value={freq.id}>
+                  {freq.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Peso de riesgo</span>
+            <input
+              type="number"
+              min="1"
+              max="5"
+              step="1"
+              className={styles.input}
+              value={form.riskWeight}
+              onChange={(e) => {
+                let val = parseInt(e.target.value);
+                if (Number.isNaN(val)) {
+                  setForm((prev) => ({ ...prev, riskWeight: '' }));
+                  return;
+                }
+                if (val < 1) val = 1;
+                if (val > 5) val = 5;
+                setForm((prev) => ({ ...prev, riskWeight: String(val) }));
+              }}
+              placeholder="1 a 5"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Factor de cascada</span>
+            <input
+              type="number"
+              min="0"
+              max="1"
+              step="0.01"
+              className={styles.input}
+              value={form.cascadeFactor}
+              onChange={(e) => {
+                let val = parseFloat(e.target.value);
+                if (Number.isNaN(val)) {
+                  setForm((prev) => ({ ...prev, cascadeFactor: '' }));
+                  return;
+                }
+                if (val < 0) val = 0;
+                if (val > 1) val = 1;
+                setForm((prev) => ({ ...prev, cascadeFactor: String(val) }));
+              }}
+              placeholder="0 a 1"
+            />
           </label>
         </div>
 
-        <label className={styles.field}>
-          <span>Nombre</span>
-          <input
-            ref={nameInputRef}
-            className={styles.input}
-            value={form.name}
-            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-            placeholder="Nombre de la actividad clave"
-          />
-        </label>
+        <div className={styles.grid} style={{ gridTemplateColumns: 'minmax(300px, 1.5fr) auto auto', alignItems: 'end', gap: '25px', marginBottom: '10px' }}>
+          <label className={styles.field} style={{ flex: '1 1 300px' }}>
+            <span>Nombre de la actividad</span>
+            <input
+              ref={nameInputRef}
+              className={styles.input}
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              placeholder="Nombre corto"
+              style={{ minWidth: 'auto' }}
+            />
+          </label>
+
+          <div style={{ display: 'flex', gap: '15px', paddingBottom: '10px' }}>
+            <label className={styles.switchRow} style={{ margin: 0 }}>
+              <input
+                type="checkbox"
+                checked={form.isHardGate}
+                onChange={(event) => setForm((prev) => ({ ...prev, isHardGate: event.target.checked }))}
+              />
+              <span 
+                style={{ fontSize: '13px', cursor: 'help', borderBottom: '1px dotted rgba(255,255,255,0.3)' }}
+                title="Condición crítica que impone un umbral mínimo de riesgo. Si se activa, anula cualquier compensación del modelo: el sistema salta directamente a un nivel de exposición definido, independientemente del resto de controles."
+              >
+                Hard Gate
+              </span>
+            </label>
+            <label className={styles.switchRow} style={{ margin: 0 }}>
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+              />
+              <span style={{ fontSize: '13px' }}>Activo</span>
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', paddingBottom: '2px' }}>
+            <label className={styles.field} style={{ margin: 0 }}>
+              <span style={{ fontSize: '10px', opacity: 0.7 }}>Creado</span>
+              <input
+                type="datetime-local"
+                className={styles.input}
+                style={{ fontSize: '11px', height: '28px', padding: '2px 5px', width: '150px' }}
+                value={form.createdAt}
+                onChange={(event) => setForm((prev) => ({ ...prev, createdAt: event.target.value }))}
+              />
+            </label>
+            <label className={styles.field} style={{ margin: 0 }}>
+              <span style={{ fontSize: '10px', opacity: 0.7 }}>Actualizado</span>
+              <input
+                type="datetime-local"
+                className={styles.input}
+                style={{ fontSize: '11px', height: '28px', padding: '2px 5px', width: '150px' }}
+                value={form.updatedAt}
+                onChange={(event) => setForm((prev) => ({ ...prev, updatedAt: event.target.value }))}
+              />
+            </label>
+          </div>
+        </div>
 
         <label className={styles.field}>
-          <span>Descripción</span>
-          <div className={styles.fieldTools}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Descripción</span>
             <button
               type="button"
               className={styles.secondaryButton}
+              style={{ padding: '4px 10px', fontSize: '11px' }}
               onClick={refineDescriptionWithIA}
               disabled={aiDescriptionLoading || saving}
             >
-              {aiDescriptionLoading ? 'IA...' : 'IA'}
+              {aiDescriptionLoading ? 'Procesando...' : 'Mejorar con IA ✨'}
             </button>
           </div>
           <textarea
@@ -392,60 +663,84 @@ export function KeyActivitiesEditorPanel() {
           />
         </label>
 
-        <div className={styles.grid}>
-          <label className={styles.field}>
-            <span>Created at</span>
-            <input
-              type="datetime-local"
-              className={styles.input}
-              value={form.createdAt}
-              onChange={(event) => setForm((prev) => ({ ...prev, createdAt: event.target.value }))}
-            />
-          </label>
-          <label className={styles.field}>
-            <span>Updated at</span>
-            <input
-              type="datetime-local"
-              className={styles.input}
-              value={form.updatedAt}
-              onChange={(event) => setForm((prev) => ({ ...prev, updatedAt: event.target.value }))}
-            />
-          </label>
-        </div>
+        <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' }}>
+          <button 
+            type="button" 
+            className={styles.saveButton} 
+            style={{ width: '192px', height: '44px', background: '#3b82f6', borderColor: '#2563eb' }}
+            onClick={addToLocalGrid}
+          >
+            Agregar
+          </button>
 
-        <label className={styles.switchRow}>
-          <input
-            type="checkbox"
-            checked={form.isActive}
-            onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-          />
-          <span>Registro activo</span>
-        </label>
+          {localActivities.length > 0 && (
+            <div className={styles.card} style={{ 
+              width: '100%', 
+              borderStyle: 'dashed', 
+              background: 'rgba(15,23,42,0.3)',
+              overflowX: 'auto'
+            }}>
+              <div className={styles.statusRow}>
+                <span>Actividades pendientes de grabar</span>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginTop: '10px' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '8px' }}>Nombre</th>
+                    <th style={{ padding: '8px' }}>Descripción</th>
+                    <th style={{ padding: '8px' }}>Responsable</th>
+                    <th style={{ padding: '8px' }}>Freq</th>
+                    <th style={{ padding: '8px' }}>Riesgo</th>
+                    <th style={{ padding: '8px' }}>Factor</th>
+                    <th style={{ padding: '8px' }}>Gate</th>
+                    <th style={{ padding: '8px' }}>Act.</th>
+                    <th style={{ padding: '8px' }}> Acción </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {localActivities.map((act) => (
+                    <tr key={act.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '8px' }}>{act.name}</td>
+                      <td style={{ padding: '8px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={act.description}>
+                        {act.description || '---'}
+                      </td>
+                      <td style={{ padding: '8px' }}>{users.find(u => u.id === act.responsible)?.name || '---'}</td>
+                      <td style={{ padding: '8px' }}>{frequencies.find(f => f.id === act.frequency)?.name || '---'}</td>
+                      <td style={{ padding: '8px' }}>{act.riskWeight}</td>
+                      <td style={{ padding: '8px' }}>{act.cascadeFactor}</td>
+                      <td style={{ padding: '8px' }}>{act.isHardGate ? 'Sí' : 'No'}</td>
+                      <td style={{ padding: '8px' }}>{act.isActive ? 'Sí' : 'No'}</td>
+                      <td style={{ padding: '8px' }}>
+                        <button 
+                          type="button" 
+                          onClick={() => removeFromLocalGrid(act.id)}
+                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                        >
+                          Quitar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         {error && <p className={styles.error}>{error}</p>}
         {success && <p className={styles.success}>{success}</p>}
 
         <CrudModelActionBar
-          onFirst={() => navigate('first')}
-          onPrevious={() => navigate('prev')}
-          onNext={() => navigate('next')}
-          onLast={() => navigate('last')}
           onClose={() => router.push('/modelo/gobernanza/company-reino')}
-          onDelete={() => void removeCurrent()}
-          onCancel={() => router.push('/modelo/gobernanza/company-reino')}
           onSave={() => void save()}
-          disableFirst={saving || !canNavigate || cursor <= 0}
-          disablePrevious={saving || !canNavigate || cursor <= 0}
-          disableNext={saving || !canNavigate || cursor >= records.length - 1 || cursor < 0}
-          disableLast={saving || !canNavigate || cursor >= records.length - 1}
-          disableClose={saving || deleting}
-          disableDelete={deleting || saving || loading || !form.id}
-          disableCancel={saving || deleting}
-          disableSave={saving || loading || deleting || !selectedCompanyId}
-          deleteLabel="Eliminar"
+          showNavigation={false}
+          showCancel={false}
+          showNew={false}
+          showDelete={false}
+          disableClose={saving}
+          disableSave={saving || loading || !selectedCompanyId || localActivities.length === 0}
           saveLabel="Grabar"
           savingLabel="Grabando..."
-          deleting={deleting}
           saving={saving}
         />
       </article>

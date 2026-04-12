@@ -319,7 +319,7 @@ export async function POST(request: Request) {
       JOIN graph.domain d
         ON d.id = mde.domain_id
       WHERE de.element_type = 'OBLIGATION'
-        AND COALESCE(de.obligation_status, 'active') = 'active'
+        AND COALESCE(de.is_active, true) = true
         AND d.framework_version_id = ${frameworkVersionId}::uuid
         ${realmDomainIds.length > 0 ? Prisma.sql`AND mde.domain_id IN (${Prisma.join(realmDomainIds.map((id) => Prisma.sql`${id}::uuid`))})` : Prisma.sql``}
       ORDER BY de.code

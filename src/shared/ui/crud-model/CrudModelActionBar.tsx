@@ -36,6 +36,10 @@ type CrudModelActionBarProps = {
   savingLabel?: string;
   deleting?: boolean;
   saving?: boolean;
+  showNavigation?: boolean;
+  showCancel?: boolean;
+  showClose?: boolean;
+  showSave?: boolean;
 };
 
 export function CrudModelActionBar({
@@ -72,28 +76,36 @@ export function CrudModelActionBar({
   savingLabel = "Guardando...",
   deleting = false,
   saving = false,
+  showNavigation = true,
+  showCancel = true,
+  showClose = true,
+  showSave = true,
 }: CrudModelActionBarProps) {
   return (
     <div className={styles.bar}>
-      <div className={styles.group}>
-        <button type="button" className={styles.button} onClick={onFirst} disabled={disableFirst}>
-          {firstLabel}
-        </button>
-        <button type="button" className={styles.button} onClick={onPrevious} disabled={disablePrevious}>
-          {previousLabel}
-        </button>
-        <button type="button" className={styles.button} onClick={onNext} disabled={disableNext}>
-          {nextLabel}
-        </button>
-        <button type="button" className={styles.button} onClick={onLast} disabled={disableLast}>
-          {lastLabel}
-        </button>
-      </div>
+      {showNavigation && (
+        <div className={styles.group}>
+          <button type="button" className={styles.button} onClick={onFirst} disabled={disableFirst}>
+            {firstLabel}
+          </button>
+          <button type="button" className={styles.button} onClick={onPrevious} disabled={disablePrevious}>
+            {previousLabel}
+          </button>
+          <button type="button" className={styles.button} onClick={onNext} disabled={disableNext}>
+            {nextLabel}
+          </button>
+          <button type="button" className={styles.button} onClick={onLast} disabled={disableLast}>
+            {lastLabel}
+          </button>
+        </div>
+      )}
 
       <div className={styles.group}>
-        <button type="button" className={`${styles.button} ${styles.close}`} onClick={onClose} disabled={disableClose}>
-          {closeLabel}
-        </button>
+        {showClose && (
+          <button type="button" className={`${styles.button} ${styles.close}`} onClick={onClose} disabled={disableClose}>
+            {closeLabel}
+          </button>
+        )}
         {showNew ? (
           <button type="button" className={`${styles.button} ${styles.new}`} onClick={onNew} disabled={disableNew}>
             {newLabel}
@@ -104,12 +116,16 @@ export function CrudModelActionBar({
             {deleting ? deletingLabel : deleteLabel}
           </button>
         ) : null}
-        <button type="button" className={styles.button} onClick={onCancel} disabled={disableCancel}>
-          {cancelLabel}
-        </button>
-        <button type="button" className={`${styles.button} ${styles.save}`} onClick={onSave} disabled={disableSave}>
-          {saving ? savingLabel : saveLabel}
-        </button>
+        {showCancel && (
+          <button type="button" className={styles.button} onClick={onCancel} disabled={disableCancel}>
+            {cancelLabel}
+          </button>
+        )}
+        {showSave && (
+          <button type="button" className={`${styles.button} ${styles.save}`} onClick={onSave} disabled={disableSave}>
+            {saving ? savingLabel : saveLabel}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -2,13 +2,16 @@ import { Prisma } from '@prisma/client';
 import prisma from '@/infrastructure/db/prisma/client';
 import { ApiError } from '@/shared/http';
 
-type KeyActivityRow = {
-  significant_activity_id: string;
-  company_id: string;
-  activity_code: string;
-  activity_name: string;
-  activity_description: string | null;
+type DomainElementRow = {
+  id: string;
+  element_type: string;
+  code: string;
+  name: string | null;
+  title: string | null;
+  description: string | null;
   is_active: boolean;
+  id_lider: string | null;
+  id_frequency: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -23,19 +26,15 @@ function normalizeCodeSeed(input: string): string {
     .replace(/_+/g, '_');
 }
 
-async function buildUniqueActivityCode(companyId: string, name: string): Promise<string> {
-  const seed = normalizeCodeSeed(name).slice(0, 40) || 'ACTIVIDAD';
-  const rows = await prisma.$queryRaw<{ activity_code: string }[]>(Prisma.sql`
-    SELECT activity_code
-    FROM core.significant_activity
-    WHERE company_id = ${companyId}::uuid
-      AND (
-        activity_code = ${seed}
-        OR activity_code LIKE ${`${seed}_%`}
-      )
+async function buildUniqueElementCode(name: string): Promise<string> {
+  const seed = normalizeCodeSeed(name).slice(0, 40) || 'ACT';
+  const rows = await prisma.$queryRaw<{ code: string }[]>(Prisma.sql`
+    SELECT code
+    FROM core.domain_elements
+    WHERE code = ${seed} OR code LIKE ${`${seed}_%`}
   `);
 
-  const existing = new Set(rows.map((row) => row.activity_code));
+  const existing = new Set(rows.map((row) => row.code));
   if (!existing.has(seed)) return seed;
 
   let suffix = 2;
@@ -45,13 +44,14 @@ async function buildUniqueActivityCode(companyId: string, name: string): Promise
   return `${seed}_${suffix}`;
 }
 
-function mapRow(row: KeyActivityRow) {
+function mapRow(row: DomainElementRow) {
   return {
-    id: row.significant_activity_id,
-    companyId: row.company_id,
-    code: row.activity_code,
-    name: row.activity_name,
-    description: row.activity_description ?? '',
+    id: row.id,
+    code: row.code,
+    name: row.name || row.title || '',
+    description: row.description ?? '',
+    responsible: row.id_lider ?? '',
+    frequency: row.id_frequency ?? '',
     isActive: row.is_active,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -73,6 +73,11 @@ export async function getGovernanceKeyActivityCatalogHandler(request: Request) {
       activity_code,
       activity_name,
       activity_description,
+      responsible,
+      frequency,
+      risk_weight,
+      cascade_factor,
+      is_cascade,
       is_active,
       created_at,
       updated_at
@@ -86,107 +91,82 @@ export async function getGovernanceKeyActivityCatalogHandler(request: Request) {
 
 export async function postGovernanceKeyActivityCatalogHandler(request: Request) {
   const body = (await request.json()) as {
+    batch?: boolean;
     companyId?: string;
-    name?: string;
-    description?: string;
-    isActive?: boolean;
-    createdAt?: string;
-    updatedAt?: string;
+    processId?: string;
+    activities?: any[];
   };
 
   const companyId = String(body.companyId ?? '').trim();
-  if (!companyId) throw ApiError.badRequest('companyId is required');
+  const processId = String(body.processId ?? '').trim();
+  
+  if (!companyId || !processId) throw ApiError.badRequest('companyId and processId are required');
 
-  const name = String(body.name ?? '').trim();
-  if (!name) throw ApiError.badRequest('name is required');
-
-  const description = String(body.description ?? '').trim();
-  const isActive = body.isActive !== false;
-  const createdAt = String(body.createdAt ?? '').trim();
-  const updatedAt = String(body.updatedAt ?? '').trim();
-  const code = await buildUniqueActivityCode(companyId, name);
-
-  const rows = await prisma.$queryRaw<KeyActivityRow[]>(Prisma.sql`
-    INSERT INTO core.significant_activity (
-      company_id,
-      activity_code,
-      activity_name,
-      activity_description,
-      is_active,
-      created_at,
-      updated_at
-    )
-    VALUES (
-      ${companyId}::uuid,
-      ${code},
-      ${name},
-      ${description || null},
-      ${isActive},
-      ${createdAt ? Prisma.sql`${createdAt}::timestamp` : Prisma.sql`now()`},
-      ${updatedAt ? Prisma.sql`${updatedAt}::timestamp` : Prisma.sql`now()`}
-    )
-    RETURNING
-      significant_activity_id,
-      company_id,
-      activity_code,
-      activity_name,
-      activity_description,
-      is_active,
-      created_at,
-      updated_at
+  // Find the Domain (Macroproceso) for this process to link the activities
+  const domainRows = await prisma.$queryRaw<{ domain_id: string }[]>(Prisma.sql`
+    SELECT DISTINCT domain_id 
+    FROM views.empresa_reino_dominio_elementos 
+    WHERE element_id = ${processId}::uuid
   `);
+  
+  if (domainRows.length === 0) throw ApiError.badRequest('Process domain not found');
+  const domainId = domainRows[0].domain_id;
 
-  return Response.json({ item: mapRow(rows[0]) }, { status: 201 });
+  const activities = Array.isArray(body.activities) ? body.activities : [];
+  const results = [];
+
+  for (const act of activities) {
+    const code = await buildUniqueElementCode(act.name);
+    const id_lider = String(act.responsible ?? '').trim() || null;
+    const id_frequency = String(act.frequency ?? '').trim() || null;
+
+    // 1. Insert into domain_elements
+    const inserted = await prisma.$queryRaw<DomainElementRow[]>(Prisma.sql`
+      INSERT INTO core.domain_elements (
+        element_type,
+        code,
+        name,
+        title,
+        description,
+        is_active,
+        is_hard_gate,
+        id_lider,
+        id_frequency,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        'ACTIVITY',
+        ${code},
+        ${act.name},
+        ${act.name},
+        ${act.description || null},
+        ${act.isActive !== false},
+        ${act.isHardGate === true},
+        ${id_lider ? Prisma.sql`${id_lider}::uuid` : null},
+        ${id_frequency ? Prisma.sql`${id_frequency}::uuid` : null},
+        now(),
+        now()
+      )
+      RETURNING *
+    `);
+
+    const newElementId = inserted[0].id;
+
+    // 2. Link to Domain
+    await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO core.map_domain_element (domain_id, element_id)
+      VALUES (${domainId}::uuid, ${newElementId}::uuid)
+    `);
+
+    results.push(mapRow(inserted[0]));
+  }
+
+  return Response.json({ items: results }, { status: 201 });
 }
 
 export async function putGovernanceKeyActivityCatalogHandler(request: Request) {
-  const body = (await request.json()) as {
-    id?: string;
-    companyId?: string;
-    name?: string;
-    description?: string;
-    isActive?: boolean;
-    createdAt?: string;
-    updatedAt?: string;
-  };
-
-  const id = String(body.id ?? '').trim();
-  if (!id) throw ApiError.badRequest('id is required');
-
-  const companyId = String(body.companyId ?? '').trim();
-  if (!companyId) throw ApiError.badRequest('companyId is required');
-
-  const name = String(body.name ?? '').trim();
-  if (!name) throw ApiError.badRequest('name is required');
-
-  const description = String(body.description ?? '').trim();
-  const isActive = body.isActive !== false;
-  const createdAt = String(body.createdAt ?? '').trim();
-  const updatedAt = String(body.updatedAt ?? '').trim();
-
-  const rows = await prisma.$queryRaw<KeyActivityRow[]>(Prisma.sql`
-    UPDATE core.significant_activity
-    SET
-      company_id = ${companyId}::uuid,
-      activity_name = ${name},
-      activity_description = ${description || null},
-      is_active = ${isActive},
-      created_at = ${createdAt ? Prisma.sql`${createdAt}::timestamp` : Prisma.sql`created_at`},
-      updated_at = ${updatedAt ? Prisma.sql`${updatedAt}::timestamp` : Prisma.sql`now()`}
-    WHERE significant_activity_id = ${id}::uuid
-    RETURNING
-      significant_activity_id,
-      company_id,
-      activity_code,
-      activity_name,
-      activity_description,
-      is_active,
-      created_at,
-      updated_at
-  `);
-
-  if (!rows[0]) throw ApiError.badRequest('Key activity not found');
-  return Response.json({ item: mapRow(rows[0]) });
+  return Response.json({ message: 'Use POST with batch mode or a dedicated update handler.' }, { status: 405 });
 }
 
 export async function deleteGovernanceKeyActivityCatalogHandler(request: Request) {
@@ -194,11 +174,9 @@ export async function deleteGovernanceKeyActivityCatalogHandler(request: Request
   const id = String(url.searchParams.get('id') ?? '').trim();
   if (!id) throw ApiError.badRequest('id is required');
 
-  await prisma.$executeRaw(Prisma.sql`
-    DELETE FROM core.significant_activity
-    WHERE significant_activity_id = ${id}::uuid
-  `);
+  // Delete element and mapping
+  await prisma.$executeRaw(Prisma.sql`DELETE FROM core.map_domain_element WHERE element_id = ${id}::uuid`);
+  await prisma.$executeRaw(Prisma.sql`DELETE FROM core.domain_elements WHERE id = ${id}::uuid`);
 
   return Response.json({ ok: true });
 }
-
