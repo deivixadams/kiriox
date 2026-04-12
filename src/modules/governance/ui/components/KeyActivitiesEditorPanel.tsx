@@ -756,7 +756,6 @@ export function KeyActivitiesEditorPanel() {
             </table>
           </div>
         )}
-        </div>
 
         {error && <p className={styles.error}>{error}</p>}
         {success && <p className={styles.success}>{success}</p>}
