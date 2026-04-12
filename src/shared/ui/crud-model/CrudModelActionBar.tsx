@@ -40,6 +40,7 @@ type CrudModelActionBarProps = {
   showCancel?: boolean;
   showClose?: boolean;
   showSave?: boolean;
+  center?: boolean;
 };
 
 export function CrudModelActionBar({
@@ -80,9 +81,10 @@ export function CrudModelActionBar({
   showCancel = true,
   showClose = true,
   showSave = true,
+  center = false,
 }: CrudModelActionBarProps) {
   return (
-    <div className={styles.bar}>
+    <div className={styles.bar} style={center ? { justifyContent: 'center' } : {}}>
       {showNavigation && (
         <div className={styles.group}>
           <button type="button" className={styles.button} onClick={onFirst} disabled={disableFirst}>

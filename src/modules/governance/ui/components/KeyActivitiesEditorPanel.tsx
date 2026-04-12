@@ -740,6 +740,7 @@ export function KeyActivitiesEditorPanel() {
           showCancel={false}
           showNew={false}
           showDelete={false}
+          center={true}
           disableClose={saving}
           disableSave={saving || loading || !selectedCompanyId || localActivities.length === 0}
           saveLabel="Grabar"
