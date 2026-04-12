@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/auth-server';
 
-function isAdmin(roleCode: string) { return roleCode === 'ADMIN'; }
+function isAdmin(roleCode: string) {
+    const code = (roleCode || '').trim().toLowerCase();
+    return code === 'admin' || code === 'super_admin';
+}
 
 // ────────────────────────────────────────────────────────────
-// GET  /api/admin/rbac                → list all active roles
-// GET  /api/admin/rbac?code=XXX       → role + permissions (UserWizard compat)
+// GET  /api/admin/rbac                → list roles
 // GET  /api/admin/rbac?id=UUID        → single role + assigned users
 // ────────────────────────────────────────────────────────────
 export async function GET(request: Request) {
@@ -16,79 +17,78 @@ export async function GET(request: Request) {
     if (!isAdmin(auth.roleCode)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
-    const roleCode = searchParams.get('role_code');
-    const roleId   = searchParams.get('id');
+    const roleId = searchParams.get('id');
+    const includeInactive = searchParams.get('includeInactive') === 'true';
 
     try {
-        // ── Single role with assigned users ──
         if (roleId) {
-            const roles = await prisma.$queryRaw<{
-                id: string; code: string; name: string;
-                description: string | null; is_active: boolean | null;
-                created_at: Date; updated_at: Date | null;
-            }[]>(
-                Prisma.sql`
-                    SELECT id, code, name, description, is_active, created_at, updated_at
-                    FROM security.role
-                    WHERE id = ${roleId}::uuid
-                    LIMIT 1
-                `
-            );
-            const role = roles[0];
+            const role = await prisma.security_rbac.findUnique({
+                where: { id: roleId },
+                include: {
+                    company_user_roles: {
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    last_name: true,
+                                    email: true
+                                }
+                            }
+                        },
+                        orderBy: {
+                            user: { name: 'asc' }
+                        }
+                    }
+                }
+            });
+
             if (!role) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-            const users = await prisma.$queryRaw<{
-                assignment_id: string; user_id: string; company_id: string;
-                name: string | null; last_name: string | null; email: string;
-                is_active: boolean;
-            }[]>(
-                Prisma.sql`
-                    SELECT cur.id           AS assignment_id,
-                           cur.user_id,
-                           cur.company_id,
-                           cur.is_active,
-                           u.name,
-                           u.last_name,
-                           u.email
-                    FROM security.company_user_role cur
-                    JOIN security.security_users u ON u.id = cur.user_id
-                    WHERE cur.role_id = ${roleId}::uuid
-                    ORDER BY u.name ASC
-                `
-            );
+            // Map to the expected UI format
+            const users = role.company_user_roles.map(cur => ({
+                assignment_id: cur.id,
+                user_id: cur.user_id,
+                company_id: cur.company_id,
+                is_active: cur.is_active,
+                name: cur.user.name,
+                last_name: cur.user.last_name,
+                email: cur.user.email
+            }));
 
-            return NextResponse.json({ ...role, users });
-        }
-
-        // ── Compat: role by code (UserWizard permissions query) ──
-        if (roleCode) {
-            const rows = await prisma.$queryRaw<{ id: string; code: string; name: string }[]>(
-                Prisma.sql`SELECT id, code, name FROM security.role WHERE code = ${roleCode} LIMIT 1`
-            );
             return NextResponse.json({
-                roleCode,
-                permissions: rows[0] ? [rows[0].name || roleCode] : []
+                ...role,
+                users
             });
         }
 
-        // ── All active roles ──
-        const roles = await prisma.$queryRaw<{
-            id: string; code: string; name: string;
-            description: string | null; is_active: boolean | null;
-            created_at: Date; updated_at: Date | null;
-        }[]>(
-            Prisma.sql`
-                SELECT id, code, name, description, is_active, created_at, updated_at
-                FROM security.role
-                WHERE COALESCE(is_active, true) = true
-                ORDER BY name ASC
-            `
-        );
-        return NextResponse.json(roles);
+        // List roles
+        const where: any = {};
+        if (!includeInactive) {
+            where.is_active = true;
+        }
+
+        const roles = await prisma.security_rbac.findMany({
+            where,
+            include: {
+                _count: {
+                    select: { company_user_roles: true }
+                }
+            },
+            orderBy: { name: 'asc' }
+        });
+
+        // Map to include user counts for the dashboard
+        const result = roles.map(r => ({
+            ...r,
+            userCount: r._count.company_user_roles
+        }));
+
+        return NextResponse.json(result);
 
     } catch (error: any) {
         console.error('Error fetching roles:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
     }
 }
 
@@ -106,29 +106,23 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'code y name son obligatorios' }, { status: 400 });
         }
 
-        const rows = await prisma.$queryRaw<{ id: string }[]>(
-            Prisma.sql`
-                INSERT INTO security.role (id, code, name, description, is_active)
-                VALUES (gen_random_uuid(), ${code.trim()}, ${name.trim()}, 
-                        ${description?.trim() || null}, ${isActive !== false})
-                RETURNING id
-            `
-        );
+        const newRole = await prisma.security_rbac.create({
+            data: {
+                code: code.trim().toLowerCase().replace(/\s+/g, '_'),
+                name: name.trim(),
+                description: description?.trim() || null,
+                is_active: isActive !== false
+            }
+        });
 
-        if (!rows || rows.length === 0) {
-            throw new Error('No se pudo obtener el ID del rol creado');
-        }
-
-        return NextResponse.json({ id: rows[0].id }, { status: 201 });
+        return NextResponse.json({ id: newRole.id }, { status: 201 });
 
     } catch (error: any) {
         console.error('Error creating role:', error);
-        const errorMsg = error?.message || 'Error desconocido';
-        
-        if (errorMsg.includes('unique') || errorMsg.includes('duplicate')) {
+        if (error.code === 'P2002') {
             return NextResponse.json({ error: 'Ya existe un rol con ese código' }, { status: 409 });
         }
-        return NextResponse.json({ error: `Error al crear rol: ${errorMsg}` }, { status: 500 });
+        return NextResponse.json({ error: 'Error al crear rol', details: error.message }, { status: 500 });
     }
 }
 
@@ -142,26 +136,24 @@ export async function PUT(request: Request) {
 
     try {
         const { id, code, name, description, isActive } = await request.json();
-        if (!id || !code?.trim() || !name?.trim()) {
-            return NextResponse.json({ error: 'id, code y name son obligatorios' }, { status: 400 });
-        }
+        if (!id) return NextResponse.json({ error: 'id es obligatorio' }, { status: 400 });
 
-        await prisma.$executeRaw(
-            Prisma.sql`
-                UPDATE security.role
-                SET code        = ${code.trim()},
-                    name        = ${name.trim()},
-                    description = ${description?.trim() || null},
-                    is_active   = ${isActive !== false},
-                    updated_at  = now()
-                WHERE id = ${id}::uuid
-            `
-        );
+        const data: any = { updated_at: new Date() };
+        if (code !== undefined) data.code = code.trim().toLowerCase().replace(/\s+/g, '_');
+        if (name !== undefined) data.name = name.trim();
+        if (description !== undefined) data.description = description?.trim() || null;
+        if (isActive !== undefined) data.is_active = isActive;
+
+        await prisma.security_rbac.update({
+            where: { id },
+            data
+        });
+
         return NextResponse.json({ ok: true });
 
     } catch (error: any) {
         console.error('Error updating role:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
     }
 }
 
@@ -175,26 +167,33 @@ export async function DELETE(request: Request) {
     if (!isAdmin(auth.roleCode)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
-    const roleId       = searchParams.get('id');
+    const roleId = searchParams.get('id');
     const assignmentId = searchParams.get('assignment_id');
 
     try {
         if (assignmentId) {
-            await prisma.$executeRaw(
-                Prisma.sql`DELETE FROM security.company_user_role WHERE id = ${assignmentId}::uuid`
-            );
+            await prisma.security_company_user_role.delete({
+                where: { id: assignmentId }
+            });
             return NextResponse.json({ ok: true });
         }
+        
         if (roleId) {
-            await prisma.$executeRaw(
-                Prisma.sql`DELETE FROM security.role WHERE id = ${roleId}::uuid`
-            );
-            return NextResponse.json({ ok: true });
+            // Soft delete: Strictly update is_active to false instead of deleting the record
+            await prisma.security_rbac.update({
+                where: { id: roleId },
+                data: { 
+                    is_active: false,
+                    updated_at: new Date() 
+                }
+            });
+            return NextResponse.json({ ok: true, message: 'Rol inactivado correctamente (Soft Delete)' });
         }
+        
         return NextResponse.json({ error: 'Falta id o assignment_id' }, { status: 400 });
 
     } catch (error: any) {
         console.error('Error deleting:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
     }
 }

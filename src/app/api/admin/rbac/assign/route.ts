@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/auth-server';
 
-function isAdmin(roleCode: string) { return roleCode === 'ADMIN'; }
+function isAdmin(roleCode: string) {
+    const code = (roleCode || '').trim().toLowerCase();
+    return code === 'admin' || code === 'super_admin';
+}
 
 /**
  * POST /api/admin/rbac/assign
- * Body: { userId, roleId, companyId? }
- * Inserts into security.company_user_role
+ * Body: { userId, roleId }
  */
 export async function POST(request: Request) {
     const auth = await getAuthContext();
@@ -23,18 +24,30 @@ export async function POST(request: Request) {
 
         const companyId = auth.tenantId;
 
-        await prisma.$executeRaw(
-            Prisma.sql`
-                INSERT INTO security.company_user_role (company_id, user_id, role_id, is_active)
-                VALUES (${companyId}::uuid, ${userId}::uuid, ${roleId}::uuid, true)
-                ON CONFLICT (company_id, user_id, role_id)
-                DO UPDATE SET is_active = true, updated_at = now()
-            `
-        );
+        // Use native Prisma to handle upsert/assignment
+        await prisma.security_company_user_role.upsert({
+            where: {
+                company_id_user_id_role_id: {
+                    company_id: companyId,
+                    user_id: userId,
+                    role_id: roleId
+                }
+            },
+            update: {
+                is_active: true,
+                updated_at: new Date()
+            },
+            create: {
+                company_id: companyId,
+                user_id: userId,
+                role_id: roleId,
+                is_active: true
+            }
+        });
 
         return NextResponse.json({ ok: true });
     } catch (error: any) {
         console.error('Error assigning user to role:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
     }
 }

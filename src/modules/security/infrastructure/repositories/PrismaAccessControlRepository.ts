@@ -42,7 +42,7 @@ export class PrismaAccessControlRepository implements AccessControlRepository {
     const rows = await prisma.$queryRaw<{ ok: number }[]>(
       Prisma.sql`
         SELECT 1 AS ok
-        FROM security.company_user cu
+        FROM core.map_user_x_company cu
         WHERE cu.user_id = ${userId}::uuid
           AND cu.company_id = ${companyId}::uuid
           AND COALESCE(cu.is_active, true) = true

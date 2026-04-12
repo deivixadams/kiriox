@@ -37,7 +37,7 @@ const teamUsersHandler = async (request: Request) => {
         u.name,
         u.last_name,
         r.code AS role_code
-      FROM security.company_user cu
+      FROM core.map_user_x_company cu
       JOIN security.security_users u
         ON u.id = cu.user_id
        AND COALESCE(u.is_active, true) = true
@@ -84,4 +84,3 @@ const teamUsersHandler = async (request: Request) => {
 };
 
 export const GET = nextHandler(withModuleAccess('audit', 'read', teamUsersHandler));
-

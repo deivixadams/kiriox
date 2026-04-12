@@ -5,7 +5,7 @@ export class PrismaCompanyUserRepository {
   async ensureMembership(companyId: string, userId: string): Promise<void> {
     await prisma.$executeRaw(
       Prisma.sql`
-        INSERT INTO security.company_user (company_id, user_id, is_active)
+        INSERT INTO core.map_user_x_company (company_id, user_id, is_active)
         VALUES (${companyId}::uuid, ${userId}::uuid, true)
         ON CONFLICT (company_id, user_id)
         DO UPDATE SET
@@ -15,4 +15,3 @@ export class PrismaCompanyUserRepository {
     );
   }
 }
-

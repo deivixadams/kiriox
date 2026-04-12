@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import styles from './roles.module.css';
-
-import { CrudModelActionBar } from '@/shared/ui/crud-model/CrudModelActionBar';
+import Link from 'next/link';
+import { 
+  Shield, Edit3, Trash2, Plus, 
+  Search, Users, ArrowLeft, Ban,
+  RefreshCcw, Activity
+} from 'lucide-react';
+import RoleEditorModal from './RoleEditorModal';
 
 /* ──────────────────── Types ──────────────────── */
-// ... existing types remain the same ...
-type RoleRecord = {
+interface RoleRecord {
   id: string;
   code: string;
   name: string;
@@ -16,366 +19,325 @@ type RoleRecord = {
   is_active: boolean | null;
   created_at: string;
   updated_at: string | null;
-};
-
-type AssignedUser = {
-  assignment_id: string;
-  user_id: string;
-  company_id: string;
-  name: string | null;
-  last_name: string | null;
-  email: string;
-  is_active: boolean;
-};
-
-type UserOption = {
-  id: string;
-  name: string | null;
-  last_name: string | null;
-  email: string;
-};
-
-/* ──────────── helpers ──────────── */
-function emptyForm(): RoleRecord {
-  return { id: '', code: '', name: '', description: '', is_active: true, created_at: '', updated_at: '' };
+  userCount?: number;
+  _count?: {
+    company_user_roles: number;
+  };
 }
 
-/* ════════════════════════════════════
-   PAGE
-═════════════════════════════════════ */
-export default function RolesPage() {
+export default function RolesDashboard() {
   const router = useRouter();
-  const codeInputRef = useRef<HTMLInputElement | null>(null);
 
-  /* ── list state ── */
-  const [records, setRecords] = useState<RoleRecord[]>([]);
-  const [cursor, setCursor] = useState(-1);
+  // State
+  const [roles, setRoles] = useState<RoleRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  /* ── form state ── */
-  const [form, setForm] = useState<RoleRecord>(emptyForm());
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<RoleRecord | null>(null);
 
-  /* ── assigned users ── */
-  const [assignedUsers, setAssignedUsers] = useState<AssignedUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [removingId, setRemovingId] = useState('');
-
-  /* ── assign-new-user ── */
-  const [allUsers, setAllUsers] = useState<UserOption[]>([]);
-  const [addUserId, setAddUserId] = useState('');
-  const [assigning, setAssigning] = useState(false);
-
-  /* ─────────────────────────────────────────────
-     LOAD ALL ROLES
-  ───────────────────────────────────────────── */
-  async function loadRecords(preferredId?: string) {
+  // Load Data
+  async function loadRoles() {
     setLoading(true);
-    setError('');
     try {
-      const res = await fetch('/api/admin/rbac');
-      if (!res.ok) throw new Error('No se pudo cargar roles');
-      const data: RoleRecord[] = await res.json();
-      setRecords(data);
-
-      if (data.length === 0) {
-        setCursor(-1);
-        setForm(emptyForm());
-        setAssignedUsers([]);
-        return;
-      }
-
-      const idx = preferredId ? data.findIndex((r) => r.id === preferredId) : -1;
-      applyRecord(data[idx >= 0 ? idx : 0], idx >= 0 ? idx : 0);
-    } catch (e: any) {
-      setError(e?.message || 'Error cargando roles');
+      const res = await fetch('/api/admin/rbac?includeInactive=true');
+      if (!res.ok) throw new Error('Error al cargar roles');
+      const data = await res.json();
+      setRoles(data);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadAllUsers() {
-    try {
-      const res = await fetch('/api/admin/users');
-      if (!res.ok) return;
-      const data = await res.json();
-      setAllUsers(Array.isArray(data) ? data : []);
-    } catch {}
-  }
-
   useEffect(() => {
-    void loadRecords();
-    void loadAllUsers();
+    loadRoles();
   }, []);
 
-  /* ─────────────────────────────────────────────
-     LOAD USERS FOR CURRENT ROLE
-  ───────────────────────────────────────────── */
-  async function loadAssignedUsers(roleId: string) {
-    if (!roleId) { setAssignedUsers([]); return; }
-    setLoadingUsers(true);
-    try {
-      const res = await fetch(`/api/admin/rbac?id=${encodeURIComponent(roleId)}`);
-      if (!res.ok) { setAssignedUsers([]); return; }
-      const data = await res.json();
-      setAssignedUsers(Array.isArray(data.users) ? data.users : []);
-    } catch {
-      setAssignedUsers([]);
-    } finally {
-      setLoadingUsers(false);
+  const handleToggleActive = async (id: string, newState: boolean) => {
+    // Solo pedir confirmación si estamos inactivando
+    if (!newState) {
+      if (!window.confirm('¿Desea inactivar este rol?')) return;
     }
-  }
-
-  /* ─────────────────────────────────────────────
-     NAVIGATION
-  ───────────────────────────────────────────── */
-  function applyRecord(record: RoleRecord, index: number) {
-    setCursor(index);
-    setForm({ ...record });
-    setError('');
-    setSuccess('');
-    void loadAssignedUsers(record.id);
-  }
-
-  const canNavigate = records.length > 0;
-
-  function navigate(action: 'first' | 'prev' | 'next' | 'last') {
-    if (!canNavigate) return;
-    const cur = cursor >= 0 ? cursor : 0;
-    const next =
-      action === 'first'  ? 0 :
-      action === 'prev'   ? Math.max(0, cur - 1) :
-      action === 'next'   ? Math.min(records.length - 1, cur + 1) :
-      records.length - 1;
-    applyRecord(records[next], next);
-  }
-
-  function clearForNew() {
-    setCursor(-1);
-    setForm(emptyForm());
-    setAssignedUsers([]);
-    setError('');
-    setSuccess('');
-    setTimeout(() => codeInputRef.current?.focus(), 0);
-  }
-
-  /* ─────────────────────────────────────────────
-     SAVE
-  ───────────────────────────────────────────── */
-  async function save() {
-    setError('');
-    setSuccess('');
-    if (!form.code.trim()) { setError('El código del rol es obligatorio.'); return; }
-    if (!form.name.trim()) { setError('El nombre del rol es obligatorio.'); return; }
-
-    setSaving(true);
+    
     try {
-      const method = form.id ? 'PUT' : 'POST';
       const res = await fetch('/api/admin/rbac', {
-        method,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          id:          form.id || undefined,
-          code:        form.code,
-          name:        form.name,
-          description: form.description,
-          isActive:    form.is_active,
-        }),
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, isActive: newState }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'No se pudo guardar el rol');
-
-      await loadRecords(form.id || data.id);
-      setSuccess('Rol guardado correctamente.');
-    } catch (e: any) {
-      setError(e?.message || 'Error guardando rol');
-    } finally {
-      setSaving(false);
+      if (!res.ok) throw new Error('Error al actualizar');
+      loadRoles();
+    } catch (err: any) {
+      alert(err.message);
     }
-  }
+  };
 
-  /* ─────────────────────────────────────────────
-     DELETE ROLE
-  ───────────────────────────────────────────── */
-  async function deleteRole() {
-    if (!form.id) { setError('No hay rol seleccionado.'); return; }
-    if (!window.confirm(`¿Eliminar el rol "${form.name}"? Esta acción es irreversible.`)) return;
-    setDeleting(true);
-    setError('');
-    setSuccess('');
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('¿Desea inactivar este rol y moverlo a la lista de desactivados?')) return;
     try {
-      const res = await fetch(`/api/admin/rbac?id=${encodeURIComponent(form.id)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'No se pudo eliminar el rol');
-      await loadRecords();
-      setSuccess('Rol eliminado.');
-    } catch (e: any) {
-      setError(e?.message || 'Error eliminando rol');
-    } finally {
-      setDeleting(false);
+      const res = await fetch(`/api/admin/rbac?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al eliminar');
+      loadRoles();
+    } catch (err: any) {
+      alert(err.message);
     }
-  }
+  };
 
-  /* ─────────────────────────────────────────────
-     REMOVE USER FROM ROLE
-  ───────────────────────────────────────────── */
-  async function removeUserFromRole(assignmentId: string, userName: string) {
-    if (!window.confirm(`¿Quitar el acceso de "${userName}" a este rol?`)) return;
-    setRemovingId(assignmentId);
-    try {
-      const res = await fetch(`/api/admin/rbac?assignment_id=${encodeURIComponent(assignmentId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Error removiendo usuario');
-      await loadAssignedUsers(form.id);
-      setSuccess(`Usuario "${userName}" removido del rol.`);
-    } catch (e: any) {
-      setError(e?.message || 'Error removiendo usuario');
-    } finally {
-      setRemovingId('');
+  const handleSave = async (data: any) => {
+    const res = await fetch('/api/admin/rbac', {
+      method: data.id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al guardar');
     }
-  }
+    loadRoles();
+  };
 
-  /* ─────────────────────────────────────────────
-     ASSIGN USER TO ROLE
-  ───────────────────────────────────────────── */
-  async function assignUser() {
-    if (!addUserId || !form.id) return;
-    setAssigning(true);
-    setError('');
-    try {
-      const res = await fetch('/api/admin/rbac/assign', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ userId: addUserId, roleId: form.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'No se pudo asignar usuario');
-      setAddUserId('');
-      await loadAssignedUsers(form.id);
-      setSuccess('Usuario asignado correctamente.');
-    } catch (e: any) {
-      setError(e?.message || 'Error asignando usuario');
-    } finally {
-      setAssigning(false);
-    }
-  }
-
-  /* ─────────────────────────────────────────────
-     HELPERS
-  ───────────────────────────────────────────── */
-  const statusLabel = useMemo(() => {
-    if (cursor < 0) return 'Nuevo registro';
-    return `Registro ${cursor + 1} de ${records.length}`;
-  }, [cursor, records.length]);
-
-  const availableUsers = useMemo(() => {
-    const assignedIds = new Set(assignedUsers.map((u) => u.user_id));
-    return allUsers.filter((u) => !assignedIds.has(u.id));
-  }, [allUsers, assignedUsers]);
-
-  /* ════════════════════════════════════
-     RENDER
-  ════════════════════════════════════ */
-  if (loading) {
-    return (
-      <section className={styles.page}>
-        <header className={styles.header}>
-          <p className={styles.eyebrow}>Administración</p>
-          <h1 className={styles.title}>Gestión de Roles</h1>
-        </header>
-        <p style={{ color: '#94a3b8' }}>Cargando roles…</p>
-      </section>
+  const filteredRoles = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return roles;
+    return roles.filter(r => 
+      r.name.toLowerCase().includes(term) || 
+      r.code.toLowerCase().includes(term)
     );
-  }
+  }, [roles, searchTerm]);
+
+  const activeRoles = filteredRoles.filter(r => r.is_active !== false);
+  const inactiveRoles = filteredRoles.filter(r => r.is_active === false);
 
   return (
-    <section className={styles.page}>
-      {/* ── Header ── */}
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>Administración</p>
-        <h1 className={styles.title}>Gestión de Roles</h1>
-        <p className={styles.subtitle}>
-          Crea, edita y elimina roles del sistema (<code>security.role</code>).
-          Gestiona los usuarios asignados a cada rol.
-        </p>
-      </header>
+    <div className="animate-fade-in" style={{ padding: '2rem' }}>
+      {/* Header section similar to Users page */}
+      <div className="section-header" style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <Link href="/admin" style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', marginRight: '0.5rem' }}>
+          <ArrowLeft size={24} />
+        </Link>
+        <Shield className="text-primary" size={28} />
+        <h1 className="gradient-text" style={{ fontSize: '2rem', margin: 0, fontWeight: 900 }}>Administración de Roles</h1>
+      </div>
 
-      {/* ── Role editor card ── */}
-      <article className={styles.card}>
-        <div className={styles.statusRow}>
-          <span>{statusLabel}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <p style={{ color: 'var(--secondary)', margin: 0, maxWidth: '600px', fontSize: '1rem' }}>
+          Estructure la jerarquía de acceso y gobierne las capacidades operativas de Kiriox.
+        </p>
+        <button
+          onClick={() => { setSelectedRole(null); setIsModalOpen(true); }}
+          style={{
+            background: 'var(--primary)',
+            color: 'white',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '10px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Plus size={20} />
+          Crear Nuevo Rol
+        </button>
+      </div>
+
+      {/* Stats and Search */}
+      <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2.5rem'
+      }}>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '0.05rem', marginBottom: '0.5rem' }}>Roles Activos</p>
+          <p style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--foreground)', margin: 0 }}>{activeRoles.length}</p>
         </div>
 
-        <label className={styles.field}>
-          <span>Código</span>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '0.05rem', marginBottom: '0.5rem' }}>En Desuso</p>
+          <p style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fca5a5', margin: 0 }}>{inactiveRoles.length}</p>
+        </div>
+
+        <div className="glass-card" style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gridColumn: 'span 2' }}>
+          <Search size={18} style={{ color: 'var(--secondary)', marginRight: '1rem' }} />
           <input
-            ref={codeInputRef}
-            className={styles.input}
-            value={form.code}
-            onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
-            placeholder="ej: admin_basico (en minúsculas)"
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por nombre o código de rol..."
+            style={{
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'var(--foreground)',
+              width: '100%',
+              fontSize: '0.9rem'
+            }}
           />
-        </label>
+        </div>
+      </div>
 
-        <label className={styles.field}>
-          <span>Nombre</span>
-          <input
-            className={styles.input}
-            value={form.name}
-            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            placeholder="Nombre visible del rol"
+      {error && (
+        <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', marginBottom: '1.5rem' }}>
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--secondary)', fontSize: '0.8rem' }}>
+          Cargando matriz de acceso...
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Active Roles */}
+          <RoleTable 
+            title="Roles Activos"
+            roles={activeRoles}
+            isActiveList={true}
+            onEdit={(r) => { setSelectedRole(r); setIsModalOpen(true); }}
+            onToggle={handleToggleActive}
+            onDelete={handleDelete}
           />
-        </label>
 
-        <label className={styles.field}>
-          <span>Descripción</span>
-          <textarea
-            className={styles.textarea}
-            rows={3}
-            value={form.description ?? ''}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-            placeholder="Descripción del rol y sus responsabilidades"
-          />
-        </label>
+          {/* Inactive Roles */}
+          {inactiveRoles.length > 0 && (
+            <RoleTable 
+              title="Roles Inactivos"
+              roles={inactiveRoles}
+              isActiveList={false}
+              onEdit={(r) => { setSelectedRole(r); setIsModalOpen(true); }}
+              onToggle={handleToggleActive}
+              onDelete={handleDelete}
+            />
+          )}
+        </div>
+      )}
 
-        <label className={styles.switchRow}>
-          <input
-            type="checkbox"
-            checked={form.is_active ?? true}
-            onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
-          />
-          <span>Rol activo</span>
-        </label>
-
-        {error   && <p className={styles.error}>{error}</p>}
-        {success && <p className={styles.success}>{success}</p>}
-      </article>
-
-      {/* ── Navigation + Actions (siempre al final) ── */}
-      <CrudModelActionBar
-        onFirst={() => navigate('first')}
-        onPrevious={() => navigate('prev')}
-        onNext={() => navigate('next')}
-        onLast={() => navigate('last')}
-        onClose={() => router.push('/score/dashboard')}
-        onDelete={() => void deleteRole()}
-        onCancel={clearForNew}
-        onSave={() => void save()}
-        disableFirst={saving || !canNavigate || cursor <= 0}
-        disablePrevious={saving || !canNavigate || cursor <= 0}
-        disableNext={saving || !canNavigate || cursor >= records.length - 1 || cursor < 0}
-        disableLast={saving || !canNavigate || cursor >= records.length - 1}
-        disableClose={saving || deleting}
-        disableDelete={deleting || saving || !form.id}
-        disableCancel={saving || deleting}
-        disableSave={saving || loading}
-        deleting={deleting}
-        saving={saving}
-        cancelLabel="Nuevo"
+      <RoleEditorModal 
+        isOpen={isModalOpen}
+        role={selectedRole}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSave}
       />
-    </section>
+    </div>
+  );
+}
+
+function RoleTable({ title, roles, isActiveList, onEdit, onToggle, onDelete }: any) {
+  const titleColor = isActiveList ? "var(--foreground)" : "#fca5a5";
+  const opacity = isActiveList ? 1 : 0.6;
+
+  return (
+    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.03)' }}>
+        <h2 style={{ fontSize: '1.1rem', margin: 0, color: titleColor }}>{title}</h2>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+              <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>#</th>
+              <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>Nombre del Rol</th>
+              <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>Descripción y Atribuciones</th>
+              <th style={{ padding: '1rem 1.5rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>Usuarios</th>
+              <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.7rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>Acciones</th>
+            </tr>
+          </thead>
+          <tbody style={{ opacity }}>
+            {roles.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--secondary)', fontSize: '0.8rem' }}>
+                  No hay roles para mostrar.
+                </td>
+              </tr>
+            ) : roles.map((role: RoleRecord, index: number) => (
+              <tr key={role.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                <td style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 'bold' }}>
+                  {index + 1}
+                </td>
+                <td style={{ padding: '1rem 1.5rem' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'white' }}>{role.name}</div>
+                </td>
+                <td style={{ padding: '1rem 1.5rem' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--secondary)', maxWidth: '500px', lineHeight: '1.4' }}>{role.description || 'Sin descripción.'}</div>
+                </td>
+                <td style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
+                  <div style={{ 
+                    display: 'inline-block', 
+                    padding: '0.2rem 0.6rem', 
+                    borderRadius: '20px', 
+                    background: 'rgba(59, 130, 246, 0.1)', 
+                    color: 'var(--primary)',
+                    fontSize: '0.8rem',
+                    fontWeight: 800
+                  }}>
+                    {role._count?.company_user_roles ?? 0}
+                  </div>
+                </td>
+                <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                    <button 
+                      onClick={() => onEdit(role)}
+                      style={{ 
+                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--secondary)',
+                        padding: '0.4rem', borderRadius: '6px', transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.color = 'white')}
+                      onMouseOut={(e) => (e.currentTarget.style.color = 'var(--secondary)')}
+                      title="Configurar Rol"
+                    >
+                      <Edit3 size={18} />
+                    </button>
+                    {isActiveList ? (
+                      <>
+                        <button 
+                          onClick={() => onToggle(role.id, false)}
+                          style={{ 
+                            background: 'none', border: 'none', cursor: 'pointer', color: '#f59e0b',
+                            padding: '0.4rem', borderRadius: '6px', transition: 'all 0.2s'
+                          }}
+                          title="Inactivar"
+                        >
+                          <Ban size={18} />
+                        </button>
+                        <button 
+                          onClick={() => onDelete(role.id)}
+                          style={{ 
+                            background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', 
+                            padding: '0.4rem', transition: 'all 0.2s'
+                          }}
+                          title="Eliminar Permanente"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => onToggle(role.id, true)}
+                        style={{ 
+                          background: 'none', border: 'none', cursor: 'pointer', color: '#10b981',
+                          padding: '0.4rem', borderRadius: '6px', transition: 'all 0.2s'
+                        }}
+                        title="Reactivar Rol"
+                      >
+                        <RefreshCcw size={18} />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

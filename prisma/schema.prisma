@@ -114,7 +114,7 @@ model corpus_catalog_status {
   old_corpus_test_control_procedure old_corpus_test_control_procedure[]
   audit_assessment                  audit_assessment[]
   audit_evaluation                  audit_evaluation[]
-  company                           company[]
+
   domain                            domain[]
   framework_source                  framework_source[]
   framework_version                 framework_version[]
@@ -301,18 +301,20 @@ model company {
   code             String            @unique(map: "corpus_company_code_key")
   name             String
   legal_name       String?
+  description      String?
   jurisdiction_id  String?           @db.Uuid
   is_active        Boolean           @default(true)
   created_at       DateTime          @default(now()) @db.Timestamptz(6)
   updated_at       DateTime          @default(now()) @db.Timestamptz(6)
   audit_assessment audit_assessment[]
   jurisdiction     jurisdiction?      @relation(fields: [jurisdiction_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "corpus_company_jurisdiction_id_fkey")
+  score_run_draft  run_draft[]
+  score_run        run[]
+  users            security_users[]
+  company_modules  security_company_module[]
+  company_licenses security_company_license[]
 
-  @@schema("score")
-  score_run_draft         run_draft[]
-  score_run               run[]
-  corpus_catalog_status   corpus_catalog_status? @relation(fields: [status_id], references: [id])
-  status_id               Int?                   @db.SmallInt
+  @@schema("core")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -1253,15 +1255,17 @@ model corpus_test_source {
 
 model security_rbac {
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role_code       String        @unique @db.VarChar(50)
-  permission_code String?       @db.VarChar(100)
-  created_at      DateTime?     @default(now()) @db.Timestamp(6)
-  role_name       String?       @db.VarChar(100)
+  code            String        @unique @db.VarChar(50)
+  name            String?       @db.VarChar(100)
   description     String?
   is_active       Boolean?      @default(true)
+  created_at      DateTime?     @default(now()) @db.Timestamp(6)
   updated_at      DateTime?     @default(now()) @db.Timestamp(6)
-  user_x_rbac     user_x_rbac[]
+  user_x_rbac              user_x_rbac[]
+  role_permissions         security_role_permission[]
+  company_user_roles       security_company_user_role[]
 
+  @@map("role")
   @@schema("security")
 }
 
@@ -1301,7 +1305,6 @@ model security_user_token {
 
 model security_users {
   id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id            String                @db.Uuid
   email                String                @unique(map: "idx_security_users_email_unique") @db.VarChar(255)
   password_hash        String
   name                 String?               @db.VarChar(255)
@@ -1315,10 +1318,13 @@ model security_users {
   last_name            String?
   whatsapp             String?
   role_id              String?               @db.Uuid
+  company_id           String?               @db.Uuid
+  company              company?              @relation(fields: [company_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
   security_user_scope  security_user_scope[]
   security_user_token  security_user_token[]
   user_x_rbac          user_x_rbac[]
   owned_processes      process[]
+  company_user_roles   security_company_user_role[]
 
   @@schema("security")
 }
@@ -1334,6 +1340,124 @@ model user_x_rbac {
   security_users security_users @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_x_rbac_userid_fkey")
 
   @@unique([user_id, role_id], map: "user_x_rbac_user_role_unique")
+  @@map("map_users_x_roles")
+  @@schema("security")
+}
+
+model security_module {
+  code        String    @id @db.VarChar(100)
+  name        String
+  description String?
+  is_core     Boolean   @default(false)
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+
+  permissions     security_permission[]
+  company_modules security_company_module[]
+
+  @@map("module")
+  @@schema("security")
+}
+
+model security_permission {
+  code        String  @id @db.VarChar(100)
+  module_code String  @db.VarChar(100)
+  name        String
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  module           security_module          @relation(fields: [module_code], references: [code], onDelete: NoAction, onUpdate: Cascade)
+  role_permissions security_role_permission[]
+
+  @@map("permission")
+  @@schema("security")
+}
+
+model security_role_permission {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role_id         String   @db.Uuid
+  permission_code String   @db.VarChar(100)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  role       security_rbac       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  permission security_permission @relation(fields: [permission_code], references: [code], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("role_permission")
+  @@schema("security")
+}
+
+model security_company_module {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String    @db.Uuid
+  module_code    String    @db.VarChar(100)
+  is_enabled     Boolean   @default(true)
+  license_status String?
+  starts_at      DateTime? @db.Timestamptz(6)
+  ends_at        DateTime? @db.Timestamptz(6)
+  metadata       Json?
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
+
+  module  security_module @relation(fields: [module_code], references: [code], onDelete: NoAction, onUpdate: Cascade)
+  company company         @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("company_module")
+  @@schema("security")
+}
+
+model security_company_license {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id        String    @db.Uuid
+  module_code       String    @db.VarChar(100)
+  license_payload   Json?
+  license_signature String?
+  issued_at         DateTime? @db.Timestamptz(6)
+  expires_at        DateTime? @db.Timestamptz(6)
+  status            String?
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+
+  company company @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("company_license")
+  @@schema("security")
+}
+
+model security_company_user_role {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String   @db.Uuid
+  user_id    String   @db.Uuid
+  role_id    String   @db.Uuid
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user security_users @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  role security_rbac  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("company_user_role")
+  @@schema("security")
+}
+
+model security_license_audit_log {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String?   @db.Uuid
+  module_code    String?   @db.VarChar(100)
+  license_id     String?   @db.Uuid
+  action         String?
+  previous_state Json?
+  new_state      Json?
+  performed_by   String?   @db.Uuid
+  source         String?
+  reason         String?
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("license_audit_log")
   @@schema("security")
 }
 

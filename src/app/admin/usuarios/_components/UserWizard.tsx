@@ -256,7 +256,6 @@ export default function UserWizard({ mode, userId }: UserWizardProps) {
                                 value={tenantId}
                                 onChange={(e) => setTenantId(e.target.value)}
                                 style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }}
-                                disabled={mode === 'edit'}
                             >
                                 <option value="">Seleccione...</option>
                                 {companies.map((company) => (

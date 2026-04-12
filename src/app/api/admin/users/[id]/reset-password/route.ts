@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/auth-server';
 import { requireCsrf } from '@/lib/csrf';
 import { hashPassword } from '@/lib/auth';
-import { randomBytes } from 'crypto';
 import { getRequestMeta } from '@/lib/request-meta';
 
 function isAdmin(roleCode: string) {
-    return roleCode === 'ADMIN';
+    const code = (roleCode || '').trim().toLowerCase();
+    return code === 'admin' || code === 'super_admin';
 }
 
-function generateTempPassword() {
-    return randomBytes(8).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
-}
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -29,32 +25,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     try {
-        const userRows = await prisma.$queryRaw<{ id: string }[]>(
-            Prisma.sql`
-              SELECT u.id
-              FROM security.security_users u
-              JOIN security.company_user cu ON cu.user_id = u.id
-              WHERE u.id = ${id}::uuid
-                AND cu.company_id = ${auth.tenantId}::uuid
-                AND COALESCE(u.is_active, true) = true
-                AND COALESCE(cu.is_active, true) = true
-              LIMIT 1
-            `
-        );
+        const body = await request.json();
+        const { password } = body;
 
-        if (userRows.length === 0) {
+        if (!password) {
+            return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+        }
+
+        const existingUser = await prisma.securityUser.findUnique({
+            where: { id },
+            select: { id: true }
+        });
+
+        if (!existingUser) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const tempPassword = generateTempPassword();
-        const passwordHash = await hashPassword(tempPassword);
+        const passwordHash = await hashPassword(password);
 
         await prisma.securityUser.update({
-            where: { id: id },
+            where: { id },
             data: {
-                passwordHash,
-                mustChangePassword: true,
-                passwordUpdatedAt: new Date()
+                password_hash: passwordHash,
+                must_change_password: true,
+                password_updated_at: new Date(),
+                updated_at: new Date()
             }
         });
 
@@ -67,7 +62,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                     entity_id: id,
                     action: 'reset_password',
                     new_data: {
-                        mustChangePassword: true
+                        must_change_password: true
                     },
                     changed_by: auth.userId,
                     ip_address: meta.ipAddress,
@@ -79,7 +74,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             console.warn('Skipping audit log for password reset:', auditError?.code || auditError?.message || auditError);
         }
 
-        return NextResponse.json({ success: true, tempPassword });
+        return NextResponse.json({ success: true });
     } catch (error: any) {
         console.error('Error resetting password:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
