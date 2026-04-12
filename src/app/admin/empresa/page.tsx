@@ -10,6 +10,7 @@ type CompanyRow = {
     id: string;
     name: string;
     code: string;
+    description: string | null;
     legalName: string | null;
     isActive: boolean;
     createdAt: string;
@@ -25,14 +26,14 @@ export default function EmpresaPage() {
     // Modal states
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
-    const [editForm, setEditForm] = useState({ name: '', code: '', legalName: '' });
+    const [editForm, setEditForm] = useState({ name: '', code: '', description: '', legalName: '' });
     const [isSaving, setIsSaving] = useState(false);
 
     const load = async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/admin/companies');
+            const res = await fetch('/api/admin/companies?status=ALL');
             if (res.status === 401 || res.status === 403) {
                 router.replace('/login');
                 return;
@@ -67,18 +68,54 @@ export default function EmpresaPage() {
         });
     };
 
-    const handleDelete = async (companyId: string) => {
-        if (!window.confirm('¿Desea borrar esta empresa permanentemente? Esta acción no se puede deshacer.')) return;
+    const handleDelete = async (company: CompanyRow) => {
+        if (!window.confirm(`¿Desea inactivar la empresa "${company.name}"?`)) return;
         
         try {
             const csrf = getCsrfTokenFromDocument();
-            const res = await fetch(`/api/admin/companies?id=${companyId}`, {
-                method: 'DELETE',
+            const res = await fetch('/api/admin/companies', {
+                method: 'PUT',
                 headers: {
+                    'Content-Type': 'application/json',
                     ...(csrf ? { 'x-csrf-token': csrf } : {})
-                }
+                },
+                body: JSON.stringify({
+                    id: company.id,
+                    name: company.name,
+                    code: company.code,
+                    description: company.description,
+                    legalName: company.legalName,
+                    isActive: false
+                })
             });
-            if (!res.ok) throw new Error('Error al borrar la empresa');
+            if (!res.ok) throw new Error('Error al inactivar la empresa');
+            load();
+        } catch (err: any) {
+            alert(err.message);
+        }
+    };
+
+    const handleReactivate = async (company: CompanyRow) => {
+        if (!window.confirm(`¿Desea reactivar la empresa "${company.name}"?`)) return;
+        
+        try {
+            const csrf = getCsrfTokenFromDocument();
+            const res = await fetch('/api/admin/companies', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(csrf ? { 'x-csrf-token': csrf } : {})
+                },
+                body: JSON.stringify({
+                    id: company.id,
+                    name: company.name,
+                    code: company.code,
+                    description: company.description,
+                    legalName: company.legalName,
+                    isActive: true
+                })
+            });
+            if (!res.ok) throw new Error('Error al reactivar la empresa');
             load();
         } catch (err: any) {
             alert(err.message);
@@ -90,6 +127,7 @@ export default function EmpresaPage() {
         setEditForm({
             name: company.name,
             code: company.code,
+            description: company.description || '',
             legalName: company.legalName || ''
         });
         setIsEditModalOpen(true);
@@ -143,43 +181,38 @@ export default function EmpresaPage() {
             )}
 
             {!loading && !error && (
+                <>
                 <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '1rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.03)' }}>
+                        <h2 style={{ fontSize: '1rem', margin: 0 }}>Empresas Activas</h2>
+                    </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
                                 <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Nombre</th>
                                 <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Codigo</th>
-                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Estado</th>
+                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Descripción</th>
                                 <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Creado / Actualizado</th>
                                 <th style={{ textAlign: 'right', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {companies.length === 0 ? (
+                            {companies.filter(c => c.isActive).length === 0 ? (
                                 <tr>
                                     <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted)' }}>
                                         No hay empresas activas registradas.
                                     </td>
                                 </tr>
                             ) : (
-                                companies.map((company) => (
+                                companies.filter(c => c.isActive).map((company) => (
                                     <tr key={company.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
                                         <td style={{ padding: '1rem', fontWeight: 600 }}>
                                             <div>{company.name}</div>
                                             <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 400 }}>{company.legalName}</div>
                                         </td>
                                         <td style={{ padding: '1rem', color: 'var(--muted)' }}>{company.code}</td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <span style={{
-                                                padding: '0.25rem 0.75rem',
-                                                borderRadius: '999px',
-                                                fontSize: '0.7rem',
-                                                fontWeight: 700,
-                                                color: company.isActive ? '#34d399' : '#f87171',
-                                                background: company.isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(248, 113, 113, 0.15)'
-                                            }}>
-                                                {company.isActive ? 'Activo' : 'Inactivo'}
-                                            </span>
+                                        <td style={{ padding: '1rem', color: 'var(--muted)', fontSize: '0.8rem', maxWidth: '300px', whiteSpace: 'pre-wrap' }}>
+                                            {company.description || '---'}
                                         </td>
                                         <td style={{ padding: '1rem', color: 'var(--muted)', fontSize: '0.85rem' }}>
                                             <div><span style={{ fontSize: '0.7rem', opacity: 0.6 }}>C:</span> {formatDate(company.createdAt)}</div>
@@ -195,9 +228,9 @@ export default function EmpresaPage() {
                                                     <Edit3 size={16} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => handleDelete(company.id)}
+                                                    onClick={() => handleDelete(company)}
                                                     style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', color: '#f87171' }}
-                                                    title="Borrar"
+                                                    title="Inactivar"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
@@ -209,6 +242,61 @@ export default function EmpresaPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <div className="glass-card" id="empresa-inactivo" style={{ padding: 0, overflow: 'hidden', marginTop: '2rem' }}>
+                    <div style={{ padding: '1rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.03)' }}>
+                        <h2 style={{ fontSize: '1rem', margin: 0, color: '#fca5a5' }}>Empresas Inactivas</h2>
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Nombre</th>
+                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Codigo</th>
+                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Descripción</th>
+                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Creado / Actualizado</th>
+                                <th style={{ textAlign: 'right', padding: '1rem', fontSize: '0.7rem', letterSpacing: '0.08rem', textTransform: 'uppercase', color: 'var(--muted)' }}>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {companies.filter(c => !c.isActive).length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted)' }}>
+                                        No hay empresas inactivas.
+                                    </td>
+                                </tr>
+                            ) : (
+                                companies.filter(c => !c.isActive).map((company) => (
+                                    <tr key={company.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                                        <td style={{ padding: '1rem', fontWeight: 600, opacity: 0.7 }}>
+                                            <div>{company.name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 400 }}>{company.legalName}</div>
+                                        </td>
+                                        <td style={{ padding: '1rem', color: 'var(--muted)', opacity: 0.7 }}>{company.code}</td>
+                                        <td style={{ padding: '1rem', color: 'var(--muted)', fontSize: '0.8rem', opacity: 0.7, maxWidth: '300px', whiteSpace: 'pre-wrap' }}>
+                                            {company.description || '---'}
+                                        </td>
+                                        <td style={{ padding: '1rem', color: 'var(--muted)', fontSize: '0.85rem', opacity: 0.7 }}>
+                                            <div><span style={{ fontSize: '0.7rem', opacity: 0.6 }}>C:</span> {formatDate(company.createdAt)}</div>
+                                            <div><span style={{ fontSize: '0.7rem', opacity: 0.6 }}>A:</span> {formatDate(company.updatedAt)}</div>
+                                        </td>
+                                        <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                                <button 
+                                                    onClick={() => handleReactivate(company)}
+                                                    style={{ background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.2)', borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', color: '#34d399' }}
+                                                    title="Reactivar"
+                                                >
+                                                    <CheckCircle2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                </>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
@@ -283,6 +371,15 @@ export default function EmpresaPage() {
                                     value={editForm.code} 
                                     onChange={e => setEditForm({...editForm, code: e.target.value.toUpperCase()})}
                                     style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.4rem' }}>Descripción</label>
+                                <textarea 
+                                    value={editForm.description} 
+                                    onChange={e => setEditForm({...editForm, description: e.target.value})}
+                                    rows={2}
+                                    style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white', resize: 'vertical' }}
                                 />
                             </div>
                             <div>

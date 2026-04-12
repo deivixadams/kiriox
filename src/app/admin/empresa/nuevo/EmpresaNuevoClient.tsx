@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Building, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Building, CheckCircle2, X } from 'lucide-react';
 import Link from 'next/link';
 import { getCsrfTokenFromDocument } from '@/lib/client-csrf';
 
@@ -12,6 +12,7 @@ export default function EmpresaNuevoClient() {
     const returnTo = searchParams.get('return_to') || '/admin/empresa';
     const [name, setName] = useState('');
     const [code, setCode] = useState('');
+    const [description, setDescription] = useState('');
     const [legalName, setLegalName] = useState('');
     const [statusId, setStatusId] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -60,7 +61,11 @@ export default function EmpresaNuevoClient() {
                     'Content-Type': 'application/json',
                     ...(csrf ? { 'x-csrf-token': csrf } : {})
                 },
-                body: JSON.stringify({ name, code, legalName, statusId })
+                body: JSON.stringify({ 
+                    name, 
+                    description, 
+                    isActive: statusId === 1 
+                })
             });
 
             if (res.status === 409) {
@@ -108,10 +113,22 @@ export default function EmpresaNuevoClient() {
                 </div>
                 <Link
                     href={returnTo}
-                    className="btn-primary"
-                    style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', background: 'transparent', border: '1px solid var(--glass-border)' }}
+                    style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        textDecoration: 'none', 
+                        background: 'rgba(255,255,255,0.05)', 
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '50%',
+                        width: '36px',
+                        height: '36px',
+                        color: 'var(--muted)',
+                        transition: 'all 0.2s ease'
+                    }}
+                    title="Cerrar"
                 >
-                    [X]
+                    <X size={18} />
                 </Link>
             </div>
 
@@ -127,21 +144,13 @@ export default function EmpresaNuevoClient() {
                         />
                     </div>
                     <div>
-                        <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Codigo</label>
-                        <input
-                            value={code}
-                            onChange={(e) => setCode(e.target.value.toUpperCase())}
-                            placeholder="CORP"
-                            style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }}
-                        />
-                    </div>
-                    <div>
-                        <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Razon social (opcional)</label>
-                        <input
-                            value={legalName}
-                            onChange={(e) => setLegalName(e.target.value)}
-                            placeholder="Corporativo Principal S.A."
-                            style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }}
+                        <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Descripción</label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={5}
+                            placeholder="Descripción de la empresa..."
+                            style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white', resize: 'vertical', minHeight: '120px' }}
                         />
                     </div>
                     <div>
@@ -164,9 +173,24 @@ export default function EmpresaNuevoClient() {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem' }}>
-                    <Link href={returnTo} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--glass-border)', textDecoration: 'none' }}>
-                        <ArrowLeft size={16} /> Volver
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+                    <Link 
+                        href={returnTo} 
+                        style={{ 
+                            background: 'transparent', 
+                            border: '1px solid var(--glass-border)', 
+                            color: 'white',
+                            textDecoration: 'none',
+                            padding: '0.75rem 1.25rem',
+                            borderRadius: '10px',
+                            fontWeight: 'bold',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Cerrar
                     </Link>
                     <button
                         onClick={handleSubmit}
