@@ -285,6 +285,7 @@ export function KeyActivitiesEditorPanel() {
       riskWeight: record.riskWeight || '',
       cascadeFactor: record.cascadeFactor || '',
       isCascade: !!record.isCascade,
+      isHardGate: !!record.isHardGate,
       isActive: record.isActive,
       createdAt: toLocalDateTimeInput(record.createdAt) || nowInputValue(),
       updatedAt: toLocalDateTimeInput(record.updatedAt) || nowInputValue(),
@@ -338,8 +339,8 @@ export function KeyActivitiesEditorPanel() {
     setError('');
     setSuccess('');
 
-    if (!selectedCompanyId || !selectedProcessId) {
-      setError('Selecciona empresa y proceso.');
+    if (!selectedCompanyId || !selectedReinoId || !selectedDomainId || !selectedProcessId) {
+      setError('Selecciona empresa, reino, macroproceso y proceso.');
       return;
     }
     if (localActivities.length === 0) {
@@ -355,6 +356,8 @@ export function KeyActivitiesEditorPanel() {
         body: JSON.stringify({
           batch: true,
           companyId: selectedCompanyId,
+          reinoId: selectedReinoId,
+          domainId: selectedDomainId,
           processId: selectedProcessId,
           activities: localActivities.map(a => ({
             ...a,
@@ -747,4 +750,3 @@ export function KeyActivitiesEditorPanel() {
     </section>
   );
 }
-

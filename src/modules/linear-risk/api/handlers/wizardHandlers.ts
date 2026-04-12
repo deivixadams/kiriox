@@ -207,8 +207,8 @@ async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: st
     inherent_risk_score: number | null;
   }>>(Prisma.sql`
     SELECT
-      sa.activity_name,
-      sa.activity_code,
+      COALESCE(sa.name, sa.title, sa.code) AS activity_name,
+      sa.code AS activity_code,
       rc.risk_name,
       rc.risk_description,
       cp.name AS probability_name,
@@ -217,7 +217,7 @@ async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: st
       ci.numeric_value AS impact_value,
       dir.inherent_risk_score
     FROM core.risk_assessment_draft_item di
-    JOIN core.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
+    JOIN core.domain_elements sa ON sa.id = di.significant_activity_id AND sa.element_type = 'ACTIVITY'
     LEFT JOIN core.risk_assessment_draft_item_risk dir ON dir.risk_assessment_draft_item_id = di.risk_assessment_draft_item_id
     LEFT JOIN core.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
     LEFT JOIN core.catalog_probability cp ON cp.catalog_probability_id = dir.catalog_probability_id
@@ -414,9 +414,13 @@ async function findDraft(id: string, tenantId: string): Promise<LinearDraftRow |
 
 async function getItems(draftPk: bigint): Promise<DraftItemRow[]> {
   return prisma.$queryRaw<DraftItemRow[]>(Prisma.sql`
-    SELECT di.risk_assessment_draft_item_id, di.significant_activity_id, sa.activity_code, sa.activity_name
+    SELECT
+      di.risk_assessment_draft_item_id,
+      di.significant_activity_id,
+      sa.code AS activity_code,
+      COALESCE(sa.name, sa.title, sa.code) AS activity_name
     FROM core.risk_assessment_draft_item di
-    JOIN core.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
+    JOIN core.domain_elements sa ON sa.id = di.significant_activity_id AND sa.element_type = 'ACTIVITY'
     WHERE di.risk_assessment_draft_id = ${draftPk}
       AND COALESCE(di.is_deleted, false) = false
     ORDER BY di.sort_order ASC, di.risk_assessment_draft_item_id ASC
@@ -428,9 +432,9 @@ async function getInherentSeedRows(draftPk: bigint): Promise<DraftInherentSeedRo
     SELECT
       di.risk_assessment_draft_item_id,
       di.significant_activity_id::text AS significant_activity_id,
-      sa.activity_code,
-      sa.activity_name,
-      sa.activity_description,
+      sa.code AS activity_code,
+      COALESCE(sa.name, sa.title, sa.code) AS activity_name,
+      COALESCE(sa.description, sa.statement) AS activity_description,
       di.notes AS draft_item_notes,
       dir.risk_assessment_draft_item_risk_id,
       dir.risk_catalog_id::text AS risk_catalog_id,
@@ -444,7 +448,7 @@ async function getInherentSeedRows(draftPk: bigint): Promise<DraftInherentSeedRo
       ci.numeric_value AS impact_value,
       dir.inherent_risk_score
     FROM core.risk_assessment_draft_item di
-    JOIN core.significant_activity sa ON sa.significant_activity_id = di.significant_activity_id
+    JOIN core.domain_elements sa ON sa.id = di.significant_activity_id AND sa.element_type = 'ACTIVITY'
     LEFT JOIN core.risk_assessment_draft_item_risk dir
       ON dir.risk_assessment_draft_item_id = di.risk_assessment_draft_item_id
     LEFT JOIN core.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
@@ -460,25 +464,61 @@ async function ensureFirstItem(draftPk: bigint, companyId: string): Promise<bigi
   const items = await getItems(draftPk);
   if (items[0]) return items[0].risk_assessment_draft_item_id;
 
-  const activityUuid = await isUuidCompany('significant_activity');
-  const act = activityUuid
-    ? await prisma.$queryRaw<{ significant_activity_id: string }[]>(Prisma.sql`
-        INSERT INTO core.significant_activity (company_id, activity_code, activity_name, activity_description, is_active, created_at, updated_at)
-        VALUES (${companyId}::uuid, 'KX-PLACEHOLDER', 'Actividad placeholder', 'Generada automáticamente', true, now(), now())
-        RETURNING significant_activity_id
-      `)
-    : await prisma.$queryRaw<{ significant_activity_id: string }[]>(Prisma.sql`
-        INSERT INTO core.significant_activity (company_id, activity_code, activity_name, activity_description, is_active, created_at, updated_at)
-        VALUES (1, 'KX-PLACEHOLDER', 'Actividad placeholder', 'Generada automáticamente', true, now(), now())
-        RETURNING significant_activity_id
+  const act = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    INSERT INTO core.domain_elements (
+      element_type,
+      code,
+      name,
+      title,
+      description,
+      is_active,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      'ACTIVITY',
+      ${`KX_PLACEHOLDER_${Date.now()}`},
+      'Actividad placeholder',
+      'Actividad placeholder',
+      'Generada automáticamente',
+      true,
+      now(),
+      now()
+    )
+    RETURNING id
+  `);
+
+  if (UUID_REGEX.test(companyId)) {
+    const companyDomain = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT id
+      FROM core.domain
+      WHERE company_id = ${companyId}::uuid
+      ORDER BY code
+      LIMIT 1
+    `);
+    if (companyDomain[0]) {
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO core.map_domain_element (domain_id, element_id, is_primary, created_at, updated_at)
+        VALUES (${companyDomain[0].id}::uuid, ${act[0].id}::uuid, true, now(), now())
+        ON CONFLICT DO NOTHING
       `);
+    }
+    await upsertSignificantActivityMirror({
+      id: act[0].id,
+      companyId,
+      code: `KX_PLACEHOLDER_${Date.now()}`,
+      name: 'Actividad placeholder',
+      description: 'Generada automáticamente',
+      isActive: true,
+    });
+  }
 
   const item = await prisma.$queryRaw<{ risk_assessment_draft_item_id: bigint }[]>(Prisma.sql`
     INSERT INTO core.risk_assessment_draft_item (
       risk_assessment_draft_id, significant_activity_id, materiality_level, materiality_weight, materiality_justification,
       sort_order, notes, created_at, updated_at, is_deleted
     ) VALUES (
-      ${draftPk}, ${act[0].significant_activity_id}, 'media', 50, 'Item placeholder', 1, '{}', now(), now(), false
+      ${draftPk}, ${act[0].id}, 'media', 50, 'Item placeholder', 1, '{}', now(), now(), false
     ) RETURNING risk_assessment_draft_item_id
   `);
   return item[0].risk_assessment_draft_item_id;
@@ -558,6 +598,46 @@ export async function getLinearRiskScalesHandler() {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+async function upsertSignificantActivityMirror(input: {
+  id: string;
+  companyId: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+}) {
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO core.significant_activity (
+      significant_activity_id,
+      company_id,
+      activity_code,
+      activity_name,
+      activity_description,
+      is_active,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      ${input.id}::uuid,
+      ${input.companyId}::uuid,
+      ${input.code},
+      ${input.name},
+      ${input.description},
+      ${input.isActive},
+      now(),
+      now()
+    )
+    ON CONFLICT (significant_activity_id)
+    DO UPDATE SET
+      company_id = EXCLUDED.company_id,
+      activity_code = EXCLUDED.activity_code,
+      activity_name = EXCLUDED.activity_name,
+      activity_description = EXCLUDED.activity_description,
+      is_active = EXCLUDED.is_active,
+      updated_at = now()
+  `);
+}
+
 export async function getLinearRiskSignificantActivitiesCatalogHandler(request: Request) {
   try {
     const auth = await getAuthContext();
@@ -570,14 +650,23 @@ export async function getLinearRiskSignificantActivitiesCatalogHandler(request: 
     if (UUID_REGEX.test(activityId)) {
       const rows = await prisma.$queryRaw<SignificantActivityCatalogRow[]>(Prisma.sql`
         SELECT
-          sa.significant_activity_id,
-          sa.company_id::text AS company_id,
-          sa.activity_code,
-          sa.activity_name,
-          sa.activity_description,
-          sa.is_active
-        FROM core.significant_activity sa
-        WHERE sa.significant_activity_id = ${activityId}::uuid
+          de.id::text AS significant_activity_id,
+          COALESCE((
+            SELECT d.company_id::text
+            FROM core.map_domain_element mde
+            JOIN core.domain d ON d.id = mde.domain_id
+            WHERE mde.element_id = de.id
+              AND d.company_id IS NOT NULL
+            ORDER BY mde.is_primary DESC, mde.created_at, d.code
+            LIMIT 1
+          ), ''::text) AS company_id,
+          de.code AS activity_code,
+          COALESCE(de.name, de.title, de.code) AS activity_name,
+          COALESCE(de.description, de.statement) AS activity_description,
+          COALESCE(de.is_active, true) AS is_active
+        FROM core.domain_elements de
+        WHERE de.id = ${activityId}::uuid
+          AND de.element_type = 'ACTIVITY'
         LIMIT 1
       `);
       return NextResponse.json({
@@ -597,29 +686,45 @@ export async function getLinearRiskSignificantActivitiesCatalogHandler(request: 
 
     const rows = fallbackAll
       ? await prisma.$queryRaw<SignificantActivityCatalogRow[]>(Prisma.sql`
-          SELECT
-            sa.significant_activity_id,
-            sa.company_id::text AS company_id,
-            sa.activity_code,
-            sa.activity_name,
-            sa.activity_description,
-            sa.is_active
-          FROM core.significant_activity sa
-          WHERE COALESCE(sa.is_active, true) = true
-          ORDER BY sa.activity_code ASC, sa.activity_name ASC
+          SELECT DISTINCT
+            de.id::text AS significant_activity_id,
+            COALESCE((
+              SELECT d2.company_id::text
+              FROM core.map_domain_element mde2
+              JOIN core.domain d2 ON d2.id = mde2.domain_id
+              WHERE mde2.element_id = de.id
+                AND d2.company_id IS NOT NULL
+              ORDER BY mde2.is_primary DESC, mde2.created_at, d2.code
+              LIMIT 1
+            ), ''::text) AS company_id,
+            de.code AS activity_code,
+            COALESCE(de.name, de.title, de.code) AS activity_name,
+            COALESCE(de.description, de.statement) AS activity_description,
+            COALESCE(de.is_active, true) AS is_active
+          FROM core.domain_elements de
+          WHERE de.element_type = 'ACTIVITY'
+            AND COALESCE(de.is_active, true) = true
+          ORDER BY de.code ASC
         `)
       : await prisma.$queryRaw<SignificantActivityCatalogRow[]>(Prisma.sql`
-          SELECT
-            sa.significant_activity_id,
-            sa.company_id::text AS company_id,
-            sa.activity_code,
-            sa.activity_name,
-            sa.activity_description,
-            sa.is_active
-          FROM core.significant_activity sa
-          WHERE sa.company_id = ${companyId}::uuid
-            AND COALESCE(sa.is_active, true) = true
-          ORDER BY sa.activity_code ASC, sa.activity_name ASC
+          SELECT DISTINCT
+            de.id::text AS significant_activity_id,
+            ${companyId}::text AS company_id,
+            de.code AS activity_code,
+            COALESCE(de.name, de.title, de.code) AS activity_name,
+            COALESCE(de.description, de.statement) AS activity_description,
+            COALESCE(de.is_active, true) AS is_active
+          FROM core.domain_elements de
+          WHERE de.element_type = 'ACTIVITY'
+            AND COALESCE(de.is_active, true) = true
+            AND EXISTS (
+              SELECT 1
+              FROM core.map_domain_element mde
+              JOIN core.domain d ON d.id = mde.domain_id
+              WHERE mde.element_id = de.id
+                AND d.company_id = ${companyId}::uuid
+            )
+          ORDER BY de.code ASC
         `);
 
     return NextResponse.json({
@@ -668,39 +773,67 @@ export async function postLinearRiskSignificantActivitiesCatalogHandler(request:
     }
 
     try {
-      const created = await prisma.$queryRaw<SignificantActivityCatalogRow[]>(Prisma.sql`
-        INSERT INTO core.significant_activity (
-          company_id,
-          activity_code,
-          activity_name,
-          activity_description,
+      const domainRows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT id
+        FROM core.domain
+        WHERE company_id = ${companyId}::uuid
+        ORDER BY code
+        LIMIT 1
+      `);
+      if (!domainRows[0]) {
+        return NextResponse.json({ error: 'La empresa no tiene dominios configurados para registrar actividades.' }, { status: 400 });
+      }
+
+      const created = await prisma.$queryRaw<Array<{
+        id: string;
+        code: string;
+        activity_name: string;
+        activity_description: string | null;
+        is_active: boolean;
+      }>>(Prisma.sql`
+        INSERT INTO core.domain_elements (
+          element_type,
+          code,
+          name,
+          title,
+          description,
           is_active,
           created_at,
           updated_at
         )
         VALUES (
-          ${companyId}::uuid,
+          'ACTIVITY',
           ${activityCode},
+          ${activityName},
           ${activityName},
           ${activityDescription || null},
           ${isActive},
           now(),
           now()
         )
-        RETURNING
-          significant_activity_id,
-          company_id::text AS company_id,
-          activity_code,
-          activity_name,
-          activity_description,
-          is_active
+        RETURNING id, code, COALESCE(name, title, code) AS activity_name, COALESCE(description, statement) AS activity_description, is_active
       `);
+
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO core.map_domain_element (domain_id, element_id, is_primary, created_at, updated_at)
+        VALUES (${domainRows[0].id}::uuid, ${created[0].id}::uuid, true, now(), now())
+        ON CONFLICT DO NOTHING
+      `);
+
+      await upsertSignificantActivityMirror({
+        id: created[0].id,
+        companyId,
+        code: created[0].code,
+        name: created[0].activity_name,
+        description: created[0].activity_description,
+        isActive: Boolean(created[0].is_active),
+      });
 
       const row = created[0];
       return NextResponse.json({
-        id: row.significant_activity_id,
-        company_id: row.company_id,
-        activity_code: row.activity_code,
+        id: row.id,
+        company_id: companyId,
+        activity_code: row.code,
         activity_name: row.activity_name,
         activity_description: row.activity_description,
         is_active: Boolean(row.is_active),
@@ -755,32 +888,42 @@ export async function putLinearRiskSignificantActivitiesCatalogHandler(request: 
     }
 
     try {
-      const updated = await prisma.$queryRaw<SignificantActivityCatalogRow[]>(Prisma.sql`
-        UPDATE core.significant_activity
+      const updated = await prisma.$queryRaw<Array<{
+        id: string;
+        code: string;
+        activity_name: string;
+        activity_description: string | null;
+        is_active: boolean;
+      }>>(Prisma.sql`
+        UPDATE core.domain_elements
         SET
-          company_id = ${companyId}::uuid,
-          activity_code = ${activityCode},
-          activity_name = ${activityName},
-          activity_description = ${activityDescription || null},
+          code = ${activityCode},
+          name = ${activityName},
+          title = ${activityName},
+          description = ${activityDescription || null},
           is_active = ${isActive},
           updated_at = now()
-        WHERE significant_activity_id = ${id}::uuid
-        RETURNING
-          significant_activity_id,
-          company_id::text AS company_id,
-          activity_code,
-          activity_name,
-          activity_description,
-          is_active
+        WHERE id = ${id}::uuid
+          AND element_type = 'ACTIVITY'
+        RETURNING id, code, COALESCE(name, title, code) AS activity_name, COALESCE(description, statement) AS activity_description, is_active
       `);
 
       const row = updated[0];
       if (!row) return NextResponse.json({ error: 'Actividad no encontrada.' }, { status: 404 });
 
+      await upsertSignificantActivityMirror({
+        id: row.id,
+        companyId,
+        code: row.code,
+        name: row.activity_name,
+        description: row.activity_description,
+        isActive: Boolean(row.is_active),
+      });
+
       return NextResponse.json({
-        id: row.significant_activity_id,
-        company_id: row.company_id,
-        activity_code: row.activity_code,
+        id: row.id,
+        company_id: companyId,
+        activity_code: row.code,
         activity_name: row.activity_name,
         activity_description: row.activity_description,
         is_active: Boolean(row.is_active),
@@ -811,13 +954,20 @@ export async function deleteLinearRiskSignificantActivitiesCatalogHandler(reques
       return NextResponse.json({ error: 'id es obligatorio y debe ser UUID válido.' }, { status: 400 });
     }
 
-    const rows = await prisma.$queryRaw<Array<{ significant_activity_id: string }>>(Prisma.sql`
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      UPDATE core.domain_elements
+      SET is_active = false, updated_at = now()
+      WHERE id = ${id}::uuid
+        AND element_type = 'ACTIVITY'
+      RETURNING id
+    `);
+    if (!rows[0]) return NextResponse.json({ error: 'Actividad no encontrada.' }, { status: 404 });
+
+    await prisma.$executeRaw(Prisma.sql`
       UPDATE core.significant_activity
       SET is_active = false, updated_at = now()
       WHERE significant_activity_id = ${id}::uuid
-      RETURNING significant_activity_id
     `);
-    if (!rows[0]) return NextResponse.json({ error: 'Actividad no encontrada.' }, { status: 404 });
 
     return NextResponse.json({ ok: true, id });
   } catch (error) {
@@ -1420,11 +1570,22 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
         activity_name: string;
         activity_description: string | null;
       }>>(Prisma.sql`
-        SELECT significant_activity_id, activity_code, activity_name, activity_description
-        FROM core.significant_activity
-        WHERE significant_activity_id = ${significantActivityId}::uuid
-          AND company_id = ${selectedCompanyId}::uuid
-          AND COALESCE(is_active, true) = true
+        SELECT
+          de.id::text AS significant_activity_id,
+          de.code AS activity_code,
+          COALESCE(de.name, de.title, de.code) AS activity_name,
+          COALESCE(de.description, de.statement) AS activity_description
+        FROM core.domain_elements de
+        WHERE de.id = ${significantActivityId}::uuid
+          AND de.element_type = 'ACTIVITY'
+          AND COALESCE(de.is_active, true) = true
+          AND EXISTS (
+            SELECT 1
+            FROM core.map_domain_element mde
+            JOIN core.domain d ON d.id = mde.domain_id
+            WHERE mde.element_id = de.id
+              AND d.company_id = ${selectedCompanyId}::uuid
+          )
         LIMIT 1
       `);
 
@@ -1440,6 +1601,15 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
       const name = activity.activity_name;
       const desc = activity.activity_description;
       const materialityWeight = normalizeMaterialityWeight(item.materiality_weight);
+
+      await upsertSignificantActivityMirror({
+        id: activity.significant_activity_id,
+        companyId: selectedCompanyId,
+        code,
+        name,
+        description: desc,
+        isActive: true,
+      });
 
       const draftItem = await prisma.$queryRaw<{ risk_assessment_draft_item_id: bigint }[]>(Prisma.sql`
         INSERT INTO core.risk_assessment_draft_item (
