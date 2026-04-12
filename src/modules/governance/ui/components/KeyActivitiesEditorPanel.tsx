@@ -411,7 +411,7 @@ export function KeyActivitiesEditorPanel() {
         <p className={styles.eyebrow}>Gobierno</p>
         <h1 className={styles.title}>Definición de Actividades Claves</h1>
         <p className={styles.subtitle}>
-          Registra y actualiza el catálogo en `core.significant_activity` con persistencia por empresa.
+          Registra y actualiza el catálogo de actividades en `core.domain_elements`.
         </p>
       </header>
 

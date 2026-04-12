@@ -41,53 +41,6 @@ async function buildUniqueElementCode(name: string): Promise<string> {
   return `${seed}_${suffix}`;
 }
 
-async function upsertSignificantActivityMirror(input: {
-  id: string;
-  companyId: string;
-  code: string;
-  name: string;
-  description: string | null;
-  isActive: boolean;
-  responsible?: string | null;
-  frequency?: string | null;
-}) {
-  await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO core.significant_activity (
-      significant_activity_id,
-      company_id,
-      activity_code,
-      activity_name,
-      activity_description,
-      responsible,
-      frequency,
-      is_active,
-      created_at,
-      updated_at
-    )
-    VALUES (
-      ${input.id}::uuid,
-      ${input.companyId}::uuid,
-      ${input.code},
-      ${input.name},
-      ${input.description},
-      ${input.responsible ?? null},
-      ${input.frequency ?? null},
-      ${input.isActive},
-      now(),
-      now()
-    )
-    ON CONFLICT (significant_activity_id)
-    DO UPDATE SET
-      company_id = EXCLUDED.company_id,
-      activity_code = EXCLUDED.activity_code,
-      activity_name = EXCLUDED.activity_name,
-      activity_description = EXCLUDED.activity_description,
-      responsible = EXCLUDED.responsible,
-      frequency = EXCLUDED.frequency,
-      is_active = EXCLUDED.is_active,
-      updated_at = now()
-  `);
-}
 
 function mapRow(row: DomainElementRow) {
   return {
@@ -237,16 +190,6 @@ export async function postGovernanceKeyActivityCatalogHandler(request: Request) 
       ON CONFLICT DO NOTHING
     `);
 
-    await upsertSignificantActivityMirror({
-      id: newElement.id,
-      companyId,
-      code: newElement.code,
-      name: newElement.name || newElement.title || newElement.code,
-      description: newElement.description ?? null,
-      isActive: Boolean(newElement.is_active),
-      responsible: id_lider,
-      frequency: id_frequency,
-    });
 
     results.push(mapRow(newElement));
   }
@@ -296,16 +239,6 @@ export async function putGovernanceKeyActivityCatalogHandler(request: Request) {
   `);
   if (!updated[0]) throw ApiError.notFound('Activity not found');
 
-  await upsertSignificantActivityMirror({
-    id,
-    companyId,
-    code,
-    name,
-    description,
-    isActive,
-    responsible: id_lider,
-    frequency: id_frequency,
-  });
 
   return Response.json({ item: mapRow(updated[0]) });
 }
@@ -323,20 +256,6 @@ export async function deleteGovernanceKeyActivityCatalogHandler(request: Request
       AND element_type = 'ACTIVITY'
   `);
 
-  if (companyId) {
-    await prisma.$executeRaw(Prisma.sql`
-      UPDATE core.significant_activity
-      SET is_active = false, updated_at = now()
-      WHERE significant_activity_id = ${id}::uuid
-        AND company_id = ${companyId}::uuid
-    `);
-  } else {
-    await prisma.$executeRaw(Prisma.sql`
-      UPDATE core.significant_activity
-      SET is_active = false, updated_at = now()
-      WHERE significant_activity_id = ${id}::uuid
-    `);
-  }
 
   return Response.json({ ok: true });
 }
