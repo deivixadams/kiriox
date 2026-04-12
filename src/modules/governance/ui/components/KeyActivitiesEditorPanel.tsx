@@ -666,87 +666,101 @@ export function KeyActivitiesEditorPanel() {
           />
         </label>
 
-        <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' }}>
+        <div style={{ marginTop: '30px', display: 'flex', gap: '15px', justifyContent: 'center', alignItems: 'center', marginBottom: '30px' }}>
           <button 
             type="button" 
             className={styles.saveButton} 
-            style={{ width: '192px', height: '44px', background: '#3b82f6', borderColor: '#2563eb' }}
+            style={{ width: '160px', height: '44px', background: '#3b82f6', borderColor: '#2563eb' }}
             onClick={addToLocalGrid}
+            disabled={saving || !form.name.trim()}
           >
             Agregar
           </button>
 
-          {localActivities.length > 0 && (
-            <div className={styles.card} style={{ 
-              width: '100%', 
-              borderStyle: 'dashed', 
-              background: 'rgba(15,23,42,0.3)',
-              overflowX: 'auto'
-            }}>
-              <div className={styles.statusRow}>
-                <span>Actividades pendientes de grabar</span>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginTop: '10px' }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <th style={{ padding: '8px' }}>Nombre</th>
-                    <th style={{ padding: '8px' }}>Descripción</th>
-                    <th style={{ padding: '8px' }}>Responsable</th>
-                    <th style={{ padding: '8px' }}>Freq</th>
-                    <th style={{ padding: '8px' }}>Riesgo</th>
-                    <th style={{ padding: '8px' }}>Factor</th>
-                    <th style={{ padding: '8px' }}>Gate</th>
-                    <th style={{ padding: '8px' }}>Act.</th>
-                    <th style={{ padding: '8px' }}> Acción </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {localActivities.map((act) => (
-                    <tr key={act.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '8px' }}>{act.name}</td>
-                      <td style={{ padding: '8px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={act.description}>
-                        {act.description || '---'}
-                      </td>
-                      <td style={{ padding: '8px' }}>{users.find(u => u.id === act.responsible)?.name || '---'}</td>
-                      <td style={{ padding: '8px' }}>{frequencies.find(f => f.id === act.frequency)?.name || '---'}</td>
-                      <td style={{ padding: '8px' }}>{act.riskWeight}</td>
-                      <td style={{ padding: '8px' }}>{act.cascadeFactor}</td>
-                      <td style={{ padding: '8px' }}>{act.isHardGate ? 'Sí' : 'No'}</td>
-                      <td style={{ padding: '8px' }}>{act.isActive ? 'Sí' : 'No'}</td>
-                      <td style={{ padding: '8px' }}>
-                        <button 
-                          type="button" 
-                          onClick={() => removeFromLocalGrid(act.id)}
-                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
-                        >
-                          Quitar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <button 
+            type="button" 
+            className={styles.saveButton} 
+            style={{ 
+              width: '160px', 
+              height: '44px', 
+              background: 'linear-gradient(180deg, rgba(22, 163, 74, 0.35) 0%, rgba(21, 128, 61, 0.32) 100%)', 
+              borderColor: 'rgba(34, 197, 94, 0.55)',
+              color: '#ecfdf5'
+            }}
+            onClick={() => void save()}
+            disabled={saving || loading || !selectedCompanyId || localActivities.length === 0}
+          >
+            {saving ? 'Grabando...' : 'Grabar'}
+          </button>
+
+          <button 
+            type="button" 
+            className={styles.secondaryButton} 
+            style={{ width: '160px', height: '44px', borderRadius: '12px' }}
+            onClick={() => router.push('/modelo/gobernanza/company-reino')}
+            disabled={saving}
+          >
+            Cerrar
+          </button>
+        </div>
+
+        {localActivities.length > 0 && (
+          <div className={styles.card} style={{ 
+            width: '100%', 
+            borderStyle: 'dashed', 
+            background: 'rgba(15,23,42,0.3)',
+            overflowX: 'auto'
+          }}>
+            <div className={styles.statusRow}>
+              <span>Actividades pendientes de grabar</span>
             </div>
-          )}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginTop: '10px' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  <th style={{ padding: '8px' }}>Nombre</th>
+                  <th style={{ padding: '8px' }}>Descripción</th>
+                  <th style={{ padding: '8px' }}>Responsable</th>
+                  <th style={{ padding: '8px' }}>Freq</th>
+                  <th style={{ padding: '8px' }}>Riesgo</th>
+                  <th style={{ padding: '8px' }}>Factor</th>
+                  <th style={{ padding: '8px' }}>Gate</th>
+                  <th style={{ padding: '8px' }}>Act.</th>
+                  <th style={{ padding: '8px' }}> Acción </th>
+                </tr>
+              </thead>
+              <tbody>
+                {localActivities.map((act) => (
+                  <tr key={act.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '8px' }}>{act.name}</td>
+                    <td style={{ padding: '8px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={act.description}>
+                      {act.description || '---'}
+                    </td>
+                    <td style={{ padding: '8px' }}>{users.find(u => u.id === act.responsible)?.name || '---'}</td>
+                    <td style={{ padding: '8px' }}>{frequencies.find(f => f.id === act.frequency)?.name || '---'}</td>
+                    <td style={{ padding: '8px' }}>{act.riskWeight}</td>
+                    <td style={{ padding: '8px' }}>{act.cascadeFactor}</td>
+                    <td style={{ padding: '8px' }}>{act.isHardGate ? 'Sí' : 'No'}</td>
+                    <td style={{ padding: '8px' }}>{act.isActive ? 'Sí' : 'No'}</td>
+                    <td style={{ padding: '8px' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => removeFromLocalGrid(act.id)}
+                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                      >
+                        Quitar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
         {success && <p className={styles.success}>{success}</p>}
 
-        <CrudModelActionBar
-          onClose={() => router.push('/modelo/gobernanza/company-reino')}
-          onSave={() => void save()}
-          showNavigation={false}
-          showCancel={false}
-          showNew={false}
-          showDelete={false}
-          center={true}
-          disableClose={saving}
-          disableSave={saving || loading || !selectedCompanyId || localActivities.length === 0}
-          saveLabel="Grabar"
-          savingLabel="Grabando..."
-          saving={saving}
-        />
       </article>
     </section>
   );
