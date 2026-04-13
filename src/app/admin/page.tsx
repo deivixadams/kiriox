@@ -1,6 +1,7 @@
 import React from 'react';
 import { Settings, Building, Users, Lock, Library, ArrowRight, Calculator } from 'lucide-react';
 import Link from 'next/link';
+import { GovernanceCloseButton } from '@/shared/ui/GovernanceCloseButton';
 
 const adminModules = [
     {
@@ -50,6 +51,7 @@ const adminModules = [
 export default function AdminPage() {
     return (
         <div className="animate-fade-in">
+            <GovernanceCloseButton variant="icon" />
             <div className="section-header">
                 <Lock className="text-primary" />
                 <h1 className="gradient-text" style={{ fontSize: '2rem', margin: 0 }}>Panel de Administración</h1>

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const reinoId = searchParams.get('reinoId');
     const domainId = searchParams.get('domainId');
 
-    if (!companyId || !reinoId || !domainId) {
+    if (!companyId || !reinoId) {
       return NextResponse.json({ items: [] });
     }
 
@@ -19,11 +19,12 @@ export async function GET(request: Request) {
         SELECT DISTINCT
           element_id as id,
           element_code as code,
-          COALESCE(element_title, element_name) AS name
+          COALESCE(element_title, element_name) AS name,
+          domain_id::text AS "domainId"
         FROM views.empresa_reino_dominio_elementos
         WHERE company_id = ${companyId}::uuid
           AND reino_id = ${reinoId}::uuid
-          AND domain_id = ${domainId}::uuid
+          AND (${domainId ? Prisma.sql`domain_id = ${domainId}::uuid` : Prisma.sql`true`})
         ORDER BY element_code ASC
       `
     );

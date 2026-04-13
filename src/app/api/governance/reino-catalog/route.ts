@@ -14,10 +14,17 @@ export async function GET(request: Request) {
 
     const items = await prisma.$queryRaw<any[]>(
       Prisma.sql`
-        SELECT DISTINCT reino_id as id, reino_name as name, reino_code as code
-        FROM views.empresa_reino_dominio_elementos
-        WHERE company_id = ${companyId}::uuid
-        ORDER BY reino_code ASC
+        SELECT DISTINCT
+          r.id,
+          r.name,
+          r.code
+        FROM core.map_company_x_reino m
+        JOIN core.reino r
+          ON r.id = m.reino_id
+        WHERE m.company_id = ${companyId}::uuid
+          AND COALESCE(m.is_active, true) = true
+          AND COALESCE(r.is_active, true) = true
+        ORDER BY r.code ASC
       `
     );
 

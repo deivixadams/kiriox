@@ -29,14 +29,10 @@ type ReinoOption = {
   name: string;
 };
 
-type DomainOption = {
-  id: string;
-  name: string;
-};
-
 type ProcessOption = {
   id: string;
   name: string;
+  domainId?: string;
 };
 
 type ActivityRecord = {
@@ -79,7 +75,6 @@ export function KeyActivitiesEditorPanel() {
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [reinos, setReinos] = useState<ReinoOption[]>([]);
-  const [domains, setDomains] = useState<DomainOption[]>([]);
   const [processes, setProcesses] = useState<ProcessOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [frequencies, setFrequencies] = useState<FrequencyOption[]>([]);
@@ -183,57 +178,37 @@ export function KeyActivitiesEditorPanel() {
     void loadReinos();
   }, [selectedCompanyId]);
 
-  // Load Domains (Macroproceso) when Reino changes
+  // Load Processes when company/reino changes
   useEffect(() => {
-    async function loadDomains() {
+    async function loadProcesses() {
       if (!selectedCompanyId || !selectedReinoId) {
-        setDomains([]);
+        setProcesses([]);
+        setSelectedProcessId('');
         setSelectedDomainId('');
         return;
       }
       try {
         const response = await fetch(
-          `/api/governance/domain-catalog?companyId=${encodeURIComponent(selectedCompanyId)}&reinoId=${encodeURIComponent(selectedReinoId)}`,
-          { cache: 'no-store' }
-        );
-        if (!response.ok) return;
-        const payload = (await response.json()) as { items?: DomainOption[] };
-        setDomains(payload.items || []);
-        if (!payload.items?.some(d => d.id === selectedDomainId)) {
-          setSelectedDomainId('');
-        }
-      } catch {
-        // ignore
-      }
-    }
-    void loadDomains();
-  }, [selectedCompanyId, selectedReinoId]);
-
-  // Load Processes when Macroproceso changes
-  useEffect(() => {
-    async function loadProcesses() {
-      if (!selectedCompanyId || !selectedReinoId || !selectedDomainId) {
-        setProcesses([]);
-        setSelectedProcessId('');
-        return;
-      }
-      try {
-        const response = await fetch(
-          `/api/governance/process-catalog?companyId=${encodeURIComponent(selectedCompanyId)}&reinoId=${encodeURIComponent(selectedReinoId)}&domainId=${encodeURIComponent(selectedDomainId)}`,
+          `/api/governance/process-catalog?companyId=${encodeURIComponent(selectedCompanyId)}&reinoId=${encodeURIComponent(selectedReinoId)}`,
           { cache: 'no-store' }
         );
         if (!response.ok) return;
         const payload = (await response.json()) as { items?: ProcessOption[] };
-        setProcesses(payload.items || []);
-        if (!payload.items?.some(p => p.id === selectedProcessId)) {
+        const items = payload.items || [];
+        setProcesses(items);
+        const current = items.find((p) => p.id === selectedProcessId);
+        if (!current) {
           setSelectedProcessId('');
+          setSelectedDomainId('');
+        } else {
+          setSelectedDomainId(current.domainId || '');
         }
       } catch {
         // ignore
       }
     }
     void loadProcesses();
-  }, [selectedCompanyId, selectedReinoId, selectedDomainId]);
+  }, [selectedCompanyId, selectedReinoId, selectedProcessId]);
 
   // Local State Management (No remote loading of catalog)
   function addToLocalGrid() {
@@ -339,8 +314,8 @@ export function KeyActivitiesEditorPanel() {
     setError('');
     setSuccess('');
 
-    if (!selectedCompanyId || !selectedReinoId || !selectedDomainId || !selectedProcessId) {
-      setError('Selecciona empresa, reino, macroproceso y proceso.');
+    if (!selectedCompanyId || !selectedReinoId || !selectedProcessId || !selectedDomainId) {
+      setError('Selecciona empresa, reino y proceso.');
       return;
     }
     if (localActivities.length === 0) {
@@ -466,28 +441,16 @@ export function KeyActivitiesEditorPanel() {
           </label>
 
           <label className={styles.field}>
-            <span>Macroproceso</span>
-            <select
-              className={styles.input}
-              value={selectedDomainId}
-              onChange={(event) => setSelectedDomainId(event.target.value)}
-              disabled={saving}
-            >
-              <option value="">Selecciona...</option>
-              {domains.map((domain) => (
-                <option key={domain.id} value={domain.id}>
-                  {domain.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className={styles.field}>
             <span>Proceso</span>
             <select
               className={styles.input}
               value={selectedProcessId}
-              onChange={(event) => setSelectedProcessId(event.target.value)}
+              onChange={(event) => {
+                const processId = event.target.value;
+                setSelectedProcessId(processId);
+                const selectedProcess = processes.find((p) => p.id === processId);
+                setSelectedDomainId(selectedProcess?.domainId || '');
+              }}
               disabled={saving}
             >
               <option value="">Selecciona...</option>
