@@ -78,8 +78,8 @@ export function ProcessEditorPanel() {
   const searchParams = useSearchParams();
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   
-  const companyName = searchParams.get('companyName')?.trim() || '';
-  const companyId = searchParams.get('companyId')?.trim() || '';
+  const queryCompanyId = searchParams.get('companyId')?.trim() || '';
+  const queryRealmId = searchParams.get('realmId')?.trim() || '';
 
   function buildEmptyForm() {
     return {
@@ -96,63 +96,121 @@ export function ProcessEditorPanel() {
   }
 
   const [records, setRecords] = useState<ProcessRecord[]>([]);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [companyRealms, setCompanyRealms] = useState<RealmOption[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [cursor, setCursor] = useState(-1);
+  const [selectedCompanyId, setSelectedCompanyId] = useState(queryCompanyId);
+  const [selectedRealmId, setSelectedRealmId] = useState(queryRealmId);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [headerCompanyName, setHeaderCompanyName] = useState(companyName || 'Sin empresa');
-  const [headerMacroprocessLabel, setHeaderMacroprocessLabel] = useState('Sin macroproceso vinculado');
 
   const [form, setForm] = useState(buildEmptyForm);
+  const selectedCompany = useMemo(
+    () => companies.find((item) => item.id === selectedCompanyId) ?? null,
+    [companies, selectedCompanyId]
+  );
+  const selectedRealm = useMemo(
+    () => companyRealms.find((item) => item.id === selectedRealmId) ?? null,
+    [companyRealms, selectedRealmId]
+  );
+  const selectedCategoryName = useMemo(() => {
+    if (!form.categoryId) return cursor >= 0 ? 'Sin categoría asignada' : 'Sin categoría';
+    return categories.find((c) => String(c.id) === String(form.categoryId))?.name || 'Categoría no encontrada';
+  }, [categories, form.categoryId, cursor]);
 
-  async function loadData(preferredId?: string) {
+  async function loadUsersByCompany(companyId: string) {
+    if (!companyId) {
+      setUsers([]);
+      return;
+    }
+    const usersEndpoint = `/api/admin/users?companyId=${encodeURIComponent(companyId)}`;
+    const usersRes = await fetch(usersEndpoint, { cache: 'no-store' });
+    const usersPayload = await usersRes.json();
+    const userList = Array.isArray(usersPayload) ? usersPayload : usersPayload.users || [];
+    setUsers(userList);
+  }
+
+  async function loadProcesses(companyId: string, realmId: string, preferredId?: string, openNew = false) {
+    if (!companyId || !realmId) {
+      setRecords([]);
+      setCursor(-1);
+      setForm(buildEmptyForm());
+      return;
+    }
+
+    const endpoint = `/api/governance/process-editor?companyId=${encodeURIComponent(companyId)}&realmId=${encodeURIComponent(realmId)}`;
+    const procRes = await fetch(endpoint, { cache: 'no-store' });
+    if (!procRes.ok) throw new Error('No se pudo cargar catálogo de procesos');
+
+    const procPayload = (await procRes.json()) as { items?: ProcessRecord[] };
+    const items = Array.isArray(procPayload.items) ? procPayload.items : [];
+    setRecords(items);
+
+    if (items.length === 0 || openNew) {
+      setCursor(-1);
+      setForm(buildEmptyForm());
+      return;
+    }
+
+    const targetIndex = preferredId ? items.findIndex((item) => item.id === preferredId) : -1;
+    const index = targetIndex >= 0 ? targetIndex : 0;
+    applyRecord(items[index], index);
+  }
+
+  async function loadContextAndBootstrap() {
     setLoading(true);
     setError('');
     try {
-      // 1. Load Categories
-      const catRes = await fetch('/api/governance/process/categories');
+      const [catRes, contextRes] = await Promise.all([
+        fetch('/api/governance/process/categories', { cache: 'no-store' }),
+        fetch('/api/governance/company-realm/assignment', { cache: 'no-store' }),
+      ]);
+      if (!catRes.ok) throw new Error('No se pudo cargar categorías');
+      if (!contextRes.ok) throw new Error('No se pudo cargar catálogo de empresas');
+
       const catPayload = await catRes.json();
       setCategories(catPayload.items || []);
 
-      // 1.1 Load Users
-      const usersRes = await fetch('/api/admin/users');
-      const usersPayload = await usersRes.json();
-      // Handle both { users: [] } and [ ] structures
-      const userList = Array.isArray(usersPayload) ? usersPayload : usersPayload.users || [];
-      setUsers(userList);
+      const contextPayload = (await contextRes.json()) as AssignmentContextPayload;
+      const contextCompanies = contextPayload.companies ?? [];
+      const allRealms = contextPayload.realms ?? [];
+      setCompanies(contextCompanies);
 
-      // 2. Load Processes
-      const endpoint = companyId
-        ? `/api/governance/process-editor?companyId=${encodeURIComponent(companyId)}`
-        : '/api/governance/process-editor';
-      const procRes = await fetch(endpoint, { cache: 'no-store' });
-      if (!procRes.ok) throw new Error('No se pudo cargar catálogo de procesos');
-
-      const procPayload = (await procRes.json()) as { items?: ProcessRecord[] };
-      const items = Array.isArray(procPayload.items) ? procPayload.items : [];
-      setRecords(items);
-
-      if (items.length === 0) {
+      const bootstrapCompanyId = queryCompanyId || contextCompanies[0]?.id || '';
+      if (!bootstrapCompanyId) {
+        setCompanyRealms([]);
+        setSelectedCompanyId('');
+        setSelectedRealmId('');
+        setUsers([]);
+        setRecords([]);
         setCursor(-1);
         setForm(buildEmptyForm());
         return;
       }
 
-      if (!preferredId) {
-        // Enter this screen in "create new process" mode by default.
-        setCursor(-1);
-        setForm(buildEmptyForm());
-        return;
-      }
+      const selectionRes = await fetch(
+        `/api/governance/company-realm/assignment?companyId=${encodeURIComponent(bootstrapCompanyId)}`,
+        { cache: 'no-store' }
+      );
+      if (!selectionRes.ok) throw new Error('No se pudo cargar macroprocesos de la empresa');
+      const selectionPayload = (await selectionRes.json()) as AssignmentContextPayload;
+      const mappedRealmIds = selectionPayload.selection?.activeRealmIds ?? [];
+      const mappedRealms = allRealms.filter((realm) => mappedRealmIds.includes(realm.id));
 
-      const targetIndex = preferredId ? items.findIndex((item) => item.id === preferredId) : -1;
-      const index = targetIndex >= 0 ? targetIndex : 0;
-      applyRecord(items[index], index);
+      const bootstrapRealmId = queryRealmId || mappedRealms[0]?.id || '';
+
+      setSelectedCompanyId(bootstrapCompanyId);
+      setCompanyRealms(mappedRealms);
+      setSelectedRealmId(bootstrapRealmId);
+
+      await loadUsersByCompany(bootstrapCompanyId);
+      await loadProcesses(bootstrapCompanyId, bootstrapRealmId);
     } catch (err: any) {
       setError(err?.message || 'No se pudo cargar la información');
     } finally {
@@ -161,45 +219,10 @@ export function ProcessEditorPanel() {
   }
 
   useEffect(() => {
-    void loadData();
-  }, [companyId]);
-
-  useEffect(() => {
-    async function loadHeaderContext() {
-      if (!companyId) {
-        setHeaderCompanyName(companyName || 'Sin empresa');
-        setHeaderMacroprocessLabel('Sin macroproceso vinculado');
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `/api/governance/company-realm/assignment?companyId=${encodeURIComponent(companyId)}`,
-          { cache: 'no-store' }
-        );
-        if (!response.ok) {
-          setHeaderCompanyName(companyName || 'Sin empresa');
-          setHeaderMacroprocessLabel('Sin macroproceso vinculado');
-          return;
-        }
-
-        const payload = (await response.json()) as AssignmentContextPayload;
-        const company = payload.companies?.find((item) => item.id === companyId);
-        const selectedIds = payload.selection?.activeRealmIds ?? [];
-        const names = selectedIds
-          .map((id) => payload.realms?.find((realm) => realm.id === id)?.name)
-          .filter((value): value is string => Boolean(value));
-
-        setHeaderCompanyName(company?.name || companyName || 'Sin empresa');
-        setHeaderMacroprocessLabel(names.length > 0 ? names.join(', ') : 'Sin macroproceso vinculado');
-      } catch {
-        setHeaderCompanyName(companyName || 'Sin empresa');
-        setHeaderMacroprocessLabel('Sin macroproceso vinculado');
-      }
-    }
-
-    void loadHeaderContext();
-  }, [companyId, companyName]);
+    void loadContextAndBootstrap();
+    // bootstrap once; subsequent changes are handled by onChange handlers
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function applyRecord(record: ProcessRecord, index: number) {
     setCursor(index);
@@ -245,6 +268,54 @@ export function ProcessEditorPanel() {
     }, 0);
   }
 
+  async function onChangeCompany(companyId: string) {
+    setSelectedCompanyId(companyId);
+    setSuccess('');
+    setError('');
+    setSelectedRealmId('');
+    setCompanyRealms([]);
+    setRecords([]);
+    setCursor(-1);
+    setForm(buildEmptyForm());
+
+    if (!companyId) {
+      setUsers([]);
+      return;
+    }
+
+    try {
+      const [contextRes] = await Promise.all([
+        fetch('/api/governance/company-realm/assignment', { cache: 'no-store' }),
+        loadUsersByCompany(companyId),
+      ]);
+      if (!contextRes.ok) throw new Error('No se pudo cargar catálogo de macroprocesos');
+
+      const payload = (await contextRes.json()) as AssignmentContextPayload;
+      const selectionRes = await fetch(
+        `/api/governance/company-realm/assignment?companyId=${encodeURIComponent(companyId)}`,
+        { cache: 'no-store' }
+      );
+      if (!selectionRes.ok) throw new Error('No se pudo cargar macroprocesos de la empresa');
+      const selectionPayload = (await selectionRes.json()) as AssignmentContextPayload;
+      const mappedRealmIds = selectionPayload.selection?.activeRealmIds ?? [];
+      const mappedRealms = (payload.realms ?? []).filter((realm) => mappedRealmIds.includes(realm.id));
+      const firstRealmId = mappedRealms[0]?.id || '';
+
+      setCompanyRealms(mappedRealms);
+      setSelectedRealmId(firstRealmId);
+      await loadProcesses(companyId, firstRealmId);
+    } catch (err: any) {
+      setError(err?.message || 'No se pudo actualizar contexto de empresa');
+    }
+  }
+
+  async function onChangeRealm(reinoId: string) {
+    setSelectedRealmId(reinoId);
+    setSuccess('');
+    setError('');
+    await loadProcesses(selectedCompanyId, reinoId);
+  }
+
   async function refineDescriptionWithIA() {
     setAiDescriptionLoading(true);
     try {
@@ -276,8 +347,12 @@ export function ProcessEditorPanel() {
       setError('El nombre del proceso es obligatorio.');
       return;
     }
-    if (!companyId) {
+    if (!selectedCompanyId) {
       setError('No hay empresa seleccionada para asociar el proceso.');
+      return;
+    }
+    if (!selectedRealmId) {
+      setError('No hay macroproceso seleccionado para asociar el proceso.');
       return;
     }
     if (!form.ownerId) {
@@ -297,7 +372,8 @@ export function ProcessEditorPanel() {
           description: form.description.trim(),
           categoryId: form.categoryId || null,
           ownerId: form.ownerId || null,
-          companyId,
+          companyId: selectedCompanyId,
+          realmId: selectedRealmId,
           isActive: form.isActive,
           createdAt: form.createdAt,
           updatedAt: form.updatedAt,
@@ -310,7 +386,7 @@ export function ProcessEditorPanel() {
       }
 
       const savedId = payload?.item?.id || form.id;
-      await loadData(savedId);
+      await loadProcesses(selectedCompanyId, selectedRealmId, savedId);
       setSuccess('Proceso guardado correctamente.');
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el proceso');
@@ -324,7 +400,7 @@ export function ProcessEditorPanel() {
       setError('No hay proceso seleccionado para eliminar.');
       return;
     }
-    if (!window.confirm('¿Eliminar este proceso?')) return;
+    if (!window.confirm('¿Marcar este proceso como inactivo?')) return;
 
     setDeleting(true);
     setError('');
@@ -337,8 +413,8 @@ export function ProcessEditorPanel() {
       if (!response.ok) {
         throw new Error(payload?.message || payload?.error || 'No se pudo eliminar el proceso');
       }
-      await loadData();
-      setSuccess('Proceso eliminado correctamente.');
+      await loadProcesses(selectedCompanyId, selectedRealmId);
+      setSuccess('Proceso marcado como inactivo.');
     } catch (err: any) {
       setError(err?.message || 'No se pudo eliminar el proceso');
     } finally {
@@ -347,9 +423,9 @@ export function ProcessEditorPanel() {
   }
 
   const statusLabel = useMemo(() => {
-    if (cursor < 0) return companyName || 'Nuevo proceso';
+    if (cursor < 0) return 'Nuevo proceso';
     return `Proceso ${cursor + 1} de ${records.length}`;
-  }, [cursor, records.length, companyName]);
+  }, [cursor, records.length]);
 
   useRegisterCommandSearch({
     id: 'governance-process-editor',
@@ -383,15 +459,39 @@ export function ProcessEditorPanel() {
           </p>
         </div>
         <aside className={styles.headerContextCard}>
-          <p className={styles.headerContextNote}>Contexto recibido (solo lectura)</p>
-          <div className={styles.headerContextRow}>
+          <p className={styles.headerContextNote}>Contexto editable</p>
+          <label className={styles.field}>
             <span>Empresa</span>
-            <strong>{headerCompanyName}</strong>
-          </div>
-          <div className={styles.headerContextRow}>
+            <select
+              className={styles.input}
+              value={selectedCompanyId}
+              onChange={(event) => void onChangeCompany(event.target.value)}
+              disabled={saving || deleting}
+            >
+              <option value="">Selecciona empresa...</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name} ({company.code})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
             <span>Macroproceso</span>
-            <strong>{headerMacroprocessLabel}</strong>
-          </div>
+            <select
+              className={styles.input}
+              value={selectedRealmId}
+              onChange={(event) => void onChangeRealm(event.target.value)}
+              disabled={saving || deleting || !selectedCompanyId}
+            >
+              <option value="">Selecciona macroproceso...</option>
+              {companyRealms.map((realm) => (
+                <option key={realm.id} value={realm.id}>
+                  {realm.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </aside>
       </header>
 
@@ -400,9 +500,9 @@ export function ProcessEditorPanel() {
           className={styles.info}
           style={{
             margin: 0,
-            fontSize: cursor < 0 && companyName ? '200%' : undefined,
-            lineHeight: cursor < 0 && companyName ? 1.1 : undefined,
-            fontWeight: cursor < 0 && companyName ? 700 : undefined,
+            fontSize: cursor < 0 && selectedCompany ? '200%' : undefined,
+            lineHeight: cursor < 0 && selectedCompany ? 1.1 : undefined,
+            fontWeight: cursor < 0 && selectedCompany ? 700 : undefined,
           }}
         >
           {statusLabel}
@@ -422,6 +522,7 @@ export function ProcessEditorPanel() {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+            <small style={{ color: '#94a3b8' }}>{selectedCategoryName}</small>
           </label>
 
           <label className={styles.field}>
@@ -515,10 +616,9 @@ export function ProcessEditorPanel() {
           onPrevious={() => navigate('prev')}
           onNext={() => navigate('next')}
           onLast={() => navigate('last')}
-          onClose={() => router.push('/modelo/gobernanza/company-reino')}
+          onClose={() => router.push('/score/dashboard')}
           onNew={clearForNew}
           onDelete={() => void removeCurrent()}
-          onCancel={() => router.push('/modelo/gobernanza/company-reino')}
           onSave={() => void save()}
           disableFirst={saving || !canNavigate || cursor <= 0}
           disablePrevious={saving || !canNavigate || cursor <= 0}
@@ -527,9 +627,10 @@ export function ProcessEditorPanel() {
           disableClose={saving || deleting}
           disableNew={saving || deleting || loading}
           disableDelete={deleting || saving || loading || !form.id}
-          disableCancel={saving || deleting}
           disableSave={saving || loading || deleting}
           showNew
+          showCancel={false}
+          saveAfterNew
           deleteLabel="Eliminar"
           saveLabel="Grabar"
           savingLabel="Grabando..."

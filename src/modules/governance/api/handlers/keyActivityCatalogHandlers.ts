@@ -80,7 +80,15 @@ export async function getGovernanceKeyActivityCatalogHandler(request: Request) {
     JOIN core.map_domain_element mde ON mde.element_id = de.id
     JOIN core.domain d ON d.id = mde.domain_id
     WHERE de.element_type = 'ACTIVITY'
-      AND d.company_id = ${companyId}::uuid
+      AND EXISTS (
+        SELECT 1
+        FROM core.map_reino_domain mrdx
+        JOIN core.map_company_x_reino mcrx
+          ON mcrx.reino_id = mrdx.reino_id
+         AND mcrx.company_id = ${companyId}::uuid
+         AND COALESCE(mcrx.is_active, true) = true
+        WHERE mrdx.domain_id = d.id
+      )
       AND (${reinoId ? Prisma.sql`EXISTS (
         SELECT 1
         FROM views.empresa_reino_dominio_elementos v

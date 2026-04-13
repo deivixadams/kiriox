@@ -490,10 +490,15 @@ async function ensureFirstItem(draftPk: bigint, companyId: string): Promise<bigi
 
   if (UUID_REGEX.test(companyId)) {
     const companyDomain = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      SELECT id
-      FROM core.domain
-      WHERE company_id = ${companyId}::uuid
-      ORDER BY code
+      SELECT DISTINCT d.id
+      FROM core.domain d
+      JOIN core.map_reino_domain mrd
+        ON mrd.domain_id = d.id
+      JOIN core.map_company_x_reino mcr
+        ON mcr.reino_id = mrd.reino_id
+       AND mcr.company_id = ${companyId}::uuid
+       AND COALESCE(mcr.is_active, true) = true
+      ORDER BY d.code
       LIMIT 1
     `);
     if (companyDomain[0]) {
@@ -652,12 +657,13 @@ export async function getLinearRiskSignificantActivitiesCatalogHandler(request: 
         SELECT
           de.id::text AS significant_activity_id,
           COALESCE((
-            SELECT d.company_id::text
+            SELECT mcr.company_id::text
             FROM core.map_domain_element mde
-            JOIN core.domain d ON d.id = mde.domain_id
+            JOIN core.map_reino_domain mrd ON mrd.domain_id = mde.domain_id
+            JOIN core.map_company_x_reino mcr ON mcr.reino_id = mrd.reino_id
             WHERE mde.element_id = de.id
-              AND d.company_id IS NOT NULL
-            ORDER BY mde.is_primary DESC, mde.created_at, d.code
+              AND COALESCE(mcr.is_active, true) = true
+            ORDER BY mde.is_primary DESC, mde.created_at
             LIMIT 1
           ), ''::text) AS company_id,
           de.code AS activity_code,
@@ -689,12 +695,13 @@ export async function getLinearRiskSignificantActivitiesCatalogHandler(request: 
           SELECT DISTINCT
             de.id::text AS significant_activity_id,
             COALESCE((
-              SELECT d2.company_id::text
+              SELECT mcr2.company_id::text
               FROM core.map_domain_element mde2
-              JOIN core.domain d2 ON d2.id = mde2.domain_id
+              JOIN core.map_reino_domain mrd2 ON mrd2.domain_id = mde2.domain_id
+              JOIN core.map_company_x_reino mcr2 ON mcr2.reino_id = mrd2.reino_id
               WHERE mde2.element_id = de.id
-                AND d2.company_id IS NOT NULL
-              ORDER BY mde2.is_primary DESC, mde2.created_at, d2.code
+                AND COALESCE(mcr2.is_active, true) = true
+              ORDER BY mde2.is_primary DESC, mde2.created_at
               LIMIT 1
             ), ''::text) AS company_id,
             de.code AS activity_code,
@@ -720,9 +727,11 @@ export async function getLinearRiskSignificantActivitiesCatalogHandler(request: 
             AND EXISTS (
               SELECT 1
               FROM core.map_domain_element mde
-              JOIN core.domain d ON d.id = mde.domain_id
+              JOIN core.map_reino_domain mrd ON mrd.domain_id = mde.domain_id
+              JOIN core.map_company_x_reino mcr ON mcr.reino_id = mrd.reino_id
               WHERE mde.element_id = de.id
-                AND d.company_id = ${companyId}::uuid
+                AND mcr.company_id = ${companyId}::uuid
+                AND COALESCE(mcr.is_active, true) = true
             )
           ORDER BY de.code ASC
         `);
@@ -774,10 +783,15 @@ export async function postLinearRiskSignificantActivitiesCatalogHandler(request:
 
     try {
       const domainRows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-        SELECT id
-        FROM core.domain
-        WHERE company_id = ${companyId}::uuid
-        ORDER BY code
+        SELECT DISTINCT d.id
+        FROM core.domain d
+        JOIN core.map_reino_domain mrd
+          ON mrd.domain_id = d.id
+        JOIN core.map_company_x_reino mcr
+          ON mcr.reino_id = mrd.reino_id
+         AND mcr.company_id = ${companyId}::uuid
+         AND COALESCE(mcr.is_active, true) = true
+        ORDER BY d.code
         LIMIT 1
       `);
       if (!domainRows[0]) {
@@ -1582,9 +1596,11 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
           AND EXISTS (
             SELECT 1
             FROM core.map_domain_element mde
-            JOIN core.domain d ON d.id = mde.domain_id
+            JOIN core.map_reino_domain mrd ON mrd.domain_id = mde.domain_id
+            JOIN core.map_company_x_reino mcr ON mcr.reino_id = mrd.reino_id
             WHERE mde.element_id = de.id
-              AND d.company_id = ${selectedCompanyId}::uuid
+              AND mcr.company_id = ${selectedCompanyId}::uuid
+              AND COALESCE(mcr.is_active, true) = true
           )
         LIMIT 1
       `);

@@ -120,9 +120,13 @@ export default function UserManagementPage() {
             });
             if (res.ok) {
                 await fetchUsers();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setError(data.error || 'No se pudo actualizar el estado del usuario.');
             }
         } catch (err) {
             console.error('Error toggling user status:', err);
+            setError('Error al actualizar el estado del usuario.');
         }
     };
 

@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Pencil } from 'lucide-react';
 import styles from './CompanyRealmAssignmentPanel.module.css';
+import { useRegisterCommandSearch } from '@/shared/ui/command-search/useRegisterCommandSearch';
 
 type CompanyOption = {
   id: string;
@@ -29,9 +32,11 @@ type ContextPayload = {
 };
 
 export function CompanyRealmAssignmentPanel() {
+  const pathname = usePathname();
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [realms, setRealms] = useState<RealmOption[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [catalogFilter, setCatalogFilter] = useState('');
   const [baseRealmIds, setBaseRealmIds] = useState<string[]>([]);
   const [selectedRealmIds, setSelectedRealmIds] = useState<string[]>([]);
   const [loadingContext, setLoadingContext] = useState(true);
@@ -85,9 +90,8 @@ export function CompanyRealmAssignmentPanel() {
 
       const payload = (await response.json()) as ContextPayload;
       const activeRealmIds = payload.selection?.activeRealmIds ?? [];
-      const normalized = activeRealmIds.length > 0 ? [activeRealmIds[0]] : [];
-      setBaseRealmIds(normalized);
-      setSelectedRealmIds(normalized);
+      setBaseRealmIds(activeRealmIds);
+      setSelectedRealmIds(activeRealmIds);
     } catch (error: any) {
       setErrorMessage(error?.message || 'No se pudo cargar la selección actual');
       setBaseRealmIds([]);
@@ -110,9 +114,9 @@ export function CompanyRealmAssignmentPanel() {
 
     setSelectedRealmIds((previous) => {
       if (previous.includes(realmId)) {
-        return [];
+        return previous.filter((id) => id !== realmId);
       }
-      return [realmId];
+      return [...previous, realmId];
     });
   }
 
@@ -120,6 +124,13 @@ export function CompanyRealmAssignmentPanel() {
     () => companies.find((company) => company.id === selectedCompanyId) ?? null,
     [companies, selectedCompanyId]
   );
+  const visibleRealms = useMemo(() => {
+    const term = catalogFilter.trim().toLowerCase();
+    if (!term) return realms;
+    return realms.filter((realm) =>
+      `${realm.code} ${realm.name} ${realm.description || ''}`.toLowerCase().includes(term)
+    );
+  }, [catalogFilter, realms]);
 
   const baseSet = useMemo(() => new Set(baseRealmIds), [baseRealmIds]);
   const selectedSet = useMemo(() => new Set(selectedRealmIds), [selectedRealmIds]);
@@ -135,6 +146,35 @@ export function CompanyRealmAssignmentPanel() {
   );
 
   const hasPendingChanges = pendingAdd.length > 0 || pendingRemove.length > 0;
+
+  useRegisterCommandSearch({
+    id: 'governance-company-reino',
+    priority: 100,
+    isActive: () => pathname === '/modelo/gobernanza/company-reino',
+    search: (query) => {
+      const term = query.trim().toLowerCase();
+      if (!term) return { ok: false, message: 'Ingresa un término para buscar.' };
+      if (realms.length === 0) return { ok: false, message: 'No hay macroprocesos disponibles en catálogo.' };
+
+      const index = realms.findIndex((realm) =>
+        `${realm.code} ${realm.name} ${realm.description || ''}`.toLowerCase().includes(term)
+      );
+      if (index < 0) {
+        return { ok: false, message: `No se encontró "${query}" en macroprocesos.` };
+      }
+
+      const match = realms[index];
+      setCatalogFilter(query);
+      setErrorMessage('');
+      if (selectedCompanyId) {
+        setSelectedRealmIds([match.id]);
+        setSuccessMessage(`Resultado encontrado: ${match.name}. Macroproceso preseleccionado.`);
+      } else {
+        setSuccessMessage(`Resultado encontrado: ${match.name}. Selecciona empresa para vincular.`);
+      }
+      return { ok: true, message: `Encontrado: ${match.name}` };
+    },
+  });
 
   async function saveConfiguration() {
     if (!selectedCompanyId) return;
@@ -209,28 +249,9 @@ export function CompanyRealmAssignmentPanel() {
               </option>
             ))}
           </select>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Link href="/modelo/gobernanza/company-reino/crear-reino" className={styles.saveButton}>
-              Crear Macroprocesos
-            </Link>
-            {selectedCompanyId ? (
-              <Link
-                href={`/modelo/gobernanza/company-reino/crear-proceso?companyId=${encodeURIComponent(selectedCompanyId)}&companyName=${encodeURIComponent(selectedCompany?.name ?? '')}`}
-                className={styles.saveButton}
-              >
-                Crear Proceso
-              </Link>
-            ) : (
-              <button
-                type="button"
-                className={`${styles.saveButton} ${styles.saveButtonDisabled}`}
-                disabled
-                title="Selecciona una empresa para crear proceso"
-              >
-                Crear Proceso
-              </button>
-            )}
-          </div>
+          <Link href="/modelo/gobernanza/company-reino/crear-reino" className={styles.saveButton}>
+            Crear Macroprocesos
+          </Link>
         </div>
 
         {!selectedCompanyId && <p className={styles.muted}>Sin empresa seleccionada.</p>}
@@ -244,8 +265,8 @@ export function CompanyRealmAssignmentPanel() {
             <strong>{selectedCompany ? `${selectedCompany.name} (${selectedCompany.code})` : 'Sin selección'}</strong>
           </div>
           <div className={styles.summaryBlock}>
-            <span>Macroproceso seleccionado</span>
-            <strong>{selectedCompanyId ? (selectedRealmIds.length > 0 ? 'Sí' : 'No') : 'No'}</strong>
+            <span>Macroprocesos seleccionados</span>
+            <strong>{selectedCompanyId ? String(selectedRealmIds.length) : '0'}</strong>
           </div>
           <div className={styles.summaryBlock}>
             <span>Estado</span>
@@ -260,13 +281,18 @@ export function CompanyRealmAssignmentPanel() {
 
       <article className={styles.card}>
         <h2>Catálogo de macroprocesos disponibles</h2>
+        {catalogFilter && (
+          <p className={styles.info}>
+            Filtro activo: "{catalogFilter}" ({visibleRealms.length} resultado{visibleRealms.length === 1 ? '' : 's'})
+          </p>
+        )}
         {!selectedCompanyId && (
           <p className={styles.muted}>Selecciona una empresa para habilitar la configuración de macroprocesos.</p>
         )}
         {selectedCompanyId && loadingSelection && <p className={styles.info}>Cargando selección actual...</p>}
         {selectedCompanyId && !loadingSelection && (
           <div className={styles.realmGrid}>
-            {realms.map((realm) => {
+            {visibleRealms.map((realm) => {
               const isSelected = selectedSet.has(realm.id);
               return (
                 <button
@@ -278,6 +304,15 @@ export function CompanyRealmAssignmentPanel() {
                   aria-pressed={isSelected}
                 >
                   <div className={`${styles.realmStatusDot} ${isSelected ? styles.realmStatusDotOn : styles.realmStatusDotOff}`} aria-hidden />
+                  <Link
+                    href={`/modelo/gobernanza/company-reino/crear-reino?realmId=${encodeURIComponent(realm.id)}`}
+                    className={styles.editRealmButton}
+                    onClick={(event) => event.stopPropagation()}
+                    aria-label={`Editar macroproceso ${realm.name}`}
+                    title="Editar macroproceso"
+                  >
+                    <Pencil size={14} />
+                  </Link>
                   <div className={styles.realmHeader}>
                     <strong className={isSelected ? styles.realmTitleOn : styles.realmTitleOff}>{realm.name}</strong>
                     <span className={isSelected ? styles.badgeLinked : styles.badgeUnlinked}>
@@ -332,9 +367,15 @@ export function CompanyRealmAssignmentPanel() {
         <Link href="/score/dashboard" className={styles.closeButton}>
           Cerrar
         </Link>
-        <Link href="/modelo/gobernanza/dominio" className={styles.nextButton}>
+        <button
+          type="button"
+          className={`${styles.nextButton} ${styles.nextButtonDisabled}`}
+          disabled
+          aria-disabled="true"
+          title="Deshabilitado permanentemente"
+        >
           Siguiente
-        </Link>
+        </button>
         <button
           type="button"
           className={styles.saveButton}

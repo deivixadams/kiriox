@@ -137,7 +137,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (name !== undefined) dataToUpdate.name = name;
       if (lastName !== undefined) dataToUpdate.last_name = lastName;
       if (whatsapp !== undefined) dataToUpdate.whatsapp = whatsapp;
-      if (isActive !== undefined) dataToUpdate.is_active = isActive;
+      if (isActive !== undefined) {
+        dataToUpdate.is_active = isActive;
+        dataToUpdate.activation_status = isActive ? 'active' : 'inactive';
+      }
 
       await tx.security_users.update({
         where: { id },

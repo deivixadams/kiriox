@@ -8,7 +8,7 @@ export async function GET() {
         const categories = await prisma.$queryRaw<{ id: string, name: string }[]>(
             Prisma.sql`
                 SELECT id::text, name 
-                FROM core.process_category 
+                FROM core.domain_category 
                 WHERE is_active = true 
                 ORDER BY name ASC
             `

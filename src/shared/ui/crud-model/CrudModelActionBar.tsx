@@ -41,6 +41,7 @@ type CrudModelActionBarProps = {
   showClose?: boolean;
   showSave?: boolean;
   center?: boolean;
+  saveAfterNew?: boolean;
 };
 
 export function CrudModelActionBar({
@@ -82,6 +83,7 @@ export function CrudModelActionBar({
   showClose = true,
   showSave = true,
   center = false,
+  saveAfterNew = false,
 }: CrudModelActionBarProps) {
   return (
     <div className={styles.bar} style={center ? { justifyContent: 'center' } : {}}>
@@ -113,6 +115,11 @@ export function CrudModelActionBar({
             {newLabel}
           </button>
         ) : null}
+        {saveAfterNew && showSave && (
+          <button type="button" className={`${styles.button} ${styles.save}`} onClick={onSave} disabled={disableSave}>
+            {saving ? savingLabel : saveLabel}
+          </button>
+        )}
         {showDelete ? (
           <button type="button" className={`${styles.button} ${styles.delete}`} onClick={onDelete} disabled={disableDelete}>
             {deleting ? deletingLabel : deleteLabel}
@@ -123,7 +130,7 @@ export function CrudModelActionBar({
             {cancelLabel}
           </button>
         )}
-        {showSave && (
+        {!saveAfterNew && showSave && (
           <button type="button" className={`${styles.button} ${styles.save}`} onClick={onSave} disabled={disableSave}>
             {saving ? savingLabel : saveLabel}
           </button>

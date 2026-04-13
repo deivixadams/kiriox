@@ -4,6 +4,7 @@ import { getAuthContext } from '@/lib/auth-server';
 import { requireCsrf } from '@/lib/csrf';
 import { hashPassword } from '@/lib/auth';
 import { getRequestMeta } from '@/lib/request-meta';
+import { Prisma } from '@prisma/client';
 
 function isAdmin(roleCode: string) {
   const code = (roleCode || '').trim().toLowerCase();
@@ -19,7 +20,7 @@ function normalizeRoleCode(code?: string): string {
   return value.toLowerCase();
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await getAuthContext();
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,6 +30,89 @@ export async function GET() {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const companyId = String(searchParams.get('companyId') ?? '').trim();
+
+    if (companyId) {
+      const rows = await prisma.$queryRaw<
+        {
+          id: string;
+          email: string;
+          name: string | null;
+          last_name: string | null;
+          is_active: boolean | null;
+          activation_status: string | null;
+          created_at: Date | null;
+          updated_at: Date | null;
+          role_code: string | null;
+          role_name: string | null;
+        }[]
+      >(Prisma.sql`
+        SELECT
+          u.id,
+          u.email,
+          u.name,
+          u.last_name,
+          u.is_active,
+          u.activation_status,
+          u.created_at,
+          u.updated_at,
+          r.code AS role_code,
+          r.name AS role_name
+        FROM security.security_users u
+        LEFT JOIN security.map_users_x_roles mur
+          ON mur.user_id = u.id
+         AND COALESCE(mur.is_active, true) = true
+        LEFT JOIN security.role r
+          ON r.id = mur.role_id
+         AND COALESCE(r.is_active, true) = true
+        WHERE u.company_id = ${companyId}::uuid
+        ORDER BY u.created_at DESC NULLS LAST
+      `);
+
+      const grouped = new Map<
+        string,
+        {
+          id: string;
+          email: string;
+          name: string | null;
+          lastName: string | null;
+          isActive: boolean;
+          activationStatus: string;
+          createdAt: Date | null;
+          updatedAt: Date | null;
+          companyName: string | null;
+          roles: { roleCode: string; roleName: string | null }[];
+        }
+      >();
+
+      for (const row of rows) {
+        if (!grouped.has(row.id)) {
+          grouped.set(row.id, {
+            id: row.id,
+            email: row.email,
+            name: row.name,
+            lastName: row.last_name,
+            isActive: Boolean(row.is_active),
+            activationStatus: row.activation_status ?? 'active',
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            companyName: null,
+            roles: [],
+          });
+        }
+
+        if (row.role_code) {
+          grouped.get(row.id)!.roles.push({
+            roleCode: row.role_code,
+            roleName: row.role_name,
+          });
+        }
+      }
+
+      return NextResponse.json(Array.from(grouped.values()));
+    }
+
     const users = await prisma.security_users.findMany({
       include: {
         company: { select: { name: true } },

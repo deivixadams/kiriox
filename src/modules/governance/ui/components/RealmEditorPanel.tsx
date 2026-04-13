@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import styles from './RealmEditorPanel.module.css';
 import { useRegisterCommandSearch } from '@/shared/ui/command-search/useRegisterCommandSearch';
 import { CrudModelActionBar } from '@/shared/ui/crud-model';
@@ -36,6 +36,8 @@ function nowInputValue(): string {
 export function RealmEditorPanel() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const preferredRealmId = searchParams.get('realmId')?.trim() || '';
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const [records, setRecords] = useState<RealmRecord[]>([]);
   const [cursor, setCursor] = useState(-1);
@@ -95,8 +97,8 @@ export function RealmEditorPanel() {
   }
 
   useEffect(() => {
-    void loadRecords();
-  }, []);
+    void loadRecords(preferredRealmId || undefined);
+  }, [preferredRealmId]);
 
   function applyRecord(record: RealmRecord, index: number) {
     setCursor(index);

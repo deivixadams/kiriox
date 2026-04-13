@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/auth-server';
+import { Prisma } from '@prisma/client';
 
 function isAdmin(roleCode: string) {
     const code = (roleCode || '').trim().toLowerCase();
@@ -24,26 +25,16 @@ export async function POST(request: Request) {
 
         const companyId = auth.tenantId;
 
-        // Use native Prisma to handle upsert/assignment
-        await prisma.security_company_user_role.upsert({
-            where: {
-                company_id_user_id_role_id: {
-                    company_id: companyId,
-                    user_id: userId,
-                    role_id: roleId
-                }
-            },
-            update: {
-                is_active: true,
-                updated_at: new Date()
-            },
-            create: {
-                company_id: companyId,
-                user_id: userId,
-                role_id: roleId,
-                is_active: true
-            }
-        });
+        await prisma.$executeRaw(
+            Prisma.sql`
+                INSERT INTO security.company_user_role (company_id, user_id, role_id, is_active)
+                VALUES (${companyId}::uuid, ${userId}::uuid, ${roleId}::uuid, true)
+                ON CONFLICT (company_id, user_id, role_id)
+                DO UPDATE SET
+                    is_active = true,
+                    updated_at = NOW()
+            `
+        );
 
         return NextResponse.json({ ok: true });
     } catch (error: any) {
