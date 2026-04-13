@@ -17,15 +17,21 @@ export async function GET(request: Request) {
     const items = await prisma.$queryRaw<any[]>(
       Prisma.sql`
         SELECT DISTINCT
-          element_id as id,
-          element_code as code,
-          COALESCE(element_title, element_name) AS name,
-          domain_id::text AS "domainId"
-        FROM views.empresa_reino_dominio_elementos
-        WHERE company_id = ${companyId}::uuid
-          AND reino_id = ${reinoId}::uuid
-          AND (${domainId ? Prisma.sql`domain_id = ${domainId}::uuid` : Prisma.sql`true`})
-        ORDER BY element_code ASC
+          d.id,
+          d.code,
+          d.name,
+          d.id::text AS "domainId"
+        FROM core.domain d
+        JOIN core.map_reino_domain mrd
+          ON mrd.domain_id = d.id
+        JOIN core.map_company_x_reino mcr
+          ON mcr.reino_id = mrd.reino_id
+         AND mcr.company_id = ${companyId}::uuid
+         AND COALESCE(mcr.is_active, true) = true
+        WHERE mrd.reino_id = ${reinoId}::uuid
+          AND COALESCE(d.status = 'active', true)
+          AND (${domainId ? Prisma.sql`d.id = ${domainId}::uuid` : Prisma.sql`true`})
+        ORDER BY d.code ASC, d.name ASC
       `
     );
 

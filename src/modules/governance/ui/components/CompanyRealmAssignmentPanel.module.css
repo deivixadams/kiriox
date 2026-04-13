@@ -106,25 +106,29 @@
 
 .editRealmButton {
   position: absolute;
-  right: 10px;
-  bottom: 8px;
-  width: 28px;
-  height: 28px;
+  right: 12px;
+  bottom: 12px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(15, 23, 42, 0.78);
-  color: #cbd5e1;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
   text-decoration: none;
   z-index: 2;
+  transition: all 150ms ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .editRealmButton:hover {
-  border-color: rgba(56, 189, 248, 0.7);
-  color: #67e8f9;
-  background: rgba(8, 47, 73, 0.7);
+  border-color: rgba(56, 189, 248, 0.8);
+  color: #ffffff;
+  background: rgba(8, 47, 73, 0.9);
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
 }
 
 .realmCard:hover {

@@ -503,8 +503,8 @@ async function ensureFirstItem(draftPk: bigint, companyId: string): Promise<bigi
     `);
     if (companyDomain[0]) {
       await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO core.map_domain_element (domain_id, element_id, is_primary, created_at, updated_at)
-        VALUES (${companyDomain[0].id}::uuid, ${act[0].id}::uuid, true, now(), now())
+        INSERT INTO core.map_domain_element (id, map_code, domain_id, element_id, is_primary, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${`MDE-${act[0].id}`}, ${companyDomain[0].id}::uuid, ${act[0].id}::uuid, true, now(), now())
         ON CONFLICT DO NOTHING
       `);
     }
@@ -829,8 +829,8 @@ export async function postLinearRiskSignificantActivitiesCatalogHandler(request:
       `);
 
       await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO core.map_domain_element (domain_id, element_id, is_primary, created_at, updated_at)
-        VALUES (${domainRows[0].id}::uuid, ${created[0].id}::uuid, true, now(), now())
+        INSERT INTO core.map_domain_element (id, map_code, domain_id, element_id, is_primary, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${`MDE-${created[0].id}`}, ${domainRows[0].id}::uuid, ${created[0].id}::uuid, true, now(), now())
         ON CONFLICT DO NOTHING
       `);
 

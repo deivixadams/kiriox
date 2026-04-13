@@ -273,6 +273,7 @@ Never mix both modes in one ambiguous configuration flow.
 2. Prefer schema clarity for N:M regulatory relations.
 3. Put temporary artifacts, ad-hoc extracts, and local logs in `xdata/`.
 4. Do not hardcode credentials in code; use `.env`.
+5. See .env to connect to database (db)
 
 ## 11) Required Validation Before Closing Any Implementation
 

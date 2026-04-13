@@ -311,7 +311,7 @@ export function CompanyRealmAssignmentPanel() {
                     aria-label={`Editar macroproceso ${realm.name}`}
                     title="Editar macroproceso"
                   >
-                    <Pencil size={14} />
+                    <Pencil size={18} />
                   </Link>
                   <div className={styles.realmHeader}>
                     <strong className={isSelected ? styles.realmTitleOn : styles.realmTitleOff}>{realm.name}</strong>

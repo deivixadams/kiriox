@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import styles from './RealmEditorPanel.module.css';
 import { useRegisterCommandSearch } from '@/shared/ui/command-search/useRegisterCommandSearch';
-import { CrudModelActionBar } from '@/shared/ui/crud-model';
 
 type CompanyOption = {
   id: string;
@@ -52,15 +51,6 @@ type ActivityRecord = {
   updatedAt: string;
 };
 
-function toLocalDateTimeInput(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
-    date.getMinutes()
-  )}`;
-}
-
 function nowInputValue(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -69,47 +59,49 @@ function nowInputValue(): string {
   )}`;
 }
 
+const initialForm = () => ({
+  id: '',
+  code: '',
+  name: '',
+  description: '',
+  responsible: '',
+  frequency: '',
+  riskWeight: '1',
+  cascadeFactor: '0',
+  isCascade: false,
+  isHardGate: false,
+  isActive: true,
+  createdAt: nowInputValue(),
+  updatedAt: nowInputValue(),
+});
+
 export function KeyActivitiesEditorPanel() {
   const router = useRouter();
   const pathname = usePathname();
-  const nameInputRef = useRef<HTMLInputElement | null>(null);
+
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [reinos, setReinos] = useState<ReinoOption[]>([]);
   const [processes, setProcesses] = useState<ProcessOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [frequencies, setFrequencies] = useState<FrequencyOption[]>([]);
+
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [selectedReinoId, setSelectedReinoId] = useState('');
   const [selectedDomainId, setSelectedDomainId] = useState('');
   const [selectedProcessId, setSelectedProcessId] = useState('');
+
+  const [form, setForm] = useState(initialForm);
+
   const [records, setRecords] = useState<ActivityRecord[]>([]);
-  const [cursor, setCursor] = useState(-1);
-  const [loading, setLoading] = useState(true);
+  const [pendingGridReload, setPendingGridReload] = useState(false);
+
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [loadingGrid, setLoadingGrid] = useState(false);
+  const [removingId, setRemovingId] = useState('');
   const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [form, setForm] = useState({
-    id: '',
-    code: '',
-    name: '',
-    description: '',
-    responsible: '',
-    frequency: '',
-    riskWeight: '1',
-    cascadeFactor: '0',
-    isCascade: false,
-    isHardGate: false,
-    isActive: true,
-    createdAt: nowInputValue(),
-    updatedAt: nowInputValue(),
-  });
-
-  const [localActivities, setLocalActivities] = useState<ActivityRecord[]>([]);
-
-  // Load Companies (Bootstrapping)
   useEffect(() => {
     async function loadCompanies() {
       try {
@@ -120,6 +112,7 @@ export function KeyActivitiesEditorPanel() {
         setCompanies(items);
         if (!selectedCompanyId && items[0]?.id) {
           setSelectedCompanyId(items[0].id);
+          setPendingGridReload(true);
         }
       } catch {
         // ignore bootstrap errors
@@ -131,7 +124,6 @@ export function KeyActivitiesEditorPanel() {
         const response = await fetch('/api/admin/users');
         if (!response.ok) return;
         const payload = await response.json();
-        // Check if payload is array or has as specific key
         const items = Array.isArray(payload) ? payload : (payload.users || payload.items || []);
         setUsers(items);
       } catch {
@@ -155,7 +147,6 @@ export function KeyActivitiesEditorPanel() {
     void loadFrequencies();
   }, []);
 
-  // Load Reinos when Company changes
   useEffect(() => {
     async function loadReinos() {
       if (!selectedCompanyId) {
@@ -164,21 +155,26 @@ export function KeyActivitiesEditorPanel() {
         return;
       }
       try {
-        const response = await fetch(`/api/governance/reino-catalog?companyId=${encodeURIComponent(selectedCompanyId)}`, { cache: 'no-store' });
+        const response = await fetch(`/api/governance/reino-catalog?companyId=${encodeURIComponent(selectedCompanyId)}`, {
+          cache: 'no-store',
+        });
         if (!response.ok) return;
         const payload = (await response.json()) as { items?: ReinoOption[] };
-        setReinos(payload.items || []);
-        if (!payload.items?.some(r => r.id === selectedReinoId)) {
-          setSelectedReinoId('');
+        const items = payload.items || [];
+        setReinos(items);
+        if (!items.some((item) => item.id === selectedReinoId)) {
+          setSelectedReinoId(items[0]?.id || '');
+          setSelectedProcessId('');
+          setSelectedDomainId('');
         }
       } catch {
         // ignore
       }
     }
-    void loadReinos();
-  }, [selectedCompanyId]);
 
-  // Load Processes when company/reino changes
+    void loadReinos();
+  }, [selectedCompanyId, selectedReinoId]);
+
   useEffect(() => {
     async function loadProcesses() {
       if (!selectedCompanyId || !selectedReinoId) {
@@ -196,37 +192,29 @@ export function KeyActivitiesEditorPanel() {
         const payload = (await response.json()) as { items?: ProcessOption[] };
         const items = payload.items || [];
         setProcesses(items);
-        const current = items.find((p) => p.id === selectedProcessId);
-        if (!current) {
+        const selected = items.find((item) => item.id === selectedProcessId) || items[0];
+        if (!selected) {
           setSelectedProcessId('');
           setSelectedDomainId('');
         } else {
-          setSelectedDomainId(current.domainId || '');
+          if (selected.id !== selectedProcessId) {
+            setSelectedProcessId(selected.id);
+          }
+          setSelectedDomainId(selected.domainId || '');
         }
       } catch {
         // ignore
       }
     }
+
     void loadProcesses();
   }, [selectedCompanyId, selectedReinoId, selectedProcessId]);
 
-  // Local State Management (No remote loading of catalog)
-  function addToLocalGrid() {
-    if (!form.name.trim()) {
-      setError('Debes ingresar un nombre para la actividad.');
-      return;
-    }
+  function openNewRecord() {
     setError('');
-    const newActivity: ActivityRecord = {
-      ...form,
-      id: crypto.randomUUID(), // Temp ID for grid
-      companyId: selectedCompanyId,
-      code: form.code || `ACT-${Date.now()}`,
-    };
-    setLocalActivities((prev) => [...prev, newActivity]);
-    
-    // Reset ALL fields of Tarjeta 2
-    setForm({
+    setSuccess('Modo nuevo registro activo.');
+    setForm((prev) => ({
+      ...prev,
       id: '',
       code: '',
       name: '',
@@ -235,57 +223,23 @@ export function KeyActivitiesEditorPanel() {
       frequency: '',
       riskWeight: '1',
       cascadeFactor: '0',
-      isCascade: false,
-      isHardGate: false,
-      isActive: true,
-      createdAt: nowInputValue(),
-      updatedAt: nowInputValue(),
-    });
-    setSuccess('Actividad añadida a la lista local. No olvides Grabar al finalizar.');
+    }));
   }
 
-  function removeFromLocalGrid(id: string) {
-    setLocalActivities((prev) => prev.filter(a => a.id !== id));
-  }
+  const isContextComplete = Boolean(selectedCompanyId && selectedReinoId && selectedProcessId && selectedDomainId);
 
-  function applyRecord(record: ActivityRecord, index: number) {
-    setCursor(index);
-    setForm({
-      id: record.id,
-      code: record.code,
-      name: record.name,
-      description: record.description || '',
-      responsible: record.responsible || '',
-      frequency: record.frequency || '',
-      riskWeight: record.riskWeight || '',
-      cascadeFactor: record.cascadeFactor || '',
-      isCascade: !!record.isCascade,
-      isHardGate: !!record.isHardGate,
-      isActive: record.isActive,
-      createdAt: toLocalDateTimeInput(record.createdAt) || nowInputValue(),
-      updatedAt: toLocalDateTimeInput(record.updatedAt) || nowInputValue(),
-    });
-  }
+  const isFormComplete = useMemo(() => {
+    return Boolean(
+      form.name.trim() &&
+        form.description.trim() &&
+        form.responsible &&
+        form.frequency &&
+        form.riskWeight.trim() &&
+        form.cascadeFactor.trim()
+    );
+  }, [form]);
 
-  const canNavigate = records.length > 0;
-
-  function navigate(action: 'first' | 'prev' | 'next' | 'last') {
-    if (!canNavigate) return;
-    const current = cursor >= 0 ? cursor : 0;
-    const nextIndex =
-      action === 'first'
-        ? 0
-        : action === 'prev'
-          ? Math.max(0, current - 1)
-          : action === 'next'
-            ? Math.min(records.length - 1, current + 1)
-            : records.length - 1;
-
-    applyRecord(records[nextIndex], nextIndex);
-    setError('');
-    setSuccess('');
-  }
-
+  const canSave = isContextComplete && isFormComplete && !saving;
 
   async function refineDescriptionWithIA() {
     setAiDescriptionLoading(true);
@@ -302,9 +256,7 @@ export function KeyActivitiesEditorPanel() {
 
       const payload = await response.json().catch(() => ({}));
       const refined = String(payload?.refinedText ?? '').trim();
-      if (refined) {
-        setForm((prev) => ({ ...prev, description: refined }));
-      }
+      if (refined) setForm((prev) => ({ ...prev, description: refined }));
     } finally {
       setAiDescriptionLoading(false);
     }
@@ -314,12 +266,12 @@ export function KeyActivitiesEditorPanel() {
     setError('');
     setSuccess('');
 
-    if (!selectedCompanyId || !selectedReinoId || !selectedProcessId || !selectedDomainId) {
-      setError('Selecciona empresa, reino y proceso.');
+    if (!isContextComplete) {
+      setError('Selecciona empresa, macroproceso y proceso.');
       return;
     }
-    if (localActivities.length === 0) {
-      setError('No hay actividades en la lista para guardar.');
+    if (!isFormComplete) {
+      setError('Completa todos los campos de la Tarjeta 2 para habilitar Grabar.');
       return;
     }
 
@@ -329,35 +281,113 @@ export function KeyActivitiesEditorPanel() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          batch: true,
           companyId: selectedCompanyId,
           reinoId: selectedReinoId,
           domainId: selectedDomainId,
           processId: selectedProcessId,
-          activities: localActivities.map(a => ({
-            ...a,
-            id: undefined, // Let backend generate real IDs in domain_elements
-          }))
+          activities: [
+            {
+              ...form,
+              id: undefined,
+              code: undefined,
+            },
+          ],
         }),
       });
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload?.message || payload?.error || 'No se pudieron guardar las actividades');
+        throw new Error(payload?.message || payload?.error || 'No se pudo guardar la actividad.');
       }
 
-      setLocalActivities([]);
-      setSuccess('Todas las actividades se guardaron correctamente en core.domain_elements.');
+      const savedItems = Array.isArray(payload?.items) ? payload.items : [];
+      if (savedItems.length > 0) {
+        setRecords((prev) => {
+          const byId = new Map(prev.map((item) => [item.id, item]));
+          for (const item of savedItems) byId.set(item.id, item);
+          return Array.from(byId.values()).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+        });
+      }
+
+      openNewRecord();
+      setSuccess('Actividad guardada correctamente en core.domain_elements y core.map_domain_element.');
     } catch (err: any) {
-      setError(err?.message || 'No se pudo guardar');
+      setError(err?.message || 'No se pudo guardar.');
     } finally {
       setSaving(false);
     }
   }
 
-  const statusLabel = useMemo(() => {
-    return `Actividades por procesar: ${localActivities.length}`;
-  }, [localActivities.length]);
+  async function loadActivitiesForCurrentContext() {
+    setError('');
+    if (!isContextComplete) {
+      setRecords([]);
+      return;
+    }
+
+    setLoadingGrid(true);
+    try {
+      const params = new URLSearchParams({
+        companyId: selectedCompanyId,
+        reinoId: selectedReinoId,
+        domainId: selectedDomainId,
+        processId: selectedProcessId,
+      });
+      const response = await fetch(`/api/governance/key-activities?${params.toString()}`, { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.message || payload?.error || 'No se pudieron cargar actividades.');
+
+      const items = Array.isArray(payload?.items) ? payload.items : [];
+      setRecords(items);
+    } catch (err: any) {
+      setError(err?.message || 'No se pudieron cargar actividades.');
+    } finally {
+      setLoadingGrid(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    setPendingGridReload(true);
+    setRecords([]);
+  }, [selectedCompanyId]);
+
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    setPendingGridReload(true);
+  }, [selectedReinoId, selectedProcessId, selectedDomainId, selectedCompanyId]);
+
+  useEffect(() => {
+    if (!pendingGridReload || !isContextComplete) return;
+    void loadActivitiesForCurrentContext();
+    setPendingGridReload(false);
+  }, [pendingGridReload, isContextComplete, selectedCompanyId, selectedReinoId, selectedProcessId, selectedDomainId]);
+
+  async function removeActivity(id: string) {
+    if (!id) return;
+    setError('');
+    setSuccess('');
+    setRemovingId(id);
+    try {
+      const params = new URLSearchParams({
+        id,
+        companyId: selectedCompanyId,
+        reinoId: selectedReinoId,
+        domainId: selectedDomainId,
+        processId: selectedProcessId,
+      });
+      const response = await fetch(`/api/governance/key-activities?${params.toString()}`, { method: 'DELETE' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.message || payload?.error || 'No se pudo remover la actividad.');
+
+      setRecords((prev) => prev.filter((row) => row.id !== id));
+      setSuccess('Actividad removida correctamente.');
+    } catch (err: any) {
+      setError(err?.message || 'No se pudo remover la actividad.');
+    } finally {
+      setRemovingId('');
+    }
+  }
 
   useRegisterCommandSearch({
     id: 'governance-key-activities-editor',
@@ -366,17 +396,9 @@ export function KeyActivitiesEditorPanel() {
     search: (query) => {
       const term = query.trim().toLowerCase();
       if (!term) return { ok: false, message: 'Ingresa un término para buscar.' };
-      if (localActivities.length === 0) return { ok: false, message: 'No hay actividades en la lista local.' };
-
-      const found = localActivities.find((item) =>
-        `${item.name} ${item.description || ''}`.toLowerCase().includes(term)
-      );
-      if (!found) {
-        return { ok: false, message: `No se encontró "${query}" en la lista.` };
-      }
-
-      setForm({ ...found });
-      return { ok: true, message: `Encontrado local: ${found.name}` };
+      const found = records.find((item) => `${item.code} ${item.name} ${item.description || ''}`.toLowerCase().includes(term));
+      if (!found) return { ok: false, message: `No se encontró "${query}" en actividades.` };
+      return { ok: true, message: `Encontrado: ${found.name}` };
     },
   });
 
@@ -385,24 +407,13 @@ export function KeyActivitiesEditorPanel() {
       <header className={styles.header}>
         <p className={styles.eyebrow}>Gobierno</p>
         <h1 className={styles.title}>Definición de Actividades Claves</h1>
-        <p className={styles.subtitle}>
-          Registra y actualiza el catálogo de actividades en `core.domain_elements`.
-        </p>
+        <p className={styles.subtitle}>Registra y actualiza el catálogo de actividades en `core.domain_elements`.</p>
       </header>
 
       <article className={styles.card} id="actividad_clave_tarjeta1">
         <div className={styles.statusRow}>
           <span>Contexto de Selección</span>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button 
-              type="button" 
-              className={styles.saveButton} 
-              style={{ padding: '10px 28px', fontSize: '14px' }}
-              onClick={() => {}}
-            >
-              Cargar proceso
-            </button>
-          </div>
+          <span style={{ fontSize: '12px', opacity: 0.8 }}>{loadingGrid ? 'Cargando grilla...' : 'Grilla activa'}</span>
         </div>
 
         <div className={styles.grid}>
@@ -424,7 +435,7 @@ export function KeyActivitiesEditorPanel() {
           </label>
 
           <label className={styles.field}>
-            <span>Reino</span>
+            <span>Macroproceso</span>
             <select
               className={styles.input}
               value={selectedReinoId}
@@ -466,7 +477,7 @@ export function KeyActivitiesEditorPanel() {
 
       <article className={styles.card} id="actividad_clave_tarjeta2">
         <div className={styles.statusRow}>
-          <span>{statusLabel}</span>
+          <span>{canSave ? 'Formulario completo: listo para grabar' : 'Modo nuevo registro'}</span>
         </div>
 
         <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
@@ -476,6 +487,7 @@ export function KeyActivitiesEditorPanel() {
               className={styles.input}
               value={form.responsible}
               onChange={(e) => setForm((prev) => ({ ...prev, responsible: e.target.value }))}
+              disabled={saving}
             >
               <option value="">Selecciona responsable...</option>
               {users.map((user) => (
@@ -485,12 +497,14 @@ export function KeyActivitiesEditorPanel() {
               ))}
             </select>
           </label>
+
           <label className={styles.field}>
             <span>Frecuencia</span>
             <select
               className={styles.input}
               value={form.frequency}
               onChange={(e) => setForm((prev) => ({ ...prev, frequency: e.target.value }))}
+              disabled={saving}
             >
               <option value="">Selecciona frecuencia...</option>
               {frequencies.map((freq) => (
@@ -500,6 +514,7 @@ export function KeyActivitiesEditorPanel() {
               ))}
             </select>
           </label>
+
           <label className={styles.field}>
             <span>Peso de riesgo</span>
             <input
@@ -510,7 +525,7 @@ export function KeyActivitiesEditorPanel() {
               className={styles.input}
               value={form.riskWeight}
               onChange={(e) => {
-                let val = parseInt(e.target.value);
+                let val = parseInt(e.target.value, 10);
                 if (Number.isNaN(val)) {
                   setForm((prev) => ({ ...prev, riskWeight: '' }));
                   return;
@@ -520,8 +535,10 @@ export function KeyActivitiesEditorPanel() {
                 setForm((prev) => ({ ...prev, riskWeight: String(val) }));
               }}
               placeholder="1 a 5"
+              disabled={saving}
             />
           </label>
+
           <label className={styles.field}>
             <span>Factor de cascada</span>
             <input
@@ -542,20 +559,24 @@ export function KeyActivitiesEditorPanel() {
                 setForm((prev) => ({ ...prev, cascadeFactor: String(val) }));
               }}
               placeholder="0 a 1"
+              disabled={saving}
             />
           </label>
         </div>
 
-        <div className={styles.grid} style={{ gridTemplateColumns: 'minmax(300px, 1.5fr) auto auto', alignItems: 'end', gap: '25px', marginBottom: '10px' }}>
+        <div
+          className={styles.grid}
+          style={{ gridTemplateColumns: 'minmax(300px, 1.5fr) auto auto', alignItems: 'end', gap: '25px', marginBottom: '10px' }}
+        >
           <label className={styles.field} style={{ flex: '1 1 300px' }}>
             <span>Nombre de la actividad</span>
             <input
-              ref={nameInputRef}
               className={styles.input}
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
               placeholder="Nombre corto"
               style={{ minWidth: 'auto' }}
+              disabled={saving}
             />
           </label>
 
@@ -565,10 +586,11 @@ export function KeyActivitiesEditorPanel() {
                 type="checkbox"
                 checked={form.isHardGate}
                 onChange={(event) => setForm((prev) => ({ ...prev, isHardGate: event.target.checked }))}
+                disabled={saving}
               />
-              <span 
+              <span
                 style={{ fontSize: '13px', cursor: 'help', borderBottom: '1px dotted rgba(255,255,255,0.3)' }}
-                title="Condición crítica que impone un umbral mínimo de riesgo. Si se activa, anula cualquier compensación del modelo: el sistema salta directamente a un nivel de exposición definido, independientemente del resto de controles."
+                title="Condición crítica que impone un umbral mínimo de riesgo. Si se activa, anula cualquier compensación del modelo."
               >
                 Hard Gate
               </span>
@@ -578,6 +600,7 @@ export function KeyActivitiesEditorPanel() {
                 type="checkbox"
                 checked={form.isActive}
                 onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+                disabled={saving}
               />
               <span style={{ fontSize: '13px' }}>Activo</span>
             </label>
@@ -592,6 +615,7 @@ export function KeyActivitiesEditorPanel() {
                 style={{ fontSize: '11px', height: '28px', padding: '2px 5px', width: '150px' }}
                 value={form.createdAt}
                 onChange={(event) => setForm((prev) => ({ ...prev, createdAt: event.target.value }))}
+                disabled={saving}
               />
             </label>
             <label className={styles.field} style={{ margin: 0 }}>
@@ -602,6 +626,7 @@ export function KeyActivitiesEditorPanel() {
                 style={{ fontSize: '11px', height: '28px', padding: '2px 5px', width: '150px' }}
                 value={form.updatedAt}
                 onChange={(event) => setForm((prev) => ({ ...prev, updatedAt: event.target.value }))}
+                disabled={saving}
               />
             </label>
           </div>
@@ -626,39 +651,43 @@ export function KeyActivitiesEditorPanel() {
             value={form.description}
             onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
             placeholder="Descripción de la actividad clave"
+            disabled={saving}
           />
         </label>
 
-        <div style={{ marginTop: '30px', display: 'flex', gap: '15px', justifyContent: 'center', alignItems: 'center', marginBottom: '30px' }}>
-          <button 
-            type="button" 
-            className={styles.saveButton} 
+        <div
+          style={{ marginTop: '30px', display: 'flex', gap: '15px', justifyContent: 'center', alignItems: 'center', marginBottom: '30px' }}
+        >
+          <button
+            type="button"
+            className={styles.saveButton}
             style={{ width: '160px', height: '44px', background: '#3b82f6', borderColor: '#2563eb' }}
-            onClick={addToLocalGrid}
-            disabled={saving || !form.name.trim()}
+            onClick={openNewRecord}
+            disabled={saving}
           >
-            Agregar
+            Nuevo
           </button>
 
-          <button 
-            type="button" 
-            className={styles.saveButton} 
-            style={{ 
-              width: '160px', 
-              height: '44px', 
-              background: 'linear-gradient(180deg, rgba(22, 163, 74, 0.35) 0%, rgba(21, 128, 61, 0.32) 100%)', 
+          <button
+            type="button"
+            className={styles.saveButton}
+            style={{
+              width: '160px',
+              height: '44px',
+              background: 'linear-gradient(180deg, rgba(22, 163, 74, 0.35) 0%, rgba(21, 128, 61, 0.32) 100%)',
               borderColor: 'rgba(34, 197, 94, 0.55)',
-              color: '#ecfdf5'
+              color: '#ecfdf5',
             }}
             onClick={() => void save()}
-            disabled={saving || loading || !selectedCompanyId || localActivities.length === 0}
+            disabled={!canSave}
+            title={!canSave ? 'Completa todos los campos para habilitar grabar.' : ''}
           >
             {saving ? 'Grabando...' : 'Grabar'}
           </button>
 
-          <button 
-            type="button" 
-            className={styles.secondaryButton} 
+          <button
+            type="button"
+            className={styles.secondaryButton}
             style={{ width: '160px', height: '44px', borderRadius: '12px' }}
             onClick={() => router.push('/modelo/gobernanza/company-reino')}
             disabled={saving}
@@ -667,50 +696,41 @@ export function KeyActivitiesEditorPanel() {
           </button>
         </div>
 
-        {localActivities.length > 0 && (
-          <div className={styles.card} style={{ 
-            width: '100%', 
-            borderStyle: 'dashed', 
-            background: 'rgba(15,23,42,0.3)',
-            overflowX: 'auto'
-          }}>
+        <div className={styles.card} style={{ width: '100%', marginTop: '14px', overflowX: 'auto' }}>
             <div className={styles.statusRow}>
-              <span>Actividades pendientes de grabar</span>
+              <span>Actividades definidas ({records.length})</span>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginTop: '10px' }}>
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  <th style={{ padding: '8px' }}>Código</th>
                   <th style={{ padding: '8px' }}>Nombre</th>
                   <th style={{ padding: '8px' }}>Descripción</th>
-                  <th style={{ padding: '8px' }}>Responsable</th>
-                  <th style={{ padding: '8px' }}>Freq</th>
-                  <th style={{ padding: '8px' }}>Riesgo</th>
-                  <th style={{ padding: '8px' }}>Factor</th>
-                  <th style={{ padding: '8px' }}>Gate</th>
-                  <th style={{ padding: '8px' }}>Act.</th>
-                  <th style={{ padding: '8px' }}> Acción </th>
+                  <th style={{ padding: '8px' }}>Activo</th>
+                  <th style={{ padding: '8px' }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
-                {localActivities.map((act) => (
+                {records.map((act) => (
                   <tr key={act.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '8px' }}>{act.code}</td>
                     <td style={{ padding: '8px' }}>{act.name}</td>
-                    <td style={{ padding: '8px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={act.description}>
-                      {act.description || '---'}
-                    </td>
-                    <td style={{ padding: '8px' }}>{users.find(u => u.id === act.responsible)?.name || '---'}</td>
-                    <td style={{ padding: '8px' }}>{frequencies.find(f => f.id === act.frequency)?.name || '---'}</td>
-                    <td style={{ padding: '8px' }}>{act.riskWeight}</td>
-                    <td style={{ padding: '8px' }}>{act.cascadeFactor}</td>
-                    <td style={{ padding: '8px' }}>{act.isHardGate ? 'Sí' : 'No'}</td>
+                    <td style={{ padding: '8px' }}>{act.description || '---'}</td>
                     <td style={{ padding: '8px' }}>{act.isActive ? 'Sí' : 'No'}</td>
                     <td style={{ padding: '8px' }}>
-                      <button 
-                        type="button" 
-                        onClick={() => removeFromLocalGrid(act.id)}
-                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                      <button
+                        type="button"
+                        onClick={() => void removeActivity(act.id)}
+                        disabled={Boolean(removingId) || saving}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                        }}
                       >
-                        Quitar
+                        {removingId === act.id ? 'Removiendo...' : 'Remover'}
                       </button>
                     </td>
                   </tr>
@@ -718,11 +738,9 @@ export function KeyActivitiesEditorPanel() {
               </tbody>
             </table>
           </div>
-        )}
 
         {error && <p className={styles.error}>{error}</p>}
         {success && <p className={styles.success}>{success}</p>}
-
       </article>
     </section>
   );

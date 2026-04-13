@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Building, Users, Lock, Library, ArrowRight, Calculator } from 'lucide-react';
+import { Settings, Building, Users, Lock, Library, ArrowRight, Calculator, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { GovernanceCloseButton } from '@/shared/ui/GovernanceCloseButton';
 
@@ -17,6 +17,13 @@ const adminModules = [
         icon: Building,
         href: "/admin/empresa",
         color: "#8b5cf6"
+    },
+    {
+        title: "Borrar empresa",
+        description: "Eliminación física de empresas y mapeos estructurales.",
+        icon: Trash2,
+        href: "/admin/borrar-empresa",
+        color: "#ef4444"
     },
     {
         title: "Usuarios",
