@@ -1177,7 +1177,7 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
           ${riskCategory || 'linear'},
           ${riskDescription || null},
           2,
-          'AML',
+          'LINEAR_WIZARD',
           ${codigoReino},
           ${isActive},
           ${body.risk_emerging_source_id ? Prisma.sql`${body.risk_emerging_source_id}::bigint` : Prisma.sql`NULL`},
