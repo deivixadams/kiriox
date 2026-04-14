@@ -8,12 +8,13 @@ import SignificantActivitiesStep, {
   type SignificantActivityCatalogOption,
   type SignificantActivityDraftItem,
 } from './_components/SignificantActivitiesStep';
-import RiskAnalysisStep from './_components/RiskAnalysisStep';
 import QuestionnaireStep from './_components/QuestionnaireStep';
 import ExtensionsStep from './_components/ExtensionsStep';
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 type Option = { id: string; name: string; code?: string; frameworkId?: string; jurisdictionId?: string; version?: string };
+type RealmOption = { id: string; name: string; code?: string };
+type ProcessOption = { id: string; name: string; code?: string; domainId?: string };
 type ScaleOption = { id: number; code: string; name: string; description: string | null; baseValue: number; sortOrder: number };
 
 type ActaData = {
@@ -29,6 +30,9 @@ type ActaData = {
   alcance: string;
   marco_normativo: string;
   metodologia: string;
+  model_of_business_id?: string;
+  business_context_id?: string;
+  business_context_domain_id?: string;
   lider_equipo: string;
   lider_equipo_id?: string;
   auditores: string;
@@ -53,6 +57,9 @@ type DraftRecord = {
 
 type ContextState = {
   companyId: string;
+  reinoId: string;
+  processId: string;
+  domainId: string;
 };
 
 type ControlEvaluation = {
@@ -139,8 +146,14 @@ export default function RiesgoLinealWizardClient() {
   const [draftId, setDraftId] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [acta, setActa] = useState<ActaData>(buildDefaultActa());
-  const [context, setContext] = useState<ContextState>({ companyId: '' });
-  const [options, setOptions] = useState<{ companies: Option[] }>({ companies: [] });
+  const [context, setContext] = useState<ContextState>({ companyId: '', reinoId: '', processId: '', domainId: '' });
+  const [options, setOptions] = useState<{ companies: Option[]; reinos: RealmOption[]; processes: ProcessOption[] }>({
+    companies: [],
+    reinos: [],
+    processes: [],
+  });
+  const [loadingReinos, setLoadingReinos] = useState(false);
+  const [loadingProcesses, setLoadingProcesses] = useState(false);
   const [scales, setScales] = useState<{ probabilityCatalog: ScaleOption[]; impactCatalog: ScaleOption[] }>({
     probabilityCatalog: [],
     impactCatalog: [],
@@ -150,6 +163,7 @@ export default function RiesgoLinealWizardClient() {
   const [activityCatalogLoading, setActivityCatalogLoading] = useState(false);
   const [questionnaire, setQuestionnaire] = useState<ControlEvaluation[]>([]);
   const [extensions, setExtensions] = useState<ExtensionItem[]>([]);
+  const [mitigationByRiskKey, setMitigationByRiskKey] = useState<Record<string, { controlId: string; coveragePct: number }>>({});
 
   const [loading, setLoading] = useState(true);
   const [aiLoadingFields, setAiLoadingFields] = useState<Record<string, boolean>>({});
@@ -161,7 +175,56 @@ export default function RiesgoLinealWizardClient() {
     const res = await fetch('/api/linear-risk/context');
     if (!res.ok) return;
     const data = await res.json();
-    setOptions({ companies: data.companies ?? [] });
+    setOptions((prev) => ({ ...prev, companies: data.companies ?? [] }));
+  }, []);
+
+  const loadReinos = useCallback(async (companyId: string) => {
+    const normalizedCompanyId = String(companyId || '').trim();
+    if (!normalizedCompanyId || !UUID_REGEX.test(normalizedCompanyId)) {
+      setOptions((prev) => ({ ...prev, reinos: [], processes: [] }));
+      return;
+    }
+
+    setLoadingReinos(true);
+    try {
+      const res = await fetch(`/api/governance/reino-catalog?companyId=${encodeURIComponent(normalizedCompanyId)}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        setOptions((prev) => ({ ...prev, reinos: [], processes: [] }));
+        return;
+      }
+      const data = await res.json();
+      setOptions((prev) => ({ ...prev, reinos: Array.isArray(data?.items) ? data.items : [], processes: [] }));
+    } finally {
+      setLoadingReinos(false);
+    }
+  }, []);
+
+  const loadProcesses = useCallback(async (companyId: string, reinoId: string) => {
+    const normalizedCompanyId = String(companyId || '').trim();
+    const normalizedReinoId = String(reinoId || '').trim();
+    if (!normalizedCompanyId || !normalizedReinoId || !UUID_REGEX.test(normalizedCompanyId) || !UUID_REGEX.test(normalizedReinoId)) {
+      setOptions((prev) => ({ ...prev, processes: [] }));
+      return;
+    }
+
+    setLoadingProcesses(true);
+    try {
+      const params = new URLSearchParams({
+        companyId: normalizedCompanyId,
+        reinoId: normalizedReinoId,
+      });
+      const res = await fetch(`/api/governance/process-catalog?${params.toString()}`, { cache: 'no-store' });
+      if (!res.ok) {
+        setOptions((prev) => ({ ...prev, processes: [] }));
+        return;
+      }
+      const data = await res.json();
+      setOptions((prev) => ({ ...prev, processes: Array.isArray(data?.items) ? data.items : [] }));
+    } finally {
+      setLoadingProcesses(false);
+    }
   }, []);
 
   const loadScalesCatalog = useCallback(async () => {
@@ -210,8 +273,121 @@ export default function RiesgoLinealWizardClient() {
   useEffect(() => {
     if (context.companyId) return;
     if (options.companies.length === 0) return;
-    setContext((prev) => ({ ...prev, companyId: options.companies[0].id }));
+    setContext((prev) => ({ ...prev, companyId: options.companies[0].id, reinoId: '', processId: '', domainId: '' }));
   }, [context.companyId, options.companies]);
+
+  useEffect(() => {
+    if (!context.companyId) {
+      setOptions((prev) => ({ ...prev, reinos: [], processes: [] }));
+      return;
+    }
+    loadReinos(context.companyId);
+  }, [context.companyId, loadReinos]);
+
+  useEffect(() => {
+    if (!context.companyId || !context.reinoId) {
+      setOptions((prev) => ({ ...prev, processes: [] }));
+      return;
+    }
+    loadProcesses(context.companyId, context.reinoId);
+  }, [context.companyId, context.reinoId, loadProcesses]);
+
+  useEffect(() => {
+    if (options.reinos.length === 0) {
+      if (context.reinoId || acta.model_of_business || acta.model_of_business_id) {
+        setContext((prev) => ({ ...prev, reinoId: '', processId: '', domainId: '' }));
+        setActa((prev) => ({
+          ...prev,
+          model_of_business: '',
+          model_of_business_id: '',
+          business_context: '',
+          business_context_id: '',
+          business_context_domain_id: '',
+          objetivo: '',
+        }));
+      }
+      return;
+    }
+
+    if (context.reinoId && options.reinos.some((item) => item.id === context.reinoId)) return;
+
+    const fallback = options.reinos[0];
+    setContext((prev) => ({ ...prev, reinoId: fallback.id, processId: '', domainId: '' }));
+    setActa((prev) => ({
+      ...prev,
+      model_of_business: fallback.name,
+      model_of_business_id: fallback.id,
+      entidad_nombre: fallback.name,
+      business_context: '',
+      business_context_id: '',
+      business_context_domain_id: '',
+      objetivo: '',
+    }));
+  }, [options.reinos, context.reinoId, acta.model_of_business, acta.model_of_business_id]);
+
+  useEffect(() => {
+    if (!context.reinoId) return;
+    const selectedRealm = options.reinos.find((item) => item.id === context.reinoId);
+    if (!selectedRealm) return;
+
+    if (acta.model_of_business === selectedRealm.name && acta.model_of_business_id === selectedRealm.id) return;
+    setActa((prev) => ({
+      ...prev,
+      model_of_business: selectedRealm.name,
+      model_of_business_id: selectedRealm.id,
+      entidad_nombre: selectedRealm.name,
+    }));
+  }, [context.reinoId, options.reinos, acta.model_of_business, acta.model_of_business_id]);
+
+  useEffect(() => {
+    if (options.processes.length === 0) {
+      if (context.processId || acta.business_context || acta.business_context_id) {
+        setContext((prev) => ({ ...prev, processId: '', domainId: '' }));
+        setActa((prev) => ({
+          ...prev,
+          business_context: '',
+          business_context_id: '',
+          business_context_domain_id: '',
+          objetivo: '',
+        }));
+      }
+      return;
+    }
+
+    if (context.processId && options.processes.some((item) => item.id === context.processId)) return;
+
+    const fallback = options.processes[0];
+    setContext((prev) => ({ ...prev, processId: fallback.id, domainId: fallback.domainId || '' }));
+    setActa((prev) => ({
+      ...prev,
+      business_context: fallback.name,
+      business_context_id: fallback.id,
+      business_context_domain_id: fallback.domainId || '',
+      objetivo: fallback.name,
+    }));
+  }, [options.processes, context.processId, acta.business_context, acta.business_context_id]);
+
+  useEffect(() => {
+    if (!context.processId) return;
+    const selectedProcess = options.processes.find((item) => item.id === context.processId);
+    if (!selectedProcess) return;
+
+    if (
+      acta.business_context === selectedProcess.name &&
+      acta.business_context_id === selectedProcess.id &&
+      (acta.business_context_domain_id || '') === (selectedProcess.domainId || '')
+    ) {
+      return;
+    }
+
+    setActa((prev) => ({
+      ...prev,
+      business_context: selectedProcess.name,
+      business_context_id: selectedProcess.id,
+      business_context_domain_id: selectedProcess.domainId || '',
+      objetivo: selectedProcess.name,
+    }));
+  }, [context.processId, options.processes, acta.business_context, acta.business_context_id, acta.business_context_domain_id]);
 
   useEffect(() => {
     const selected = options.companies.find((c) => c.id === context.companyId);
@@ -233,17 +409,28 @@ export default function RiesgoLinealWizardClient() {
 
   const hydrateDraft = useCallback((draft: DraftRecord) => {
     setDraftId(draft.id);
-    const safeStep = Math.min(Math.max(draft.step || 1, 1), TOTAL_STEPS);
+    const rawStep = Math.max(draft.step || 1, 1);
+    const mappedStep = rawStep >= 4 ? rawStep - 1 : rawStep;
+    const safeStep = Math.min(mappedStep, TOTAL_STEPS);
     setStep(safeStep);
     const normalizedCompanyId = String(draft.companyId || '').trim();
-    setContext({ companyId: UUID_REGEX.test(normalizedCompanyId) ? normalizedCompanyId : '' });
-    if (draft.acta) setActa({ ...buildDefaultActa(), ...draft.acta });
+    const mergedActa = draft.acta ? { ...buildDefaultActa(), ...draft.acta } : buildDefaultActa();
+    setActa(mergedActa);
+    setContext({
+      companyId: UUID_REGEX.test(normalizedCompanyId) ? normalizedCompanyId : '',
+      reinoId: mergedActa.model_of_business_id || '',
+      processId: mergedActa.business_context_id || '',
+      domainId: mergedActa.business_context_domain_id || '',
+    });
     if (Array.isArray(draft.questionnaire)) setQuestionnaire(draft.questionnaire);
     if (Array.isArray(draft.manualExtensions)) setExtensions(draft.manualExtensions);
 
     const notes = draft.notes && typeof draft.notes === 'object' ? draft.notes : null;
     if (Array.isArray((notes as any)?.activities) && (notes as any).activities.length > 0) {
       setActivities((notes as any).activities);
+    }
+    if ((notes as any)?.mitigationByRiskKey && typeof (notes as any).mitigationByRiskKey === 'object') {
+      setMitigationByRiskKey((notes as any).mitigationByRiskKey);
     }
   }, []);
 
@@ -274,12 +461,13 @@ export default function RiesgoLinealWizardClient() {
         manualExtensions: extensions,
         notes: {
           activities,
+          mitigationByRiskKey,
         },
         step,
         ...payload,
       }),
     });
-  }, [draftId, acta, context.companyId, questionnaire, extensions, activities, step]);
+  }, [draftId, acta, context.companyId, questionnaire, extensions, activities, mitigationByRiskKey, step]);
 
   const persistActivities = useCallback(async () => {
     if (!draftId) return true;
@@ -431,14 +619,14 @@ export default function RiesgoLinealWizardClient() {
       const ok = await persistActivities();
       if (!ok) return;
     }
-    if (step === 4) {
+    if (step === 3) {
       const ok = await persistControls();
       if (!ok) {
         // No bloquear el avance; el guardado se puede reintentar en el siguiente paso.
-        console.error('No se pudo guardar controles en Paso 4, avanzando de todas formas.');
+        console.error('No se pudo guardar controles en Paso 3, avanzando de todas formas.');
       }
     }
-    if (step === 5) {
+    if (step === 4) {
       const ok = await persistFindingsActions();
       if (!ok) return;
     }
@@ -506,9 +694,8 @@ export default function RiesgoLinealWizardClient() {
   const stepTitle = useMemo(() => {
     if (step === 1) return 'Contexto del análisis';
     if (step === 2) return 'Actividades significativas';
-    if (step === 3) return 'Mitigación y riesgo residual';
-    if (step === 4) return 'Gestión y controles';
-    if (step === 5) return 'Hallazgos y acciones';
+    if (step === 3) return 'Gestión y controles';
+    if (step === 4) return 'Hallazgos y acciones';
     return 'Wizard';
   }, [step]);
 
@@ -521,12 +708,68 @@ export default function RiesgoLinealWizardClient() {
       {step === 1 && (
         <ActaStep
           acta={acta}
-          context={{ companyId: context.companyId }}
+          context={{ companyId: context.companyId, reinoId: context.reinoId, processId: context.processId }}
           companies={options.companies}
+          reinos={options.reinos}
+          processes={options.processes}
+          loadingReinos={loadingReinos}
+          loadingProcesses={loadingProcesses}
           onChangeActa={setActa}
           onChangeContext={(next) => {
             if (Object.prototype.hasOwnProperty.call(next, 'companyId')) {
-              setContext((prev) => ({ ...prev, companyId: next.companyId ?? '' }));
+              const nextCompanyId = next.companyId ?? '';
+              setContext((prev) => ({
+                ...prev,
+                companyId: nextCompanyId,
+                reinoId: '',
+                processId: '',
+                domainId: '',
+              }));
+              setActa((prev) => ({
+                ...prev,
+                model_of_business: '',
+                model_of_business_id: '',
+                business_context: '',
+                business_context_id: '',
+                business_context_domain_id: '',
+                objetivo: '',
+              }));
+            }
+            if (Object.prototype.hasOwnProperty.call(next, 'reinoId')) {
+              const nextReinoId = next.reinoId ?? '';
+              const selectedRealm = options.reinos.find((item) => item.id === nextReinoId);
+              setContext((prev) => ({
+                ...prev,
+                reinoId: nextReinoId,
+                processId: '',
+                domainId: '',
+              }));
+              setActa((prev) => ({
+                ...prev,
+                model_of_business: selectedRealm?.name || '',
+                model_of_business_id: selectedRealm?.id || '',
+                entidad_nombre: selectedRealm?.name || '',
+                business_context: '',
+                business_context_id: '',
+                business_context_domain_id: '',
+                objetivo: '',
+              }));
+            }
+            if (Object.prototype.hasOwnProperty.call(next, 'processId')) {
+              const nextProcessId = next.processId ?? '';
+              const selectedProcess = options.processes.find((item) => item.id === nextProcessId);
+              setContext((prev) => ({
+                ...prev,
+                processId: nextProcessId,
+                domainId: selectedProcess?.domainId || '',
+              }));
+              setActa((prev) => ({
+                ...prev,
+                business_context: selectedProcess?.name || '',
+                business_context_id: selectedProcess?.id || '',
+                business_context_domain_id: selectedProcess?.domainId || '',
+                objetivo: selectedProcess?.name || '',
+              }));
             }
           }}
           onAI={handleAI}
@@ -539,11 +782,13 @@ export default function RiesgoLinealWizardClient() {
       {step === 2 && (
         <SignificantActivitiesStep
           items={activities}
+          mitigationByRiskKey={mitigationByRiskKey}
           probabilityCatalog={scales.probabilityCatalog}
           impactCatalog={scales.impactCatalog}
           catalogActivities={activityCatalog}
           loadingCatalog={activityCatalogLoading}
           onChange={setActivities}
+          onChangeMitigationByRiskKey={setMitigationByRiskKey}
           onOpenCreateActivity={(tempId) => {
             const params = new URLSearchParams({
               return_to: '/validacion/riesgo-lineal/nueva',
@@ -553,18 +798,6 @@ export default function RiesgoLinealWizardClient() {
             if (context.companyId) params.set('company_id', context.companyId);
             router.push(`/validacion/riesgo-lineal/actividad/nueva?${params.toString()}`);
           }}
-          onOpenCreateRisk={(tempId, significantActivityId) => {
-            const params = new URLSearchParams({
-              return_to: '/validacion/riesgo-lineal/nueva',
-              draft: draftId || '',
-              row_temp_id: tempId,
-              significant_activity_id: significantActivityId,
-            });
-            if (context.companyId) params.set('company_id', context.companyId);
-            router.push(`/validacion/riesgo-lineal/riesgo/nuevo?${params.toString()}`);
-          }}
-          onAIRefine={refineText}
-          aiLoadingFields={aiLoadingFields}
           onBack={prevStep}
           onSave={async () => {
             await persistActivities();
@@ -575,15 +808,6 @@ export default function RiesgoLinealWizardClient() {
       )}
 
       {step === 3 && (
-        <RiskAnalysisStep
-          draftId={draftId}
-          onBack={prevStep}
-          onNext={nextStep}
-          onSave={() => saveDraft()}
-        />
-      )}
-
-      {step === 4 && (
         <QuestionnaireStep
           draftId={draftId}
           riskIds={[]}
@@ -598,7 +822,7 @@ export default function RiesgoLinealWizardClient() {
         />
       )}
 
-      {step === 5 && (
+      {step === 4 && (
         <ExtensionsStep
           draftId={draftId}
           evaluations={questionnaire}

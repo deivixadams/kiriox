@@ -3,12 +3,12 @@ import {
   Clock,
   Info,
   Sparkles,
-  Users,
   Wand2
 } from 'lucide-react';
 import styles from './ActaStep.module.css';
 
 type Option = { id: string; name: string; code?: string };
+type ProcessOption = { id: string; name: string; domainId?: string; code?: string };
 
 type ActaData = {
   title: string;
@@ -32,14 +32,20 @@ type ActaData = {
 
 type ContextState = {
   companyId: string;
+  reinoId: string;
+  processId: string;
 };
 
 type ActaStepProps = {
   acta: ActaData;
   context: ContextState;
   companies: Option[];
+  reinos: Option[];
+  processes: ProcessOption[];
+  loadingReinos?: boolean;
+  loadingProcesses?: boolean;
   onChangeActa: (next: ActaData) => void;
-  onChangeContext: (next: Partial<Pick<ContextState, 'companyId'>>) => void;
+  onChangeContext: (next: Partial<Pick<ContextState, 'companyId' | 'reinoId' | 'processId'>>) => void;
   onAI: (field: string, promptCode: string) => void;
   aiLoadingFields: Record<string, boolean>;
   onSave: () => void;
@@ -50,6 +56,10 @@ export default function ActaStep({
   acta,
   context,
   companies,
+  reinos,
+  processes,
+  loadingReinos = false,
+  loadingProcesses = false,
   onChangeActa,
   onChangeContext,
   onAI,
@@ -95,33 +105,51 @@ export default function ActaStep({
           <div className={styles.divider} />
 
           <div className={styles.gridTwo}>
-            <TextSection
-              title="Modelo de negocio"
-              description="Describe el modelo operativo de la organización."
-              value={acta.model_of_business}
-              onChange={(val: string) => onChangeActa({
-                ...acta,
-                model_of_business: val,
-                entidad_nombre: val
-              })}
-              onAI={() => onAI('model_of_business', 'AUDIT_MODELO_NEGOCIO')}
-              isLoading={!!aiLoadingFields.model_of_business}
-              placeholder="Describe el modelo de negocio en al menos dos oraciones."
-              icon={Info}
-              minHeight={130}
-            />
+            <FormField label="Modelo de negocio (Macroproceso)" icon={Info}>
+              <select
+                value={context.reinoId}
+                onChange={(e) => onChangeContext({ reinoId: e.target.value })}
+                className={styles.select}
+                disabled={!context.companyId || loadingReinos}
+              >
+                <option value="">
+                  {!context.companyId
+                    ? 'Seleccione empresa primero...'
+                    : loadingReinos
+                      ? 'Cargando macroprocesos...'
+                      : 'Seleccione macroproceso...'}
+                </option>
+                {reinos.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}{item.code ? ` (${item.code})` : ''}
+                  </option>
+                ))}
+              </select>
+            </FormField>
 
-            <TextSection
-              title="Contexto de negocio"
-              description="Contexto de negocio que enmarca la evaluación."
-              value={acta.business_context}
-              onChange={(val: string) => onChangeActa({ ...acta, business_context: val, objetivo: val })}
-              onAI={() => onAI('business_context', 'AUDIT_OBJETIVO_GEN')}
-              isLoading={!!aiLoadingFields.business_context}
-              placeholder="Describa el contexto de negocio..."
-              icon={Users}
-              minHeight={130}
-            />
+            <FormField label="Contexto de negocio (Proceso)" icon={Info}>
+              <select
+                value={context.processId}
+                onChange={(e) => onChangeContext({ processId: e.target.value })}
+                className={styles.select}
+                disabled={!context.companyId || !context.reinoId || loadingProcesses}
+              >
+                <option value="">
+                  {!context.companyId
+                    ? 'Seleccione empresa primero...'
+                    : !context.reinoId
+                      ? 'Seleccione macroproceso primero...'
+                      : loadingProcesses
+                        ? 'Cargando procesos...'
+                        : 'Seleccione proceso...'}
+                </option>
+                {processes.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}{item.code ? ` (${item.code})` : ''}
+                  </option>
+                ))}
+              </select>
+            </FormField>
           </div>
 
           <div className={styles.gridTwo}>

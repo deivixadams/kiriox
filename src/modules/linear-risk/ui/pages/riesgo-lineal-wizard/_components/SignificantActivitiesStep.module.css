@@ -249,11 +249,108 @@
   max-width: 100%;
 }
 
+.associatedRiskCard {
+  border: 1px solid rgba(73, 111, 186, 0.35);
+  border-radius: 10px;
+  background: rgba(7, 17, 36, 0.45);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.associatedRiskTitle {
+  color: #dbe9ff;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.associatedRiskEmpty {
+  color: #9bb5de;
+  font-size: 0.82rem;
+}
+
+.associatedRiskTableWrap {
+  overflow-x: auto;
+}
+
+.associatedRiskTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  min-width: 1160px;
+}
+
+.associatedRiskTable th,
+.associatedRiskTable td {
+  border-bottom: 1px solid rgba(73, 111, 186, 0.26);
+  padding: 7px 8px;
+  text-align: left;
+  color: #dbe9ff;
+  vertical-align: top;
+}
+
+.associatedRiskTable th {
+  color: #9bb5de;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.associatedRiskTable th:nth-child(1),
+.associatedRiskTable td:nth-child(1) {
+  width: 16%;
+}
+
+.associatedRiskTable th:nth-child(2),
+.associatedRiskTable td:nth-child(2) {
+  width: 24%;
+}
+
+.associatedRiskTable th:nth-child(3),
+.associatedRiskTable td:nth-child(3),
+.associatedRiskTable th:nth-child(4),
+.associatedRiskTable td:nth-child(4),
+.associatedRiskTable th:nth-child(5),
+.associatedRiskTable td:nth-child(5),
+.associatedRiskTable th:nth-child(7),
+.associatedRiskTable td:nth-child(7),
+.associatedRiskTable th:nth-child(8),
+.associatedRiskTable td:nth-child(8) {
+  width: 8%;
+}
+
+.associatedRiskTable th:nth-child(6),
+.associatedRiskTable td:nth-child(6) {
+  width: 20%;
+}
+
+.associatedRiskDescription {
+  max-width: 260px;
+  white-space: normal;
+}
+
+.associatedRiskSelect,
+.associatedRiskCoverage {
+  width: 100%;
+  background: rgba(7, 17, 36, 0.9);
+  border: 1px solid rgba(73, 111, 186, 0.45);
+  color: #dbe9ff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.78rem;
+}
+
+.associatedRiskCoverage {
+  min-width: 72px;
+}
+
 .addButton,
 .removeButton,
 .aiButton,
 .backButton,
 .ghostButton,
+.heatmapButton,
 .primaryButton {
   border-radius: 10px;
   border: 1px solid rgba(73, 111, 186, 0.45);
@@ -270,6 +367,16 @@
   background: linear-gradient(180deg, #1e5fd6, #1148ad);
   border-color: #2b73ef;
   color: #fff;
+}
+
+.heatmapButton {
+  border-color: rgba(110, 231, 183, 0.6);
+  background: rgba(110, 231, 183, 0.18);
+  color: #6ee7b7;
+}
+
+.heatmapButton:hover {
+  background: rgba(110, 231, 183, 0.28);
 }
 
 .ghostButton {

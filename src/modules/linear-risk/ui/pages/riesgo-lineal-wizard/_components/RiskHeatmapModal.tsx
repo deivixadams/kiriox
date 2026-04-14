@@ -41,25 +41,12 @@ type RiskHeatmapModalProps = {
   open: boolean;
   rows: HeatmapRow[];
   onClose: () => void;
-  onLaunchAudit: () => void | Promise<void>;
 };
 
 type MetricMode = 'inherent' | 'residual';
 
 const probabilityAxis = ['1 Muy Baja', '2 Baja', '3 Media', '4 Alta', '5 Muy Alta'];
 const impactAxis = ['1 Muy Bajo', '2 Bajo', '3 Medio', '4 Alto', '5 Muy Alto'];
-
-const jitterOffsets: Array<[number, number]> = [
-  [0, 0],
-  [-0.18, -0.18],
-  [0.18, -0.18],
-  [-0.18, 0.18],
-  [0.18, 0.18],
-  [-0.24, 0],
-  [0.24, 0],
-  [0, -0.24],
-  [0, 0.24]
-];
 
 function clampLevel(value: number | null | undefined): number | null {
   if (value == null || Number.isNaN(value)) return null;
@@ -70,8 +57,31 @@ function clampLevel(value: number | null | undefined): number | null {
   return rounded;
 }
 
+function clampAxis(value: number | null | undefined): number | null {
+  if (value == null || Number.isNaN(value)) return null;
+  if (value <= 1) return 1;
+  if (value >= 5) return 5;
+  return value;
+}
+
 function clampScatterCoord(value: number) {
-  return Math.max(1.05, Math.min(4.95, value));
+  return Math.max(1.06, Math.min(4.94, value));
+}
+
+function computeJitteredCoords(impact: number, probability: number, indexInCell: number): [number, number] {
+  if (indexInCell === 0) {
+    return [clampScatterCoord(impact), clampScatterCoord(probability)];
+  }
+
+  // Keep first point centered and distribute overlaps in rings towards valid plot area.
+  const ringIndex = indexInCell - 1;
+  const angle = (ringIndex % 8) * (Math.PI / 4);
+  const ring = 1 + Math.floor(ringIndex / 8);
+  const radius = 0.22 + (ring - 1) * 0.12;
+
+  const jitteredImpact = impact + Math.cos(angle) * radius;
+  const jitteredProbability = probability + Math.sin(angle) * radius;
+  return [clampScatterCoord(jitteredImpact), clampScatterCoord(jitteredProbability)];
 }
 
 function getSeverityByScale(scale?: { name?: string | null; severity_rank?: number | null; color_hex?: string | null }) {
@@ -91,20 +101,69 @@ function pickScore(row: HeatmapRow, metric: MetricMode): number | null {
   return metric === 'inherent' ? row.baseScore : row.riskScore;
 }
 
-export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }: RiskHeatmapModalProps) {
+function scoreToLevel(score: number | null): number | null {
+  if (score == null || Number.isNaN(score)) return null;
+  if (score <= 5) return 1;
+  if (score <= 10) return 2;
+  if (score <= 15) return 3;
+  if (score <= 20) return 4;
+  return 5;
+}
+
+function scoreToAxis(score: number | null): number | null {
+  if (score == null || Number.isNaN(score)) return null;
+  if (score <= 0) return 1;
+  // Mapea score [1..25] en eje [1..5].
+  const normalized = 1 + ((Math.min(25, score) - 1) / 24) * 4;
+  return clampAxis(normalized);
+}
+
+function resolveCoords(row: HeatmapRow, metric: MetricMode): { probability: number | null; impact: number | null } {
+  const baseProbability = clampAxis(row.probability);
+  const baseImpact = clampAxis(row.impact);
+  const baseScore = row.baseScore == null ? null : Number(row.baseScore);
+  const residualScore = row.riskScore == null ? null : Number(row.riskScore);
+
+  if (metric === 'inherent') {
+    if (baseProbability != null && baseImpact != null) {
+      return { probability: baseProbability, impact: baseImpact };
+    }
+    const fallbackAxis = scoreToAxis(baseScore);
+    return { probability: fallbackAxis, impact: fallbackAxis };
+  }
+
+  // Residual: proyecta desde el punto inherente hacia abajo-izquierda según reducción real del score.
+  if (
+    baseProbability != null &&
+    baseImpact != null &&
+    baseScore != null &&
+    baseScore > 0 &&
+    residualScore != null
+  ) {
+    const ratio = Math.max(0, Math.min(1, residualScore / baseScore));
+    const shrink = Math.sqrt(ratio);
+    return {
+      probability: clampAxis(baseProbability * shrink),
+      impact: clampAxis(baseImpact * shrink),
+    };
+  }
+
+  if (baseProbability != null && baseImpact != null) {
+    return { probability: baseProbability, impact: baseImpact };
+  }
+
+  const fallbackAxis = scoreToAxis(residualScore ?? baseScore);
+  return { probability: fallbackAxis, impact: fallbackAxis };
+}
+
+export default function RiskHeatmapModal({ open, rows, onClose }: RiskHeatmapModalProps) {
   const [metric, setMetric] = useState<MetricMode>('residual');
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const prepared = useMemo(() => {
     const validRows = rows
       .map((row) => {
-        const baseProbability = clampLevel(row.probability);
-        const baseImpact = clampLevel(row.impact);
-        const scale = metric === 'residual' ? row.residualScale : row.inherentScale;
-        const scaleRank = scale?.severity_rank ?? null;
-        const plotLevel = scaleRank != null ? clampLevel(scaleRank) : null;
-        const probability = plotLevel ?? baseProbability;
-        const impact = plotLevel ?? baseImpact;
+        const { probability, impact } = resolveCoords(row, metric);
 
         return {
           row,
@@ -117,13 +176,10 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
     const inCellCounter = new Map<string, number>();
     const points = validRows.map(({ row, probability, impact }) => {
       const score = pickScore(row, metric) ?? 0;
-      const severity = metric === 'residual'
-        ? getSeverityByScale(row.residualScale || undefined)
-        : getSeverityByScale(row.inherentScale || undefined);
       const key = `${probability}:${impact}`;
       const indexInCell = inCellCounter.get(key) ?? 0;
       inCellCounter.set(key, indexInCell + 1);
-      const [jitterX, jitterY] = jitterOffsets[indexInCell % jitterOffsets.length];
+      const [scatterImpact, scatterProbability] = computeJitteredCoords(impact, probability, indexInCell);
       const riskLabel = row.riskName || row.riskCode || 'Riesgo';
       const elementLabel = row.customElementName || row.elementName || 'Elemento';
       const base = row.baseScore == null ? '--' : row.baseScore.toFixed(4);
@@ -132,17 +188,17 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
       const residualClass = row.residualScale?.name || 'Sin escala';
       return {
         name: `${elementLabel} | ${riskLabel}`,
-        value: [clampScatterCoord(impact + jitterX), clampScatterCoord(probability + jitterY * 0.8), score],
-        symbolSize: 12 + Math.min(18, Math.max(0, score)),
+        value: [scatterImpact, scatterProbability, score],
+        symbolSize: 11 + Math.min(12, Math.max(0, score * 0.7)),
         itemStyle: {
-          color: 'rgba(255,255,255,0.08)',
+          color: 'rgba(255,255,255,0.06)',
           borderColor: '#ffffff',
           borderWidth: 2,
           shadowBlur: 10,
           shadowColor: 'rgba(2,6,23,0.7)'
         },
         label: {
-          show: true,
+          show: false,
           formatter: riskLabel,
           position: 'right',
           color: '#0f172a',
@@ -159,6 +215,8 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
           `Clasificación inherente: ${inherentClass}`,
           `Riesgo residual: ${residual}`,
           `Clasificación residual: ${residualClass}`,
+          `Métrica visualizada: ${metric === 'inherent' ? 'Inherente' : 'Residual'}`,
+          `Posición en mapa (I,P): ${scatterImpact.toFixed(2)}, ${scatterProbability.toFixed(2)}`,
           `Control: ${row.mitigatingControlName || 'Sin control'}${row.mitigationLevel ? ` (${row.mitigationLevel})` : ''}`
         ].join('<br/>')
       };
@@ -234,6 +292,7 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
           },
           nameTextStyle: { color: '#93a7c2', fontWeight: 700, fontSize: 12 },
           axisLine: { lineStyle: { color: 'rgba(255,255,255,0.22)' } },
+          axisTick: { show: false },
           splitArea: { show: false },
           splitLine: { show: true, lineStyle: { color: 'rgba(255,255,255,0.42)', width: 1 } }
         },
@@ -252,6 +311,7 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
           },
           nameTextStyle: { color: '#93a7c2', fontWeight: 700, fontSize: 12 },
           axisLine: { lineStyle: { color: 'rgba(255,255,255,0.22)' } },
+          axisTick: { show: false },
           splitArea: { show: false },
           splitLine: { show: true, lineStyle: { color: 'rgba(255,255,255,0.42)', width: 1 } }
         },
@@ -262,6 +322,23 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
             data: prepared.points,
             symbol: 'circle',
             zlevel: 2
+          },
+          {
+            type: 'effectScatter',
+            name: 'Pulse',
+            data: prepared.points,
+            symbol: 'circle',
+            zlevel: 3,
+            tooltip: { show: false },
+            silent: true,
+            rippleEffect: {
+              period: 2,
+              scale: 1.35,
+              brushType: 'stroke'
+            },
+            itemStyle: {
+              color: 'rgba(255,255,255,0.15)'
+            }
           }
         ]
       });
@@ -320,13 +397,8 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
               Ver Residual
             </button>
           </div>
-          <div className={styles.toolbarActions}>
-            <button type="button" className={styles.launchAuditButton} onClick={onLaunchAudit}>
-              Lanzar auditoría
-            </button>
-          </div>
           <p className={styles.toolbarHint}>
-            Puntos en mapa: {prepared.plottedCount}/{prepared.totalCount}. Escala aplicada desde risk_scale (1-5).
+            Puntos en mapa: {prepared.plottedCount}/{prepared.totalCount}. Separación automática para riesgos que comparten celda.
           </p>
         </div>
         <div className={styles.content}>
@@ -336,7 +408,7 @@ export default function RiskHeatmapModal({ open, rows, onClose, onLaunchAudit }:
             <>
               <div className={styles.chart} ref={chartRef} />
               <aside className={styles.sidePanel}>
-                <h4 className={styles.sideTitle}>Top Riesgos (Residual)</h4>
+                <h4 className={styles.sideTitle}>Top Riesgos ({metric === 'residual' ? 'Residual' : 'Inherente'})</h4>
                 <div className={styles.sideList}>
                   {prepared.topRows.map(({ row, score, scale }, index) => {
                     const sev = getSeverityByScale(scale || undefined);

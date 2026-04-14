@@ -182,9 +182,9 @@
 
 .heatmapButton {
   border-radius: 999px;
-  border: 1px solid rgba(251, 191, 36, 0.65);
-  background: rgba(251, 191, 36, 0.2);
-  color: #fde68a;
+  border: 1px solid rgba(110, 231, 183, 0.6);
+  background: rgba(110, 231, 183, 0.18);
+  color: #6ee7b7;
   padding: 11px 20px;
   min-height: 46px;
   font-size: 13px;
@@ -196,11 +196,10 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-right: auto;
 }
 
 .heatmapButton:hover {
-  background: rgba(251, 191, 36, 0.3);
+  background: rgba(110, 231, 183, 0.28);
 }
 
 .backButton:hover,

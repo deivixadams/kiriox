@@ -1,9 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Flame } from 'lucide-react';
 import styles from './RiskAnalysisStep.module.css';
-import RiskHeatmapModal from './RiskHeatmapModal';
 
 type ControlOption = {
   id: string;
@@ -90,7 +88,6 @@ export default function RiskAnalysisStep({ draftId, onBack, onNext, onSave }: Ri
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isHeatmapOpen, setIsHeatmapOpen] = useState(false);
 
   const loadRows = useCallback(async () => {
     if (!draftId) {
@@ -218,25 +215,6 @@ export default function RiskAnalysisStep({ draftId, onBack, onNext, onSave }: Ri
     [rows]
   );
 
-  const heatmapRows = useMemo(
-    () =>
-      rows.map((row) => ({
-        rowId: row.rowId,
-        elementName: row.activityName || null,
-        customElementName: null,
-        riskName: row.riskName,
-        probability: row.probability,
-        impact: row.impact,
-        baseScore: row.inherentRisk,
-        riskScore: row.residualScore,
-        mitigatingControlName: row.mitigatingControlName,
-        mitigationLevel: row.coveragePct > 0 ? 'PARCIAL' : null,
-        inherentScale: row.inherentScale ?? null,
-        residualScale: row.residualScale ?? null,
-      })),
-    [rows]
-  );
-
   const handleSaveClick = async () => {
     const ok = await persist();
     if (ok) onSave();
@@ -250,18 +228,6 @@ export default function RiskAnalysisStep({ draftId, onBack, onNext, onSave }: Ri
   const handleNextClick = async () => {
     const ok = await persist();
     if (ok) onNext();
-  };
-
-  const handleHeatmapClick = async () => {
-    if (rows.length === 0) {
-      setError('No hay filas para mostrar en el mapa de calor.');
-      return;
-    }
-    const ok = await persist();
-    if (!ok) return;
-    await loadRows();
-    setError(null);
-    setIsHeatmapOpen(true);
   };
 
   if (loading) {
@@ -367,9 +333,6 @@ export default function RiskAnalysisStep({ draftId, onBack, onNext, onSave }: Ri
       </div>
 
       <div className={styles.footer}>
-        <button className={styles.heatmapButton} onClick={handleHeatmapClick} type="button">
-          <Flame size={16} /> Mapa de calor
-        </button>
         <button className={styles.backButton} onClick={handleBackClick} disabled={saving}>
           Volver
         </button>
@@ -380,16 +343,6 @@ export default function RiskAnalysisStep({ draftId, onBack, onNext, onSave }: Ri
           Continuar
         </button>
       </div>
-
-      <RiskHeatmapModal
-        open={isHeatmapOpen}
-        rows={heatmapRows}
-        onClose={() => setIsHeatmapOpen(false)}
-        onLaunchAudit={async () => {
-          setIsHeatmapOpen(false);
-          await handleNextClick();
-        }}
-      />
     </div>
   );
 }

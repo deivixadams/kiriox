@@ -81,7 +81,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
       {
         key: 'risk-linear',
         label: 'Riesgo lineal',
-        href: '/score/evaluacion/lineal-assessment',
+        href: '/validacion/riesgo-lineal/nueva',
         icon: 'BarChart3',
         module: 'linear-risk',
         permission: 'risk.linear.read',

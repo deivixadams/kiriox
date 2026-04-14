@@ -1,6 +1,6 @@
-import LinearRiskEvaluationLinealPage from '@/modules/linear-risk/ui/pages/LinearRiskEvaluationLinealPage';
+import { redirect } from 'next/navigation';
 
 export default function LinealAssessmentWarningPage() {
-  return <LinearRiskEvaluationLinealPage />;
+  redirect('/validacion/riesgo-lineal/nueva');
 }
 

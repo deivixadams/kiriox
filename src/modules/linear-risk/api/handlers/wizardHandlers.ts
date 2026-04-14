@@ -77,6 +77,10 @@ type RiskCatalogByActivityRow = {
   risk_name: string | null;
   risk_description: string | null;
   risk_category: string | null;
+  probability_name?: string | null;
+  probability_value?: number | null;
+  impact_name?: string | null;
+  impact_value?: number | null;
   is_active?: boolean;
   risk_emerging_source_id?: string | null;
   risk_emerging_status_id?: string | null;
@@ -132,7 +136,6 @@ type RiskScaleRow = {
 };
 
 let cacheDraftUuid: boolean | null = null;
-let cacheActivityUuid: boolean | null = null;
 
 function parseNotes(value: string | null) {
   if (!value) return {};
@@ -396,24 +399,6 @@ function mapEffectiveness(status: EvaluationInput['status']) {
   return 'not_evaluated';
 }
 
-async function isUuidCompany(tableName: 'risk_assessment_draft' | 'significant_activity') {
-  if (tableName === 'risk_assessment_draft' && cacheDraftUuid !== null) return cacheDraftUuid;
-  if (tableName === 'significant_activity' && cacheActivityUuid !== null) return cacheActivityUuid;
-
-  const rows = await prisma.$queryRaw<{ data_type: string }[]>(Prisma.sql`
-    SELECT data_type
-    FROM information_schema.columns
-    WHERE table_schema = 'core'
-      AND table_name = ${tableName}
-      AND column_name = 'company_id'
-    LIMIT 1
-  `);
-  const isUuid = rows[0]?.data_type === 'uuid';
-  if (tableName === 'risk_assessment_draft') cacheDraftUuid = isUuid;
-  if (tableName === 'significant_activity') cacheActivityUuid = isUuid;
-  return isUuid;
-}
-
 async function findDraft(id: string, tenantId: string): Promise<LinearDraftRow | null> {
   const rows = await prisma.$queryRaw<LinearDraftRow[]>(Prisma.sql`
     SELECT risk_assessment_draft_id, assessment_code, company_id, notes
@@ -528,14 +513,6 @@ async function ensureFirstItem(draftPk: bigint, companyId: string): Promise<bigi
         ON CONFLICT DO NOTHING
       `);
     }
-    await upsertSignificantActivityMirror({
-      id: act[0].id,
-      companyId,
-      code: `KX_PLACEHOLDER_${Date.now()}`,
-      name: 'Actividad placeholder',
-      description: 'Generada automáticamente',
-      isActive: true,
-    });
   }
 
   const item = await prisma.$queryRaw<{ risk_assessment_draft_item_id: bigint }[]>(Prisma.sql`
@@ -622,46 +599,6 @@ export async function getLinearRiskScalesHandler() {
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-async function upsertSignificantActivityMirror(input: {
-  id: string;
-  companyId: string;
-  code: string;
-  name: string;
-  description: string | null;
-  isActive: boolean;
-}) {
-  await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO core.significant_activity (
-      significant_activity_id,
-      company_id,
-      activity_code,
-      activity_name,
-      activity_description,
-      is_active,
-      created_at,
-      updated_at
-    )
-    VALUES (
-      ${input.id}::uuid,
-      ${input.companyId}::uuid,
-      ${input.code},
-      ${input.name},
-      ${input.description},
-      ${input.isActive},
-      now(),
-      now()
-    )
-    ON CONFLICT (significant_activity_id)
-    DO UPDATE SET
-      company_id = EXCLUDED.company_id,
-      activity_code = EXCLUDED.activity_code,
-      activity_name = EXCLUDED.activity_name,
-      activity_description = EXCLUDED.activity_description,
-      is_active = EXCLUDED.is_active,
-      updated_at = now()
-  `);
-}
 
 export async function getLinearRiskSignificantActivitiesCatalogHandler(request: Request) {
   try {
@@ -854,15 +791,6 @@ export async function postLinearRiskSignificantActivitiesCatalogHandler(request:
         ON CONFLICT DO NOTHING
       `);
 
-      await upsertSignificantActivityMirror({
-        id: created[0].id,
-        companyId,
-        code: created[0].code,
-        name: created[0].activity_name,
-        description: created[0].activity_description,
-        isActive: Boolean(created[0].is_active),
-      });
-
       const row = created[0];
       return NextResponse.json({
         id: row.id,
@@ -945,15 +873,6 @@ export async function putLinearRiskSignificantActivitiesCatalogHandler(request: 
       const row = updated[0];
       if (!row) return NextResponse.json({ error: 'Actividad no encontrada.' }, { status: 404 });
 
-      await upsertSignificantActivityMirror({
-        id: row.id,
-        companyId,
-        code: row.code,
-        name: row.activity_name,
-        description: row.activity_description,
-        isActive: Boolean(row.is_active),
-      });
-
       return NextResponse.json({
         id: row.id,
         company_id: companyId,
@@ -997,12 +916,6 @@ export async function deleteLinearRiskSignificantActivitiesCatalogHandler(reques
     `);
     if (!rows[0]) return NextResponse.json({ error: 'Actividad no encontrada.' }, { status: 404 });
 
-    await prisma.$executeRaw(Prisma.sql`
-      UPDATE core.significant_activity
-      SET is_active = false, updated_at = now()
-      WHERE significant_activity_id = ${id}::uuid
-    `);
-
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error('Error deleting significant activity:', error);
@@ -1029,6 +942,10 @@ export async function getLinearRiskRisksBySignificantActivityHandler(request: Re
         r.name AS risk_name,
         r.description AS risk_description,
         r.risk_type AS risk_category,
+        cp.name AS probability_name,
+        cp.numeric_value AS probability_value,
+        ci.name AS impact_name,
+        ci.numeric_value AS impact_value,
         r.is_active,
         r.risk_emerging_source_id::text AS risk_emerging_source_id,
         r.risk_emerging_status_id::text AS risk_emerging_status_id,
@@ -1038,6 +955,8 @@ export async function getLinearRiskRisksBySignificantActivityHandler(request: Re
         r.catalog_probability_id::text AS catalog_probability_id
       FROM core.risk r
       JOIN core.map_elements_risk mer ON mer.risk_id = r.id
+      LEFT JOIN core.catalog_probability cp ON cp.catalog_probability_id = r.catalog_probability_id
+      LEFT JOIN core.catalog_impact ci ON ci.catalog_impact_id = r.catalog_impact_id
       WHERE mer.element_id = ${significantActivityId}::uuid
         AND COALESCE(r.is_active, true) = true
       ORDER BY r.name ASC
@@ -1051,6 +970,10 @@ export async function getLinearRiskRisksBySignificantActivityHandler(request: Re
         risk_name: row.risk_name || '',
         risk_description: row.risk_description || '',
         risk_category: row.risk_category || '',
+        probability_name: row.probability_name || null,
+        probability_value: row.probability_value == null ? null : Number(row.probability_value),
+        impact_name: row.impact_name || null,
+        impact_value: row.impact_value == null ? null : Number(row.impact_value),
         is_active: Boolean(row.is_active ?? true),
         risk_emerging_source_id: row.risk_emerging_source_id || null,
         risk_emerging_status_id: row.risk_emerging_status_id || null,
@@ -1764,15 +1687,6 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
       const desc = activity.activity_description;
       const materialityWeight = normalizeMaterialityWeight(item.materiality_weight);
 
-      await upsertSignificantActivityMirror({
-        id: activity.significant_activity_id,
-        companyId: selectedCompanyId,
-        code,
-        name,
-        description: desc,
-        isActive: true,
-      });
-
       const draftItem = await prisma.$queryRaw<{ risk_assessment_draft_item_id: bigint }[]>(Prisma.sql`
         INSERT INTO core.risk_assessment_draft_item (
           risk_assessment_draft_id, significant_activity_id, materiality_level, materiality_weight,
@@ -2142,6 +2056,84 @@ export async function getControlsByRiskHandler(request: Request) {
   } catch (error) {
     console.error('Error loading controls:', error);
     return NextResponse.json({ error: 'No se pudieron cargar los controles.' }, { status: 500 });
+  }
+}
+
+export async function postLinearRiskControlsByRiskHandler(request: Request) {
+  try {
+    const auth = await getAuthContext();
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = (await request.json()) as { riskIds?: string[] };
+    const riskIds = Array.isArray(body?.riskIds)
+      ? body.riskIds.map((id) => String(id || '').trim()).filter((id) => UUID_REGEX.test(id))
+      : [];
+
+    if (riskIds.length === 0) {
+      return NextResponse.json({ byRisk: {} });
+    }
+
+    const [mappedRows, allControls] = await Promise.all([
+      prisma.$queryRaw<Array<{
+        risk_id: string;
+        control_id: string;
+        name: string;
+        description: string | null;
+      }>>(Prisma.sql`
+        SELECT
+          mrc.risk_id::text AS risk_id,
+          c.id::text AS control_id,
+          c.name,
+          c.description
+        FROM core.map_risk_control mrc
+        JOIN core.control c ON c.id = mrc.control_id
+        WHERE mrc.risk_id = ANY(${riskIds}::uuid[])
+          AND c.status = 'active'
+        ORDER BY mrc.risk_id, c.name ASC
+      `),
+      prisma.$queryRaw<Array<{
+        control_id: string;
+        name: string;
+        description: string | null;
+      }>>(Prisma.sql`
+        SELECT
+          c.id::text AS control_id,
+          c.name,
+          c.description
+        FROM core.control c
+        WHERE c.status = 'active'
+        ORDER BY c.name ASC
+      `),
+    ]);
+
+    const byRisk: Record<string, Array<{ id: string; name: string; description: string | null }>> = {};
+    for (const riskId of riskIds) byRisk[riskId] = [];
+
+    for (const row of mappedRows) {
+      byRisk[row.risk_id] = byRisk[row.risk_id] || [];
+      byRisk[row.risk_id].push({
+        id: row.control_id,
+        name: row.name,
+        description: row.description,
+      });
+    }
+
+    const catalogFallback = allControls.map((control) => ({
+      id: control.control_id,
+      name: control.name,
+      description: control.description,
+    }));
+
+    for (const riskId of riskIds) {
+      if ((byRisk[riskId] || []).length === 0) {
+        byRisk[riskId] = catalogFallback;
+      }
+    }
+
+    return NextResponse.json({ byRisk });
+  } catch (error) {
+    console.error('Error loading linear controls by risk:', error);
+    return NextResponse.json({ error: 'No se pudo cargar controles por riesgo.' }, { status: 500 });
   }
 }
 

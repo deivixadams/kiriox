@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { ChevronDown, Plus, Sparkles, Trash2 } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Flame, Plus, Trash2 } from 'lucide-react';
 import styles from './SignificantActivitiesStep.module.css';
+import RiskHeatmapModal from './RiskHeatmapModal';
 
 type ScaleOption = {
   id: number;
@@ -45,27 +46,43 @@ type ActivityRiskOption = {
   risk_name: string;
   risk_description: string;
   risk_category: string;
+  catalog_impact_id?: string | null;
+  catalog_probability_id?: string | null;
+  probability_name?: string | null;
+  probability_value?: number | null;
+  impact_name?: string | null;
+  impact_value?: number | null;
+};
+
+type ControlItem = {
+  id: string;
+  name: string;
+  description?: string | null;
 };
 
 type Props = {
   items: SignificantActivityDraftItem[];
+  mitigationByRiskKey: Record<string, { controlId: string; coveragePct: number }>;
   probabilityCatalog: ScaleOption[];
   impactCatalog: ScaleOption[];
   catalogActivities: SignificantActivityCatalogOption[];
   loadingCatalog: boolean;
   onChange: (next: SignificantActivityDraftItem[]) => void;
+  onChangeMitigationByRiskKey: (next: Record<string, { controlId: string; coveragePct: number }>) => void;
   onOpenCreateActivity: (tempId: string) => void;
-  onOpenCreateRisk: (tempId: string, significantActivityId: string) => void;
   onBack: () => void;
   onNext: () => void | Promise<void>;
   onSave: () => void | Promise<void>;
-  onAIRefine: (payload: { text: string; field: string; promptCode: string; loadingKey?: string }) => Promise<string | null>;
-  aiLoadingFields: Record<string, boolean>;
 };
 
 const round6 = (value: number) => Math.round(value * 1_000_000) / 1_000_000;
 
 function computeInherentRisk(probability: number | null, impact: number | null) {
+  if (probability == null || impact == null) return null;
+  return round6(probability * impact);
+}
+
+function computeRiskValue(probability: number | null | undefined, impact: number | null | undefined) {
   if (probability == null || impact == null) return null;
   return round6(probability * impact);
 }
@@ -111,25 +128,26 @@ function buildEmpty(index: number): SignificantActivityDraftItem {
 
 export default function SignificantActivitiesStep({
   items,
+  mitigationByRiskKey = {},
   probabilityCatalog,
   impactCatalog,
   catalogActivities,
   loadingCatalog,
   onChange,
+  onChangeMitigationByRiskKey,
   onOpenCreateActivity,
-  onOpenCreateRisk,
   onBack,
   onNext,
   onSave,
-  onAIRefine,
-  aiLoadingFields,
 }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [comboSearchByRow, setComboSearchByRow] = useState<Record<string, string>>({});
   const [comboOpenByRow, setComboOpenByRow] = useState<Record<string, boolean>>({});
-  const [riskListOpenByRow, setRiskListOpenByRow] = useState<Record<string, boolean>>({});
   const [riskOptionsByActivity, setRiskOptionsByActivity] = useState<Record<string, ActivityRiskOption[]>>({});
   const [riskOptionsLoadingByActivity, setRiskOptionsLoadingByActivity] = useState<Record<string, boolean>>({});
+  const [riskOptionsLoadedByActivity, setRiskOptionsLoadedByActivity] = useState<Record<string, boolean>>({});
+  const [controlsByRisk, setControlsByRisk] = useState<Record<string, ControlItem[]>>({});
+  const [isHeatmapOpen, setIsHeatmapOpen] = useState(false);
 
   const normalizedItems = useMemo(() => buildCanonicalItems(items), [items]);
 
@@ -138,6 +156,18 @@ export default function SignificantActivitiesStep({
     catalogActivities.forEach((item) => map.set(item.id, item));
     return map;
   }, [catalogActivities]);
+
+  const probabilityById = useMemo(() => {
+    const map = new Map<string, number>();
+    probabilityCatalog.forEach((item) => map.set(String(item.id), Number(item.baseValue)));
+    return map;
+  }, [probabilityCatalog]);
+
+  const impactById = useMemo(() => {
+    const map = new Map<string, number>();
+    impactCatalog.forEach((item) => map.set(String(item.id), Number(item.baseValue)));
+    return map;
+  }, [impactCatalog]);
 
   const getFilteredCatalog = (tempId: string) => {
     const term = (comboSearchByRow[tempId] || '').trim().toLowerCase();
@@ -165,21 +195,6 @@ export default function SignificantActivitiesStep({
     if (left !== right) {
       onChange(normalizedItems);
     }
-  };
-
-  const setField = <K extends keyof SignificantActivityDraftItem>(tempId: string, field: K, value: SignificantActivityDraftItem[K]) => {
-    onChange(normalizedItems.map((item) => {
-      if (item.tempId !== tempId) return item;
-      const next = { ...item, [field]: value };
-      if (field === 'inherent_probability' || field === 'inherent_impact') {
-        const probability = field === 'inherent_probability' ? (value as number | null) : next.inherent_probability;
-        const impact = field === 'inherent_impact' ? (value as number | null) : next.inherent_impact;
-        const score = computeInherentRisk(probability, impact);
-        next.inherent_risk_score = score;
-        next.materiality_level = deriveMaterialityLevel(score);
-      }
-      return next;
-    }));
   };
 
   const setSelectedActivity = (tempId: string, significantActivityId: string) => {
@@ -240,22 +255,10 @@ export default function SignificantActivitiesStep({
       seenActivities.set(id, idx + 1);
     }
 
-    const invalidIndex = normalizedItems.findIndex((item) => {
-      const missingRiskText = !item.inherent_risk_description.trim() && !item.inherent_risk_catalog_id;
-      const missingProb = item.inherent_probability === null || Number.isNaN(Number(item.inherent_probability));
-      const missingImpact = item.inherent_impact === null || Number.isNaN(Number(item.inherent_impact));
-      return !item.significant_activity_id || missingRiskText || missingProb || missingImpact;
-    });
+    const invalidIndex = normalizedItems.findIndex((item) => !item.significant_activity_id);
 
     if (invalidIndex >= 0) {
-      const item = normalizedItems[invalidIndex];
-      const missing: string[] = [];
-      if (!item.significant_activity_id) missing.push('actividad');
-      if (!item.inherent_risk_description.trim() && !item.inherent_risk_catalog_id) missing.push('riesgo inherente');
-      if (item.inherent_probability === null || Number.isNaN(Number(item.inherent_probability))) missing.push('probabilidad');
-      if (item.inherent_impact === null || Number.isNaN(Number(item.inherent_impact))) missing.push('impacto');
-      const detail = missing.length > 0 ? missing.join(', ') : 'datos requeridos';
-      setError(`Fila ${invalidIndex + 1}: completa ${detail}.`);
+      setError(`Fila ${invalidIndex + 1}: completa actividad.`);
       return false;
     }
 
@@ -283,20 +286,9 @@ export default function SignificantActivitiesStep({
     }
   };
 
-  const handleAI = async (tempId: string, field: 'inherent_risk_description' | 'materiality_justification', promptCode: string) => {
-    const item = normalizedItems.find((row) => row.tempId === tempId);
-    if (!item) return;
-    const currentText = String(item[field] ?? '');
-    const refined = await onAIRefine({ text: currentText, field, promptCode, loadingKey: `${tempId}.${field}` });
-    if (refined && refined.trim()) {
-      setField(tempId, field, refined.trim());
-    }
-    setError(null);
-  };
-
-  const ensureRisksForActivity = async (significantActivityId: string) => {
+  const ensureRisksForActivity = useCallback(async (significantActivityId: string, force = false) => {
     if (!significantActivityId) return;
-    if (riskOptionsByActivity[significantActivityId]) return;
+    if (!force && riskOptionsLoadedByActivity[significantActivityId]) return;
     setRiskOptionsLoadingByActivity((prev) => ({ ...prev, [significantActivityId]: true }));
     try {
       const res = await fetch(
@@ -308,33 +300,160 @@ export default function SignificantActivitiesStep({
       setRiskOptionsByActivity((prev) => ({ ...prev, [significantActivityId]: rows }));
     } finally {
       setRiskOptionsLoadingByActivity((prev) => ({ ...prev, [significantActivityId]: false }));
+      setRiskOptionsLoadedByActivity((prev) => ({ ...prev, [significantActivityId]: true }));
     }
-  };
+  }, [riskOptionsLoadedByActivity]);
 
-  const openRiskList = async (item: SignificantActivityDraftItem) => {
-    if (!item.significant_activity_id) return;
-    setRiskListOpenByRow((prev) => ({ ...prev, [item.tempId]: true }));
-    try {
-      await ensureRisksForActivity(item.significant_activity_id);
-    } catch {
-      setError('No se pudieron cargar los riesgos asociados a la actividad seleccionada.');
-    }
-  };
-
-  const selectRiskForRow = (tempId: string, risk: ActivityRiskOption) => {
-    onChange(
-      normalizedItems.map((item) =>
-        item.tempId === tempId
-          ? {
-              ...item,
-              inherent_risk_catalog_id: risk.id,
-              inherent_risk_description: risk.risk_description || risk.risk_name || '',
-            }
-          : item
+  useEffect(() => {
+    const ids = Array.from(
+      new Set(
+        normalizedItems
+          .map((item) => item.significant_activity_id || '')
+          .filter((id): id is string => Boolean(id))
       )
     );
-    setRiskListOpenByRow((prev) => ({ ...prev, [tempId]: false }));
+
+    ids.forEach((id) => {
+      if (riskOptionsLoadedByActivity[id] || riskOptionsLoadingByActivity[id]) return;
+      void ensureRisksForActivity(id);
+    });
+  }, [normalizedItems, riskOptionsLoadedByActivity, riskOptionsLoadingByActivity, ensureRisksForActivity]);
+
+  useEffect(() => {
+    const handleFocusRefresh = () => {
+      const ids = Array.from(
+        new Set(
+          normalizedItems
+            .map((item) => item.significant_activity_id || '')
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      ids.forEach((id) => {
+        void ensureRisksForActivity(id, true);
+      });
+    };
+
+    window.addEventListener('focus', handleFocusRefresh);
+    return () => window.removeEventListener('focus', handleFocusRefresh);
+  }, [normalizedItems, ensureRisksForActivity]);
+
+  useEffect(() => {
+    const riskIds = Array.from(
+      new Set(
+        Object.values(riskOptionsByActivity)
+          .flat()
+          .map((risk) => risk.id)
+          .filter(Boolean)
+      )
+    );
+
+    if (riskIds.length === 0) {
+      setControlsByRisk({});
+      return;
+    }
+
+    const loadControls = async () => {
+      const res = await fetch('/api/linear-risk/catalog/controls-by-risk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ riskIds }),
+      });
+      if (!res.ok) {
+        setControlsByRisk({});
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      setControlsByRisk(data?.byRisk || {});
+    };
+
+    void loadControls();
+  }, [riskOptionsByActivity]);
+
+  const riskKey = (activityId: string, riskId: string) => `${activityId}::${riskId}`;
+
+  const getMitigation = (activityId: string, riskId: string) =>
+    (mitigationByRiskKey || {})[riskKey(activityId, riskId)] || { controlId: '', coveragePct: 0 };
+
+  const setMitigation = (activityId: string, riskId: string, patch: Partial<{ controlId: string; coveragePct: number }>) => {
+    const key = riskKey(activityId, riskId);
+    onChangeMitigationByRiskKey?.((() => {
+      const prev = mitigationByRiskKey || {};
+      const current = prev[key] || { controlId: '', coveragePct: 0 };
+      const nextCoverage = Number.isFinite(Number(patch.coveragePct))
+        ? Math.min(100, Math.max(0, Math.round(Number(patch.coveragePct))))
+        : current.coveragePct;
+      return {
+        ...prev,
+        [key]: {
+          controlId: patch.controlId !== undefined ? patch.controlId : current.controlId,
+          coveragePct: nextCoverage,
+        },
+      };
+    })());
+  };
+
+  const heatmapRows = useMemo(() => {
+    const rows: Array<{
+      rowId: string;
+      elementName: string | null;
+      customElementName: string | null;
+      riskName: string | null;
+      probability: number | null;
+      impact: number | null;
+      baseScore: number | null;
+      riskScore: number | null;
+      mitigatingControlName: string | null;
+      mitigationLevel: string | null;
+      inherentScale: null;
+      residualScale: null;
+    }> = [];
+
+    normalizedItems.forEach((item) => {
+      const activityId = item.significant_activity_id;
+      if (!activityId) return;
+      const risks = riskOptionsByActivity[activityId] || [];
+      risks.forEach((risk) => {
+        const probabilityValue =
+          risk.probability_value != null
+            ? Number(risk.probability_value)
+            : (risk.catalog_probability_id ? probabilityById.get(String(risk.catalog_probability_id)) ?? null : null);
+        const impactValue =
+          risk.impact_value != null
+            ? Number(risk.impact_value)
+            : (risk.catalog_impact_id ? impactById.get(String(risk.catalog_impact_id)) ?? null : null);
+        const value = computeRiskValue(probabilityValue, impactValue);
+        const mitigation = getMitigation(activityId, risk.id);
+        const residualValue = value == null ? null : Number((value * (1 - mitigation.coveragePct / 100)).toFixed(6));
+        const selectedControl = (controlsByRisk[risk.id] || []).find((c) => c.id === mitigation.controlId) || null;
+
+        rows.push({
+          rowId: `${activityId}::${risk.id}`,
+          elementName: item.activity_name || null,
+          customElementName: null,
+          riskName: risk.risk_name || null,
+          probability: probabilityValue,
+          impact: impactValue,
+          baseScore: value,
+          riskScore: residualValue,
+          mitigatingControlName: selectedControl?.name || null,
+          mitigationLevel: mitigation.coveragePct > 0 ? 'PARCIAL' : null,
+          inherentScale: null,
+          residualScale: null,
+        });
+      });
+    });
+
+    return rows;
+  }, [normalizedItems, riskOptionsByActivity, probabilityById, impactById, mitigationByRiskKey, controlsByRisk]);
+
+  const handleHeatmapClick = () => {
+    if (heatmapRows.length === 0) {
+      setError('No hay filas para mostrar en el mapa de calor.');
+      return;
+    }
     setError(null);
+    setIsHeatmapOpen(true);
   };
 
   return (
@@ -461,152 +580,93 @@ export default function SignificantActivitiesStep({
               />
             </label>
 
-            <div className={styles.gridTwo}>
-              <label className={styles.field}>
-                <div className={styles.fieldHeader}>
-                  <button
-                    type="button"
-                    className={styles.labelButton}
-                    onClick={() => {
-                      if (!item.significant_activity_id) {
-                        setError('Selecciona primero una actividad significativa para crear un riesgo.');
-                        return;
-                      }
-                      onOpenCreateRisk(item.tempId, item.significant_activity_id);
-                    }}
-                    title="Clic para crear nuevo riesgo de la actividad seleccionada"
-                  >
-                    Riesgo inherente narrativo
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.aiButton}
-                    onClick={() => handleAI(item.tempId, 'inherent_risk_description', 'LINEAR_INHERENT_RISK')}
-                    disabled={!!aiLoadingFields[`${item.tempId}.inherent_risk_description`]}
-                  >
-                    <Sparkles size={14} />
-                    IA
-                  </button>
+            <div className={styles.associatedRiskCard}>
+              <div className={styles.associatedRiskTitle}>Riesgos asociados a esta actividad</div>
+              {!item.significant_activity_id ? (
+                <div className={styles.associatedRiskEmpty}>Selecciona una actividad para visualizar sus riesgos asociados.</div>
+              ) : riskOptionsLoadingByActivity[item.significant_activity_id] ? (
+                <div className={styles.associatedRiskEmpty}>Cargando riesgos asociados...</div>
+              ) : (riskOptionsByActivity[item.significant_activity_id] || []).length === 0 ? (
+                <div className={styles.associatedRiskEmpty}>No hay riesgos asociados a esta actividad.</div>
+              ) : (
+                <div className={styles.associatedRiskTableWrap}>
+                  <table className={styles.associatedRiskTable}>
+                    <thead>
+                      <tr>
+                        <th>Título</th>
+                        <th>Descripción</th>
+                        <th>Impacto</th>
+                        <th>Probabilidad</th>
+                        <th>Valor</th>
+                        <th>Control mitigante</th>
+                        <th>% Cobertura</th>
+                        <th>Riesgo residual</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const activityId = item.significant_activity_id as string;
+                        return (riskOptionsByActivity[activityId] || []).map((risk) => {
+                        const probabilityValue =
+                          risk.probability_value != null
+                            ? Number(risk.probability_value)
+                            : (risk.catalog_probability_id ? probabilityById.get(String(risk.catalog_probability_id)) ?? null : null);
+                        const impactValue =
+                          risk.impact_value != null
+                            ? Number(risk.impact_value)
+                            : (risk.catalog_impact_id ? impactById.get(String(risk.catalog_impact_id)) ?? null : null);
+                        const value = computeRiskValue(probabilityValue, impactValue);
+                        const mitigation = getMitigation(activityId, risk.id);
+                        const residualValue = value == null ? null : Number((value * (1 - mitigation.coveragePct / 100)).toFixed(6));
+                        const controlOptions = controlsByRisk[risk.id] || [];
+                        return (
+                          <tr key={risk.id}>
+                            <td>{risk.risk_name || '—'}</td>
+                            <td className={styles.associatedRiskDescription}>{risk.risk_description || '—'}</td>
+                            <td>{impactValue == null ? '—' : impactValue.toFixed(2)}</td>
+                            <td>{probabilityValue == null ? '—' : probabilityValue.toFixed(2)}</td>
+                            <td>{value == null ? '—' : value.toFixed(4)}</td>
+                            <td>
+                              <select
+                                className={styles.associatedRiskSelect}
+                                value={mitigation.controlId}
+                                onChange={(event) =>
+                                  setMitigation(activityId, risk.id, { controlId: event.target.value })
+                                }
+                              >
+                                <option value="">Seleccione...</option>
+                                {controlOptions.map((control) => (
+                                  <option key={`${risk.id}-${control.id}`} value={control.id}>
+                                    {control.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                className={styles.associatedRiskCoverage}
+                                value={mitigation.coveragePct}
+                                onChange={(event) =>
+                                  setMitigation(activityId, risk.id, {
+                                    coveragePct: Number(event.target.value),
+                                  })
+                                }
+                              />
+                            </td>
+                            <td>{residualValue == null ? '—' : residualValue.toFixed(4)}</td>
+                          </tr>
+                        );
+                      });
+                      })()}
+                    </tbody>
+                  </table>
                 </div>
-                <textarea
-                  className={styles.textarea}
-                  rows={4}
-                  value={item.inherent_risk_description}
-                  onChange={(e) => setField(item.tempId, 'inherent_risk_description', e.target.value)}
-                  onFocus={() => openRiskList(item)}
-                  onClick={() => openRiskList(item)}
-                  placeholder="Describe el riesgo inherente asociado a la actividad"
-                />
-                {item.significant_activity_id && riskListOpenByRow[item.tempId] && (
-                  <div className={styles.riskListBox}>
-                    <div className={styles.riskListHeader}>
-                      <span>Nombre</span>
-                      <span>Descripción</span>
-                      <span>Categoría</span>
-                    </div>
-                    {riskOptionsLoadingByActivity[item.significant_activity_id] ? (
-                      <div className={styles.riskListEmpty}>Cargando riesgos...</div>
-                    ) : (riskOptionsByActivity[item.significant_activity_id] || []).length === 0 ? (
-                      <div className={styles.riskListEmpty}>No hay riesgos asociados a esta actividad.</div>
-                    ) : (
-                      (riskOptionsByActivity[item.significant_activity_id] || []).map((risk) => (
-                        <button
-                          key={risk.id}
-                          type="button"
-                          className={styles.riskListRow}
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            selectRiskForRow(item.tempId, risk);
-                          }}
-                        >
-                          <span>{risk.risk_name}</span>
-                          <span>{risk.risk_description}</span>
-                          <span>{risk.risk_category || '—'}</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </label>
-
-              <label className={styles.field}>
-                <div className={styles.fieldHeader}>
-                  <span>Justificación de materialidad</span>
-                  <button
-                    type="button"
-                    className={styles.aiButton}
-                    onClick={() => handleAI(item.tempId, 'materiality_justification', 'LINEAR_MATERIALITY_JUSTIFICATION')}
-                    disabled={!!aiLoadingFields[`${item.tempId}.materiality_justification`]}
-                  >
-                    <Sparkles size={14} />
-                    IA
-                  </button>
-                </div>
-                <textarea
-                  className={styles.textarea}
-                  rows={4}
-                  value={item.materiality_justification}
-                  onChange={(e) => setField(item.tempId, 'materiality_justification', e.target.value)}
-                  placeholder="Justifica por qué esta actividad tiene este nivel de materialidad"
-                />
-              </label>
+              )}
             </div>
 
-            <div className={styles.gridRisk}>
-              <label className={styles.field}>
-                <span>Impacto</span>
-                <select
-                  className={styles.select}
-                  value={item.inherent_impact ?? ''}
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    setField(item.tempId, 'inherent_impact', Number.isFinite(n) ? n : null);
-                  }}
-                >
-                  <option value="">Seleccione...</option>
-                  {impactCatalog.map((option) => (
-                    <option key={option.id} value={option.baseValue}>
-                      {option.name} ({option.baseValue})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={styles.field}>
-                <span>Probabilidad</span>
-                <select
-                  className={styles.select}
-                  value={item.inherent_probability ?? ''}
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    setField(item.tempId, 'inherent_probability', Number.isFinite(n) ? n : null);
-                  }}
-                >
-                  <option value="">Seleccione...</option>
-                  {probabilityCatalog.map((option) => (
-                    <option key={option.id} value={option.baseValue}>
-                      {option.name} ({option.baseValue})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={styles.field}>
-                <span>Nivel de materialidad</span>
-                <input
-                  className={styles.input}
-                  value={item.materiality_level.toUpperCase()}
-                  readOnly
-                />
-              </label>
-              <label className={styles.field}>
-                <span>Riesgo inherente calculado</span>
-                <input
-                  className={styles.input}
-                  value={item.inherent_risk_score == null ? '' : item.inherent_risk_score.toFixed(4)}
-                  readOnly
-                  placeholder="f(probabilidad, impacto)"
-                />
-              </label>
-            </div>
           </div>
         ))}
       </div>
@@ -623,9 +683,18 @@ export default function SignificantActivitiesStep({
         <div className={styles.footerRight}>
           <button className={styles.backButton} onClick={onBack}>Volver</button>
           <button className={styles.ghostButton} onClick={handleSave}>Guardar</button>
+          <button className={styles.heatmapButton} onClick={handleHeatmapClick} type="button">
+            <Flame size={16} /> Mapa de calor
+          </button>
           <button className={styles.primaryButton} onClick={handleNext}>Continuar</button>
         </div>
       </div>
+
+      <RiskHeatmapModal
+        open={isHeatmapOpen}
+        rows={heatmapRows}
+        onClose={() => setIsHeatmapOpen(false)}
+      />
     </div>
   );
 }
