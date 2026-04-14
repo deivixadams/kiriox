@@ -302,8 +302,15 @@ export default function RiskCatalogNewPage() {
             <X size={16} />
           </button>
           <div className={styles.header}>
-            <h1 className={styles.title}>Nuevo riesgo</h1>
+            <h1 className={styles.title}>{form.id ? 'Editar riesgo' : 'Nuevo riesgo'}</h1>
             <p className={styles.subtitle}>Registra riesgos del catálogo para la actividad significativa seleccionada.</p>
+            {riskRows.length > 0 && (
+              <p className={styles.subtitle} style={{ marginTop: 4, fontWeight: 500, opacity: 0.85 }}>
+                {cursor >= 0
+                  ? `Registro ${cursor + 1} de ${riskRows.length}`
+                  : `${riskRows.length} registro(s) existente(s) — Modo nuevo`}
+              </p>
+            )}
           </div>
         </div>
 
@@ -316,6 +323,15 @@ export default function RiskCatalogNewPage() {
                 value={activityMeta?.activity_name || ''}
                 readOnly
                 placeholder="Actividad seleccionada desde actividades-claves"
+              />
+            </label>
+            <label className={styles.field}>
+              <span>Código del riesgo</span>
+              <input
+                className={styles.input}
+                value={riskRows[cursor]?.risk_code || '(se genera al guardar)'}
+                readOnly
+                style={{ fontFamily: 'monospace', opacity: form.id ? 1 : 0.5 }}
               />
             </label>
           </div>
