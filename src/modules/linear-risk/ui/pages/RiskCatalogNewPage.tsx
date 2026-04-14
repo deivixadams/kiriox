@@ -21,10 +21,7 @@ type RiskRow = {
 
 type ActivityMeta = {
   id: string;
-  company_id?: string;
-  activity_code: string;
   activity_name: string;
-  activity_description: string | null;
 };
 
 export default function RiskCatalogNewPage() {
@@ -35,7 +32,6 @@ export default function RiskCatalogNewPage() {
   const draft = searchParams.get('draft') || '';
   const rowTempId = searchParams.get('row_temp_id') || '';
   const significantActivityId = searchParams.get('significant_activity_id') || '';
-  const companyId = searchParams.get('company_id') || '';
 
   const [riskRows, setRiskRows] = useState<RiskRow[]>([]);
   const [cursor, setCursor] = useState<number>(-1);
@@ -43,11 +39,6 @@ export default function RiskCatalogNewPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activityMeta, setActivityMeta] = useState<ActivityMeta | null>(null);
-  const [activityOptions, setActivityOptions] = useState<ActivityMeta[]>([]);
-  const [activityOptionsLoading, setActivityOptionsLoading] = useState(false);
-  const [activitySearch, setActivitySearch] = useState('');
-  const [activityComboOpen, setActivityComboOpen] = useState(false);
-  const [allowAllActivities, setAllowAllActivities] = useState(!significantActivityId);
   const [aiLoading, setAiLoading] = useState(false);
   const [classifications, setClassifications] = useState<{
     risk_emerging_source: any[];
@@ -64,7 +55,6 @@ export default function RiskCatalogNewPage() {
   const [form, setForm] = useState({
     id: '',
     significant_activity_id: significantActivityId,
-    risk_code: '',
     risk_name: '',
     risk_description: '',
     risk_category: '',
@@ -76,6 +66,12 @@ export default function RiskCatalogNewPage() {
   });
 
   React.useEffect(() => {
+    if (!significantActivityId) {
+      setError('Esta pantalla requiere una actividad seleccionada desde actividades-claves.');
+    }
+  }, [significantActivityId]);
+
+  React.useEffect(() => {
     fetch('/api/linear-risk/catalog/risk-classifications')
       .then(res => res.json())
       .then(data => {
@@ -85,23 +81,12 @@ export default function RiskCatalogNewPage() {
   }, []);
 
   const canNavigate = useMemo(() => riskRows.length > 0, [riskRows.length]);
-  const filteredActivityOptions = useMemo(() => {
-    const scoped = allowAllActivities
-      ? activityOptions
-      : activityOptions.filter((opt) => opt.id === significantActivityId);
-    const term = activitySearch.trim().toLowerCase();
-    if (!term) return scoped;
-    return scoped.filter((opt) =>
-      `${opt.activity_name} ${opt.activity_code} ${opt.activity_description || ''}`.toLowerCase().includes(term)
-    );
-  }, [activityOptions, allowAllActivities, significantActivityId, activitySearch]);
 
   const applyRow = React.useCallback((row: RiskRow, idx: number) => {
     setCursor(idx);
     setForm({
       id: row.id,
       significant_activity_id: row.significant_activity_id || '',
-      risk_code: row.risk_code,
       risk_name: row.risk_name,
       risk_description: row.risk_description,
       risk_category: row.risk_category,
@@ -155,35 +140,9 @@ export default function RiskCatalogNewPage() {
     }
     setActivityMeta({
       id: String(row.id),
-      company_id: row.company_id ? String(row.company_id) : undefined,
-      activity_code: String(row.activity_code || ''),
       activity_name: String(row.activity_name || ''),
-      activity_description: row.activity_description ? String(row.activity_description) : null,
     });
   }, []);
-
-  const loadActivityOptions = React.useCallback(async () => {
-    setActivityOptionsLoading(true);
-    try {
-      const query = companyId
-        ? `/api/linear-risk/catalog/significant-activities?companyId=${encodeURIComponent(companyId)}`
-        : '/api/linear-risk/catalog/significant-activities?fallbackAll=1';
-      const res = await fetch(query, { cache: 'no-store' });
-      const data = await res.json().catch(() => ({}));
-      const rows = Array.isArray(data?.items) ? data.items : [];
-      setActivityOptions(
-        rows.map((row: any) => ({
-          id: String(row.id),
-          company_id: row.company_id ? String(row.company_id) : undefined,
-          activity_code: String(row.activity_code || ''),
-          activity_name: String(row.activity_name || ''),
-          activity_description: row.activity_description ? String(row.activity_description) : null,
-        }))
-      );
-    } finally {
-      setActivityOptionsLoading(false);
-    }
-  }, [companyId]);
 
   React.useEffect(() => {
     if (!form.significant_activity_id) return;
@@ -191,19 +150,13 @@ export default function RiskCatalogNewPage() {
     loadActivityMeta(form.significant_activity_id);
   }, [form.significant_activity_id, form.id, loadRows, loadActivityMeta]);
 
-  React.useEffect(() => {
-    loadActivityOptions();
-  }, [loadActivityOptions]);
-
   const clearForNew = () => {
     setCursor(-1);
     setError(null);
     setSuccess(null);
-    setAllowAllActivities(true);
     setForm((prev) => ({
       ...prev,
       id: '',
-      risk_code: '',
       risk_name: '',
       risk_description: '',
       risk_category: '',
@@ -213,27 +166,6 @@ export default function RiskCatalogNewPage() {
       risk_factor_id: null,
       operational_risk_loss_event_type_id: null,
     }));
-  };
-
-  const selectActivity = (activity: ActivityMeta) => {
-    setForm((prev) => ({
-      ...prev,
-      id: '',
-      significant_activity_id: activity.id,
-      risk_code: '',
-      risk_name: '',
-      risk_description: '',
-      risk_category: '',
-      is_active: true,
-      risk_emerging_source_id: null,
-      risk_emerging_status_id: null,
-      risk_factor_id: null,
-      operational_risk_loss_event_type_id: null,
-    }));
-    setActivityMeta(activity);
-    setActivitySearch('');
-    setActivityComboOpen(false);
-    setCursor(-1);
   };
 
   const navigate = (target: 'first' | 'prev' | 'next' | 'last') => {
@@ -301,10 +233,6 @@ export default function RiskCatalogNewPage() {
       setError('significant_activity_id es obligatorio.');
       return;
     }
-    if (!form.risk_code.trim()) {
-      setError('risk_code es obligatorio.');
-      return;
-    }
     if (!form.risk_name.trim()) {
       setError('risk_name es obligatorio.');
       return;
@@ -320,7 +248,6 @@ export default function RiskCatalogNewPage() {
         body: JSON.stringify({
           id: form.id || undefined,
           significant_activity_id: form.significant_activity_id,
-          risk_code: form.risk_code.trim(),
           risk_name: form.risk_name.trim(),
           risk_description: form.risk_description.trim() || null,
           risk_category: form.risk_category.trim() || null,
@@ -398,85 +325,11 @@ export default function RiskCatalogNewPage() {
           <div className={styles.grid}>
             <label className={styles.field}>
               <span>Actividad significativa</span>
-              <div
-                className={styles.comboBox}
-                onFocus={() => setActivityComboOpen(true)}
-                onBlur={() => {
-                  window.setTimeout(() => {
-                    setActivityComboOpen(false);
-                    setActivitySearch('');
-                  }, 120);
-                }}
-              >
-                <input
-                  className={styles.comboInput}
-                  value={activitySearch || activityMeta?.activity_name || ''}
-                  onChange={(e) => {
-                    setActivitySearch(e.target.value);
-                    setActivityComboOpen(true);
-                  }}
-                  onClick={() => setActivityComboOpen(true)}
-                  placeholder={
-                    activityOptionsLoading
-                      ? 'Cargando actividades...'
-                      : allowAllActivities
-                        ? 'Seleccione actividad...'
-                        : 'Actividad del contexto actual'
-                  }
-                />
-                {activityComboOpen && (
-                  <div className={styles.comboList}>
-                    {filteredActivityOptions.length === 0 ? (
-                      <div className={styles.comboEmpty}>Sin actividades disponibles.</div>
-                    ) : (
-                      filteredActivityOptions.map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          className={styles.comboOption}
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            selectActivity(opt);
-                          }}
-                        >
-                          {opt.activity_name}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            </label>
-            <label className={styles.field}>
-              <span>Código de actividad</span>
               <input
-                className={styles.input}
-                value={activityMeta?.activity_code || ''}
+                className={`${styles.input} ${styles.immutableActivity}`}
+                value={activityMeta?.activity_name || ''}
                 readOnly
-                placeholder="Código de la actividad"
-              />
-            </label>
-          </div>
-
-          <label className={styles.field}>
-            <span>Descripción de la actividad</span>
-            <textarea
-              className={styles.textarea}
-              rows={3}
-              value={activityMeta?.activity_description || ''}
-              readOnly
-              placeholder="Descripción de la actividad seleccionada"
-            />
-          </label>
-
-          <div className={styles.grid}>
-            <label className={styles.field}>
-              <span>Código de riesgo</span>
-              <input
-                className={styles.input}
-                value={form.risk_code}
-                onChange={(e) => setForm((prev) => ({ ...prev, risk_code: e.target.value }))}
-                placeholder="Código del riesgo"
+                placeholder="Actividad seleccionada desde actividades-claves"
               />
             </label>
           </div>
@@ -611,9 +464,6 @@ export default function RiskCatalogNewPage() {
             <div className={styles.actionsRight}>
               <button type="button" className={styles.secondaryButton} onClick={clearForNew} disabled={saving}>
                 Nuevo
-              </button>
-              <button type="button" className={styles.secondaryButton} onClick={goBack}>
-                Volver al wizard
               </button>
               <button type="submit" className={styles.primaryButton} disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar riesgo'}

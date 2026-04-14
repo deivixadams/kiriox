@@ -101,6 +101,11 @@
   pointer-events: auto;
 }
 
+.immutableActivity {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
 .comboBox {
   position: relative;
   display: flex;

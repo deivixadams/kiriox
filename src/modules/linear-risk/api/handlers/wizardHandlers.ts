@@ -143,6 +143,18 @@ function mapRiskLevel(score: number) {
   return 'bajo';
 }
 
+function buildInternalRiskCode(seedName: string) {
+  const seed = seedName
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 24) || 'RISK';
+  const stamp = Date.now().toString(36).toUpperCase();
+  const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `RSK_${seed}_${stamp}${rnd}`;
+}
+
 async function getRiskScaleBand(value: number, appliesTo: 'INHERENT' | 'RESIDUAL') {
   const rows = await prisma.$queryRaw<RiskScaleRow[]>(
     Prisma.sql`
@@ -1119,7 +1131,7 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
       operational_risk_loss_event_type_id?: string | null;
     };
     const significantActivityId = String(body.significant_activity_id || '').trim();
-    const riskCode = String(body.risk_code || '').trim();
+    const inputRiskCode = String(body.risk_code || '').trim();
     const riskName = String(body.risk_name || '').trim();
     const riskDescription = typeof body.risk_description === 'string' ? body.risk_description.trim() : '';
     const riskCategory = typeof body.risk_category === 'string' ? body.risk_category.trim() : '';
@@ -1128,8 +1140,8 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
     if (!UUID_REGEX.test(significantActivityId)) {
       return NextResponse.json({ error: 'significant_activity_id es obligatorio y debe ser UUID válido.' }, { status: 400 });
     }
-    if (!riskCode) return NextResponse.json({ error: 'risk_code es obligatorio.' }, { status: 400 });
     if (!riskName) return NextResponse.json({ error: 'risk_name es obligatorio.' }, { status: 400 });
+    const riskCode = inputRiskCode || buildInternalRiskCode(riskName);
 
     const codeResult = await prisma.$queryRaw<Array<{ codigo_reino: string }>>(Prisma.sql`
       SELECT mcr.reino_id::text as codigo_reino 
@@ -1148,7 +1160,6 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
           name,
           risk_type,
           description,
-          status,
           risk_layer_id,
           risk_origen,
           codigo_reino,
@@ -1165,7 +1176,6 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
           ${riskName},
           ${riskCategory || 'linear'},
           ${riskDescription || null},
-          'active',
           2,
           'LINEAR_WIZARD',
           ${codigoReino},
@@ -1244,7 +1254,7 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
     };
     const id = String(body.id || '').trim();
     const significantActivityId = String(body.significant_activity_id || '').trim();
-    const riskCode = String(body.risk_code || '').trim();
+    const inputRiskCode = String(body.risk_code || '').trim();
     const riskName = String(body.risk_name || '').trim();
     const riskDescription = typeof body.risk_description === 'string' ? body.risk_description.trim() : '';
     const riskCategory = typeof body.risk_category === 'string' ? body.risk_category.trim() : '';
@@ -1254,14 +1264,13 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
     if (!UUID_REGEX.test(significantActivityId)) {
       return NextResponse.json({ error: 'significant_activity_id es obligatorio y debe ser UUID válido.' }, { status: 400 });
     }
-    if (!riskCode) return NextResponse.json({ error: 'risk_code es obligatorio.' }, { status: 400 });
     if (!riskName) return NextResponse.json({ error: 'risk_name es obligatorio.' }, { status: 400 });
 
     const rows = await prisma.$queryRaw<RiskCatalogByActivityRow[]>(Prisma.sql`
       WITH updated_risk AS (
         UPDATE core.risk
         SET
-          code = ${riskCode},
+          code = COALESCE(NULLIF(${inputRiskCode}, ''), code),
           name = ${riskName},
           description = ${riskDescription || null},
           risk_type = ${riskCategory || 'linear'},
@@ -1986,6 +1995,5 @@ export async function postLinearRiskDraftReportHandler(request: Request, { param
     return NextResponse.json({ error: 'No se pudo generar el informe' }, { status: 500 });
   }
 }
-
 
 

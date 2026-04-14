@@ -296,3 +296,6 @@ Siempre que necesites crear archivos temporales, bitácoras, respaldos o artefac
 
 # Note
 Any time you make a change on db update prisma
+
+Si necesitas dejar bitácora dejarla en 
+D:\_KIRIOX\xdata y documentación en: D:\_KIRIOX\xdata\docs
