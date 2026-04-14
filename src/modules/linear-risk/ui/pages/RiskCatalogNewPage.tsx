@@ -146,9 +146,10 @@ export default function RiskCatalogNewPage() {
 
   React.useEffect(() => {
     if (!form.significant_activity_id) return;
-    loadRows(form.significant_activity_id, form.id || undefined, false);
+    loadRows(form.significant_activity_id);
     loadActivityMeta(form.significant_activity_id);
-  }, [form.significant_activity_id, form.id, loadRows, loadActivityMeta]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.significant_activity_id]);
 
   const clearForNew = () => {
     setCursor(-1);
