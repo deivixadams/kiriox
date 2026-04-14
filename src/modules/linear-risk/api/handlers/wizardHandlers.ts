@@ -1997,3 +1997,310 @@ export async function postLinearRiskDraftReportHandler(request: Request, { param
 }
 
 
+// ─── Control Handlers ────────────────────────────────────────────────
+
+function buildInternalControlCode(seedName: string) {
+  const seed = seedName
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 24) || 'CTRL';
+  const stamp = Date.now().toString(36).toUpperCase();
+  const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `CTL_${seed}_${stamp}${rnd}`;
+}
+
+type ControlByRiskRow = {
+  control_id: string;
+  risk_id: string;
+  code: string;
+  name: string;
+  description: string;
+  control_type_id: number;
+  automation_id: number;
+  frequency_id: number;
+  owner_role: string | null;
+  control_objective: string | null;
+  control_scope: string | null;
+  evidence_required: boolean;
+  is_hard_gate: boolean;
+  required_test: boolean;
+  status: string;
+  mitigation_strength: number;
+  effect_type: string;
+  rationale: string | null;
+  coverage_notes: string | null;
+};
+
+export async function getControlsByRiskHandler(request: Request) {
+  try {
+    const auth = await getAuthContext();
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const url = new URL(request.url);
+    const riskId = (url.searchParams.get('risk_id') || '').trim();
+    const controlId = (url.searchParams.get('id') || '').trim();
+
+    // Single control by id
+    if (controlId && UUID_REGEX.test(controlId)) {
+      const rows = await prisma.$queryRaw<ControlByRiskRow[]>(Prisma.sql`
+        SELECT
+          c.id::text AS control_id,
+          mrc.risk_id::text AS risk_id,
+          c.code,
+          c.name,
+          c.description,
+          c.control_type_id,
+          c.automation_id,
+          c.frequency_id,
+          c.owner_role,
+          c.control_objective,
+          c.control_scope,
+          c.evidence_required,
+          c.is_hard_gate,
+          c.required_test,
+          c.status,
+          COALESCE(mrc.mitigation_strength, 3) AS mitigation_strength,
+          COALESCE(mrc.effect_type, 'prevent') AS effect_type,
+          mrc.rationale,
+          mrc.coverage_notes
+        FROM core.control c
+        LEFT JOIN core.map_risk_control mrc ON mrc.control_id = c.id
+        WHERE c.id = ${controlId}::uuid
+        LIMIT 1
+      `);
+      const row = rows[0];
+      if (!row) return NextResponse.json({ error: 'Control no encontrado.' }, { status: 404 });
+      return NextResponse.json(row);
+    }
+
+    // Controls by risk_id
+    if (!UUID_REGEX.test(riskId)) {
+      return NextResponse.json({ error: 'risk_id es obligatorio y debe ser UUID válido.' }, { status: 400 });
+    }
+
+    const rows = await prisma.$queryRaw<ControlByRiskRow[]>(Prisma.sql`
+      SELECT
+        c.id::text AS control_id,
+        mrc.risk_id::text AS risk_id,
+        c.code,
+        c.name,
+        c.description,
+        c.control_type_id,
+        c.automation_id,
+        c.frequency_id,
+        c.owner_role,
+        c.control_objective,
+        c.control_scope,
+        c.evidence_required,
+        c.is_hard_gate,
+        c.required_test,
+        c.status,
+        mrc.mitigation_strength,
+        mrc.effect_type,
+        mrc.rationale,
+        mrc.coverage_notes
+      FROM core.control c
+      JOIN core.map_risk_control mrc ON mrc.control_id = c.id
+      WHERE mrc.risk_id = ${riskId}::uuid
+        AND c.status = 'active'
+      ORDER BY c.name ASC
+    `);
+
+    return NextResponse.json({ items: rows });
+  } catch (error) {
+    console.error('Error loading controls:', error);
+    return NextResponse.json({ error: 'No se pudieron cargar los controles.' }, { status: 500 });
+  }
+}
+
+export async function postControlHandler(request: Request) {
+  try {
+    const auth = await getAuthContext();
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = (await request.json()) as {
+      risk_id?: string;
+      name?: string;
+      description?: string;
+      control_type_id?: number;
+      automation_id?: number;
+      frequency_id?: number;
+      owner_role?: string | null;
+      control_objective?: string | null;
+      control_scope?: string | null;
+      evidence_required?: boolean;
+      is_hard_gate?: boolean;
+      required_test?: boolean;
+      mitigation_strength?: number;
+      effect_type?: string;
+      rationale?: string | null;
+      coverage_notes?: string | null;
+    };
+
+    const riskId = String(body.risk_id || '').trim();
+    const controlName = String(body.name || '').trim();
+    const controlDescription = String(body.description || '').trim();
+    const controlTypeId = Number(body.control_type_id) || 1;
+    const automationId = Number(body.automation_id) || 1;
+    const frequencyId = Number(body.frequency_id) || 3;
+    const ownerRole = typeof body.owner_role === 'string' ? body.owner_role.trim() : null;
+    const controlObjective = typeof body.control_objective === 'string' ? body.control_objective.trim() : null;
+    const controlScope = typeof body.control_scope === 'string' ? body.control_scope.trim() : null;
+    const evidenceRequired = body.evidence_required !== false;
+    const isHardGate = body.is_hard_gate === true;
+    const requiredTest = body.required_test !== false;
+    const mitigationStrength = Number(body.mitigation_strength) || 3;
+    const effectType = String(body.effect_type || 'prevent').trim();
+    const mapRationale = typeof body.rationale === 'string' ? body.rationale.trim() : null;
+    const coverageNotes = typeof body.coverage_notes === 'string' ? body.coverage_notes.trim() : null;
+
+    if (!UUID_REGEX.test(riskId)) {
+      return NextResponse.json({ error: 'risk_id es obligatorio y debe ser UUID válido.' }, { status: 400 });
+    }
+    if (!controlName) return NextResponse.json({ error: 'name es obligatorio.' }, { status: 400 });
+    if (!controlDescription) return NextResponse.json({ error: 'description es obligatorio.' }, { status: 400 });
+
+    const controlCode = buildInternalControlCode(controlName);
+
+    // Get reino_id and framework_version_id from the risk
+    const riskMeta = await prisma.$queryRaw<Array<{ reino_id: string; codigo_reino: string; fvid: string | null }>>(Prisma.sql`
+      SELECT r.codigo_reino,
+             r.codigo_reino AS reino_code,
+             mcr.reino_id::text AS reino_id,
+             (
+               SELECT mrc2.framework_version_id::text
+               FROM core.map_risk_control mrc2
+               WHERE mrc2.risk_id = r.id
+               LIMIT 1
+             ) AS fvid
+      FROM core.risk r
+      JOIN core.map_elements_risk mer ON mer.risk_id = r.id
+      JOIN core.map_domain_element mde ON mde.element_id = mer.element_id
+      JOIN core.map_reino_domain mrd ON mrd.domain_id = mde.domain_id
+      JOIN core.map_company_x_reino mcr ON mcr.reino_id = mrd.reino_id
+      WHERE r.id = ${riskId}::uuid
+      LIMIT 1
+    `);
+
+    const meta = riskMeta[0];
+    if (!meta) return NextResponse.json({ error: 'No se encontró el riesgo o su reino.' }, { status: 404 });
+
+    const reinoId = meta.reino_id;
+    const codigoReino = meta.codigo_reino || null;
+
+    // Fallback for framework_version_id: use existing from map, or find any from reinoId
+    let frameworkVersionId = meta.fvid;
+    if (!frameworkVersionId) {
+      const fvRows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT fv.id::text AS id
+        FROM corpus."_Delete_framework_version" fv
+        LIMIT 1
+      `);
+      frameworkVersionId = fvRows[0]?.id || null;
+    }
+    if (!frameworkVersionId) {
+      return NextResponse.json({ error: 'No se encontró framework_version_id disponible.' }, { status: 500 });
+    }
+
+    const rows = await prisma.$queryRaw<ControlByRiskRow[]>(Prisma.sql`
+      WITH inserted_control AS (
+        INSERT INTO core.control (
+          code, name, description,
+          control_type_id, automation_id, frequency_id,
+          owner_role, control_objective, control_scope,
+          evidence_required, is_hard_gate, required_test,
+          status, status_id,
+          reino_id, codigo_reino,
+          rationale
+        ) VALUES (
+          ${controlCode},
+          ${controlName},
+          ${controlDescription},
+          ${controlTypeId},
+          ${automationId},
+          ${frequencyId},
+          ${ownerRole},
+          ${controlObjective},
+          ${controlScope},
+          ${evidenceRequired},
+          ${isHardGate},
+          ${requiredTest},
+          'active',
+          2,
+          ${reinoId}::uuid,
+          ${codigoReino},
+          '{}'::jsonb
+        )
+        RETURNING id, code, name, description, control_type_id, automation_id, frequency_id,
+                  owner_role, control_objective, control_scope,
+                  evidence_required, is_hard_gate, required_test, status
+      ),
+      inserted_map AS (
+        INSERT INTO core.map_risk_control (
+          control_id, risk_id, mitigation_strength, framework_version_id, effect_type, rationale, coverage_notes
+        )
+        SELECT id, ${riskId}::uuid, ${mitigationStrength}, ${frameworkVersionId}::uuid, ${effectType}, ${mapRationale}, ${coverageNotes}
+        FROM inserted_control
+        RETURNING control_id, risk_id, mitigation_strength, effect_type, rationale, coverage_notes
+      )
+      SELECT
+        c.id::text AS control_id,
+        m.risk_id::text AS risk_id,
+        c.code, c.name, c.description,
+        c.control_type_id, c.automation_id, c.frequency_id,
+        c.owner_role, c.control_objective, c.control_scope,
+        c.evidence_required, c.is_hard_gate, c.required_test, c.status,
+        m.mitigation_strength, m.effect_type, m.rationale, m.coverage_notes
+      FROM inserted_control c
+      JOIN inserted_map m ON m.control_id = c.id
+    `);
+
+    return NextResponse.json(rows[0]);
+  } catch (error) {
+    console.error('Error creating control:', error);
+    return NextResponse.json({ error: 'No se pudo crear el control.' }, { status: 500 });
+  }
+}
+
+export async function getControlClassificationsHandler() {
+  try {
+    const auth = await getAuthContext();
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    return NextResponse.json({
+      control_type: [
+        { id: 1, name: 'Preventivo' },
+        { id: 2, name: 'Detectivo' },
+        { id: 3, name: 'Correctivo' },
+      ],
+      automation: [
+        { id: 1, name: 'Manual' },
+        { id: 2, name: 'Semi-automático' },
+        { id: 3, name: 'Automático' },
+      ],
+      frequency: [
+        { id: 1, name: 'Diaria' },
+        { id: 2, name: 'Semanal' },
+        { id: 3, name: 'Mensual' },
+        { id: 4, name: 'Trimestral' },
+        { id: 5, name: 'Anual' },
+      ],
+      effect_type: [
+        { id: 'prevent', name: 'Prevenir' },
+        { id: 'detect', name: 'Detectar' },
+        { id: 'corrective', name: 'Correctivo' },
+        { id: 'preventive', name: 'Preventivo' },
+        { id: 'detective', name: 'Detectivo' },
+        { id: 'respond', name: 'Responder' },
+        { id: 'evidence', name: 'Evidencia' },
+        { id: 'resilience', name: 'Resiliencia' },
+        { id: 'governance', name: 'Gobernanza' },
+      ],
+    });
+  } catch (error) {
+    console.error('Error fetching control classifications:', error);
+    return NextResponse.json({ error: 'No se pudieron cargar las clasificaciones.' }, { status: 500 });
+  }
+}

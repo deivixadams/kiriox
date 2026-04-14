@@ -467,6 +467,32 @@ export default function RiskCatalogNewPage() {
               <button type="button" className={styles.secondaryButton} onClick={clearForNew} disabled={saving}>
                 Nuevo
               </button>
+              <button
+                type="button"
+                disabled={saving || !form.id}
+                style={{
+                  padding: '0.5rem 1.2rem',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: form.id ? 'pointer' : 'not-allowed',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  background: form.id ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#6b7280',
+                  color: '#fff',
+                  opacity: form.id ? 1 : 0.5,
+                  transition: 'all 0.2s ease',
+                }}
+                onClick={() => {
+                  if (!form.id) return;
+                  const params = new URLSearchParams();
+                  params.set('risk_id', form.id);
+                  params.set('risk_name', form.risk_name);
+                  params.set('return_to', window.location.href);
+                  router.push(`/validacion/riesgo-lineal/control/nuevo?${params.toString()}`);
+                }}
+              >
+                Agregar Controles
+              </button>
               <button type="submit" className={styles.primaryButton} disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar riesgo'}
               </button>
