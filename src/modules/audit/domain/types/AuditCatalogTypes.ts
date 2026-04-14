@@ -7,7 +7,7 @@ export type CatalogRiskRow = {
   code: string | null;
   name: string;
   description: string | null;
-  status: string;
+  isActive: boolean;
   riskTypeName: string | null;
   riskLayerName: string | null;
   domainIds: string[];

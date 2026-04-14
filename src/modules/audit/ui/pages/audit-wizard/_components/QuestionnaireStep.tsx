@@ -8,7 +8,7 @@ type RiskItem = {
   id: string;
   name: string;
   description?: string | null;
-  status?: string | null;
+  isActive?: boolean | null;
   riskTypeName?: string | null;
   riskLayerName?: string | null;
 };

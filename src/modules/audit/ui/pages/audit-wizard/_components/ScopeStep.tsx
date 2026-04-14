@@ -11,7 +11,7 @@ type Risk = {
   code?: string | null;
   name: string;
   description?: string | null;
-  status?: string | null;
+  isActive?: boolean | null;
   riskTypeName?: string | null;
   riskLayerName?: string | null;
   domainIds?: string[];
@@ -159,7 +159,7 @@ export default function ScopeStep({ draftId, domainIds, selectedDomainName, obli
                 code: row.riskCode ?? null,
                 name: riskName,
                 description: null,
-                status: null,
+                isActive: true,
                 riskTypeName: null,
                 riskLayerName: null
               };
@@ -445,7 +445,7 @@ export default function ScopeStep({ draftId, domainIds, selectedDomainName, obli
                       {risk.description && <div className={styles.riskSubtitle}>{risk.description}</div>}
                     </td>
                     <td className={styles.tdMuted}>{risk.riskTypeName || 'Sin tipo'}</td>
-                    <td className={styles.tdMuted}>{risk.status || 'Sin estado'}</td>
+                    <td className={styles.tdMuted}>{risk.isActive === false ? 'Inactivo' : 'Activo'}</td>
                   </tr>
                 );
               })}

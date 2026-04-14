@@ -90,7 +90,7 @@ export class PrismaAuditRepository implements AuditCatalogRepository, AuditFindi
         r.code,
         r.name,
         r.description,
-        r.status,
+        COALESCE((to_jsonb(r) ->> 'is_active')::boolean, true) AS is_active,
         r.risk_type,
         rt.name AS risk_type_name,
         rl.name AS risk_layer_name,
@@ -105,7 +105,15 @@ export class PrismaAuditRepository implements AuditCatalogRepository, AuditFindi
       LEFT JOIN core.map_elements_control moc ON moc.control_id = mrc.control_id
       LEFT JOIN graph.map_domain_element mde ON mde.element_id = moc.element_id
       ${whereSql}
-      GROUP BY r.id, r.code, r.name, r.description, r.status, r.risk_type, rt.name, rl.name
+      GROUP BY
+        r.id,
+        r.code,
+        r.name,
+        r.description,
+        COALESCE((to_jsonb(r) ->> 'is_active')::boolean, true),
+        r.risk_type,
+        rt.name,
+        rl.name
       ORDER BY r.name ASC
     `);
 
@@ -114,7 +122,7 @@ export class PrismaAuditRepository implements AuditCatalogRepository, AuditFindi
       code: row.code,
       name: row.name,
       description: row.description,
-      status: row.status,
+      isActive: Boolean(row.is_active ?? true),
       riskTypeName: row.risk_type_name ?? row.risk_type ?? null,
       riskLayerName: row.risk_layer_name ?? null,
       domainIds: row.domain_ids ?? [],
