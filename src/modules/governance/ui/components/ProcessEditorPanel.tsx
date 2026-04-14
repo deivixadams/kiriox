@@ -136,12 +136,17 @@ export function ProcessEditorPanel() {
     setUsers(userList);
   }
 
-  async function loadProcesses(companyId: string, realmId: string, preferredId?: string, openNew = false) {
+  async function loadProcesses(
+    companyId: string,
+    realmId: string,
+    preferredId?: string,
+    openNew = false
+  ): Promise<{ items: ProcessRecord[]; selectedIndex: number }> {
     if (!companyId || !realmId) {
       setRecords([]);
       setCursor(-1);
       setForm(buildEmptyForm());
-      return;
+      return { items: [], selectedIndex: -1 };
     }
 
     const endpoint = `/api/governance/process-editor?companyId=${encodeURIComponent(companyId)}&realmId=${encodeURIComponent(realmId)}`;
@@ -155,12 +160,13 @@ export function ProcessEditorPanel() {
     if (items.length === 0 || openNew) {
       setCursor(-1);
       setForm(buildEmptyForm());
-      return;
+      return { items, selectedIndex: -1 };
     }
 
     const targetIndex = preferredId ? items.findIndex((item) => item.id === preferredId) : -1;
     const index = targetIndex >= 0 ? targetIndex : 0;
     applyRecord(items[index], index);
+    return { items, selectedIndex: index };
   }
 
   async function loadContextAndBootstrap() {
@@ -343,8 +349,16 @@ export function ProcessEditorPanel() {
     setError('');
     setSuccess('');
 
+    if (!form.categoryId) {
+      setError('Selecciona una categoría de proceso.');
+      return;
+    }
     if (!form.name.trim()) {
       setError('El nombre del proceso es obligatorio.');
+      return;
+    }
+    if (!form.description.trim()) {
+      setError('La descripción del proceso es obligatoria.');
       return;
     }
     if (!selectedCompanyId) {
@@ -386,7 +400,10 @@ export function ProcessEditorPanel() {
       }
 
       const savedId = payload?.item?.id || form.id;
-      await loadProcesses(selectedCompanyId, selectedRealmId, savedId);
+      const result = await loadProcesses(selectedCompanyId, selectedRealmId, savedId);
+      if (result.items.length > 0 && result.selectedIndex < 0) {
+        applyRecord(result.items[0], 0);
+      }
       setSuccess('Proceso guardado correctamente.');
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el proceso');

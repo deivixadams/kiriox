@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { CirclePlus, Trash2 } from 'lucide-react';
 import styles from './RealmEditorPanel.module.css';
 import { useRegisterCommandSearch } from '@/shared/ui/command-search/useRegisterCommandSearch';
 
@@ -389,6 +390,19 @@ export function KeyActivitiesEditorPanel() {
     }
   }
 
+  function openRiskForActivity(activityId: string) {
+    if (!activityId || !selectedCompanyId) {
+      setError('Selecciona empresa y actividad para registrar riesgo.');
+      return;
+    }
+    const params = new URLSearchParams({
+      company_id: selectedCompanyId,
+      significant_activity_id: activityId,
+      return_to: '/modelo/gobernanza/actividades-claves',
+    });
+    router.push(`/validacion/riesgo-lineal/riesgo/nuevo?${params.toString()}`);
+  }
+
   useRegisterCommandSearch({
     id: 'governance-key-activities-editor',
     priority: 100,
@@ -661,16 +675,6 @@ export function KeyActivitiesEditorPanel() {
           <button
             type="button"
             className={styles.saveButton}
-            style={{ width: '160px', height: '44px', background: '#3b82f6', borderColor: '#2563eb' }}
-            onClick={openNewRecord}
-            disabled={saving}
-          >
-            Nuevo
-          </button>
-
-          <button
-            type="button"
-            className={styles.saveButton}
             style={{
               width: '160px',
               height: '44px',
@@ -703,9 +707,13 @@ export function KeyActivitiesEditorPanel() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginTop: '10px' }}>
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                  <th style={{ padding: '8px' }}>Código</th>
                   <th style={{ padding: '8px' }}>Nombre</th>
                   <th style={{ padding: '8px' }}>Descripción</th>
+                  <th style={{ padding: '8px' }}>Responsable</th>
+                  <th style={{ padding: '8px' }}>Frecuencia</th>
+                  <th style={{ padding: '8px' }}>Peso</th>
+                  <th style={{ padding: '8px' }}>Cascada</th>
+                  <th style={{ padding: '8px' }}>Hard Gate</th>
                   <th style={{ padding: '8px' }}>Activo</th>
                   <th style={{ padding: '8px' }}>Acción</th>
                 </tr>
@@ -713,25 +721,56 @@ export function KeyActivitiesEditorPanel() {
               <tbody>
                 {records.map((act) => (
                   <tr key={act.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '8px' }}>{act.code}</td>
                     <td style={{ padding: '8px' }}>{act.name}</td>
                     <td style={{ padding: '8px' }}>{act.description || '---'}</td>
+                    <td style={{ padding: '8px' }}>{users.find((u) => u.id === act.responsible)?.name || '---'}</td>
+                    <td style={{ padding: '8px' }}>{frequencies.find((f) => f.id === act.frequency)?.name || '---'}</td>
+                    <td style={{ padding: '8px' }}>{act.riskWeight || '1'}</td>
+                    <td style={{ padding: '8px' }}>{act.cascadeFactor || '0'}</td>
+                    <td style={{ padding: '8px' }}>{act.isHardGate ? 'Sí' : 'No'}</td>
                     <td style={{ padding: '8px' }}>{act.isActive ? 'Sí' : 'No'}</td>
                     <td style={{ padding: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => openRiskForActivity(act.id)}
+                        disabled={Boolean(removingId) || saving}
+                        title="Agregar riesgo"
+                        aria-label="Agregar riesgo"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#60a5fa',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                        }}
+                      >
+                        <CirclePlus size={15} />
+                      </button>
+                      <span style={{ opacity: 0.75 }}>-</span>
                       <button
                         type="button"
                         onClick={() => void removeActivity(act.id)}
                         disabled={Boolean(removingId) || saving}
+                        title={removingId === act.id ? 'Removiendo...' : 'Remover'}
+                        aria-label={removingId === act.id ? 'Removiendo' : 'Remover'}
                         style={{
                           background: 'transparent',
                           border: 'none',
                           color: '#ef4444',
                           cursor: 'pointer',
-                          fontSize: '12px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
                         }}
                       >
-                        {removingId === act.id ? 'Removiendo...' : 'Remover'}
+                        <Trash2 size={15} />
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

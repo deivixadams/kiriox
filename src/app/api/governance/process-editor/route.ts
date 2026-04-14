@@ -3,6 +3,42 @@ import { NextResponse } from 'next/server';
 import prisma from '@/infrastructure/db/prisma/client';
 import { Prisma } from '@prisma/client';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error ?? 'Error desconocido');
+}
+
+async function validateCategory(categoryId: unknown) {
+  const normalizedCategoryId = Number.isFinite(Number(categoryId)) ? Number(categoryId) : null;
+  if (!normalizedCategoryId) {
+    return { ok: false as const, normalizedCategoryId: null, message: 'Selecciona una categoría de proceso válida.' };
+  }
+
+  const categoryRows = await prisma.$queryRaw<Array<{ ok: number }>>(Prisma.sql`
+    SELECT 1 AS ok
+    FROM core.domain_category dc
+    WHERE dc.id = ${normalizedCategoryId}
+      AND COALESCE(dc.is_active, true) = true
+    LIMIT 1
+  `);
+
+  if (!categoryRows[0]) {
+    return { ok: false as const, normalizedCategoryId: null, message: 'La categoría seleccionada no existe o está inactiva.' };
+  }
+
+  return { ok: true as const, normalizedCategoryId };
+}
+
+function mapProcessEditorDbError(error: unknown): string {
+  const message = getErrorMessage(error);
+  if (message.includes('fk_core_domain_domain_category')) {
+    return 'La categoría seleccionada no es válida para guardar el proceso.';
+  }
+  if (message.includes('23503')) {
+    return 'No se pudo guardar por una relación inválida. Verifica categoría y líder del proceso.';
+  }
+  return message;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -83,7 +119,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { name, description, ownerId, companyId, realmId, categoryId, isActive, createdAt, updatedAt } = body;
-    const normalizedCategoryId = Number.isFinite(Number(categoryId)) ? Number(categoryId) : null;
+    const categoryValidation = await validateCategory(categoryId);
 
     if (!companyId) {
       return NextResponse.json({ error: 'companyId es obligatorio' }, { status: 400 });
@@ -93,6 +129,15 @@ export async function POST(req: Request) {
     }
     if (!ownerId) {
       return NextResponse.json({ error: 'lider_id (ownerId) es obligatorio' }, { status: 400 });
+    }
+    if (!String(name ?? '').trim()) {
+      return NextResponse.json({ error: 'El nombre del proceso es obligatorio.' }, { status: 400 });
+    }
+    if (!String(description ?? '').trim()) {
+      return NextResponse.json({ error: 'La descripción del proceso es obligatoria.' }, { status: 400 });
+    }
+    if (!categoryValidation.ok) {
+      return NextResponse.json({ error: categoryValidation.message }, { status: 400 });
     }
     const mappingRows = await prisma.$queryRaw<Array<{ ok: number }>>(Prisma.sql`
       SELECT 1 AS ok
@@ -142,7 +187,7 @@ export async function POST(req: Request) {
           ${frameworkVersion.id}::uuid,
           ${isActive !== false ? 'active' : 'inactive'},
           ${ownerId ? ownerId : null}::uuid,
-          ${normalizedCategoryId},
+          ${categoryValidation.normalizedCategoryId},
           gen_random_uuid(),
           ${createdAt ? new Date(createdAt) : new Date()},
           ${updatedAt ? new Date(updatedAt) : new Date()}
@@ -182,7 +227,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ item });
   } catch (error: any) {
     console.error('Error creating process:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: mapProcessEditorDbError(error) }, { status: 500 });
   }
 }
 
@@ -190,7 +235,7 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
     const { id, name, description, ownerId, companyId, realmId, categoryId, isActive, createdAt, updatedAt } = body;
-    const normalizedCategoryId = Number.isFinite(Number(categoryId)) ? Number(categoryId) : null;
+    const categoryValidation = await validateCategory(categoryId);
 
     if (!id) throw new Error('ID is required');
     if (!companyId) {
@@ -201,6 +246,15 @@ export async function PUT(req: Request) {
     }
     if (!ownerId) {
       return NextResponse.json({ error: 'lider_id (ownerId) es obligatorio' }, { status: 400 });
+    }
+    if (!String(name ?? '').trim()) {
+      return NextResponse.json({ error: 'El nombre del proceso es obligatorio.' }, { status: 400 });
+    }
+    if (!String(description ?? '').trim()) {
+      return NextResponse.json({ error: 'La descripción del proceso es obligatoria.' }, { status: 400 });
+    }
+    if (!categoryValidation.ok) {
+      return NextResponse.json({ error: categoryValidation.message }, { status: 400 });
     }
     const mappingRows = await prisma.$queryRaw<Array<{ ok: number }>>(Prisma.sql`
       SELECT 1 AS ok
@@ -224,7 +278,7 @@ export async function PUT(req: Request) {
           name = ${name.trim()},
           description = ${description?.trim() || null},
           lider_id = ${ownerId}::uuid,
-          domain_category = ${normalizedCategoryId},
+          domain_category = ${categoryValidation.normalizedCategoryId},
           status = ${isActive !== false ? 'active' : 'inactive'},
           created_at = ${createdAt ? new Date(createdAt) : new Date()},
           updated_at = ${updatedAt ? new Date(updatedAt) : new Date()}
@@ -263,7 +317,7 @@ export async function PUT(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error updating process:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: mapProcessEditorDbError(error) }, { status: 500 });
   }
 }
 

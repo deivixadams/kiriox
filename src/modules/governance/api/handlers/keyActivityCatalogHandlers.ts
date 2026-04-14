@@ -8,7 +8,10 @@ type DomainElementRow = {
   name: string | null;
   title: string | null;
   description: string | null;
+  rationale: unknown;
   is_active: boolean;
+  is_hard_gate: boolean | null;
+  criticality: number | null;
   id_lider: string | null;
   id_frequency: string | null;
   created_at: Date;
@@ -43,6 +46,25 @@ async function buildUniqueElementCode(name: string): Promise<string> {
 
 
 function mapRow(row: DomainElementRow) {
+  const rationale =
+    row.rationale && typeof row.rationale === 'object' && !Array.isArray(row.rationale)
+      ? (row.rationale as Record<string, unknown>)
+      : {};
+  const cascadeFactorRaw = rationale.cascadeFactor;
+  const riskWeightRaw = rationale.riskWeight;
+  const cascadeFactor =
+    typeof cascadeFactorRaw === 'number'
+      ? String(cascadeFactorRaw)
+      : typeof cascadeFactorRaw === 'string'
+        ? cascadeFactorRaw
+        : '0';
+  const rationaleRiskWeight =
+    typeof riskWeightRaw === 'number'
+      ? String(Math.round(riskWeightRaw))
+      : typeof riskWeightRaw === 'string'
+        ? riskWeightRaw
+        : '';
+
   return {
     id: row.id,
     code: row.code,
@@ -50,6 +72,10 @@ function mapRow(row: DomainElementRow) {
     description: row.description ?? '',
     responsible: row.id_lider ?? '',
     frequency: row.id_frequency ?? '',
+    riskWeight: row.criticality != null ? String(row.criticality) : rationaleRiskWeight || '1',
+    cascadeFactor,
+    isHardGate: Boolean(row.is_hard_gate),
+    isCascade: Number(cascadeFactor) > 0,
     isActive: row.is_active,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -74,7 +100,10 @@ export async function getGovernanceKeyActivityCatalogHandler(request: Request) {
       de.name,
       de.title,
       de.description,
+      de.rationale,
       COALESCE(de.is_active, true) AS is_active,
+      COALESCE(de.is_hard_gate, false) AS is_hard_gate,
+      de.criticality,
       de.id_lider::text AS id_lider,
       de.id_frequency::text AS id_frequency,
       de.created_at,
@@ -112,6 +141,9 @@ export async function postGovernanceKeyActivityCatalogHandler(request: Request) 
       description?: string;
       responsible?: string;
       frequency?: string;
+      riskWeight?: string | number;
+      cascadeFactor?: string | number;
+      isHardGate?: boolean;
       isActive?: boolean;
     }>;
   };
@@ -153,7 +185,18 @@ export async function postGovernanceKeyActivityCatalogHandler(request: Request) 
     const id_lider = String(act?.responsible ?? '').trim() || null;
     const id_frequency = String(act?.frequency ?? '').trim() || null;
     const isActive = act?.isActive !== false;
+    const isHardGate = act?.isHardGate === true;
     const description = String(act?.description ?? '').trim() || null;
+    const riskWeightRaw = Number(act?.riskWeight);
+    const riskWeight =
+      Number.isFinite(riskWeightRaw) && riskWeightRaw >= 1 && riskWeightRaw <= 5
+        ? Math.round(riskWeightRaw)
+        : 1;
+    const cascadeFactorRaw = Number(act?.cascadeFactor);
+    const cascadeFactor =
+      Number.isFinite(cascadeFactorRaw) && cascadeFactorRaw >= 0 && cascadeFactorRaw <= 1
+        ? cascadeFactorRaw
+        : 0;
 
     const inserted = await prisma.$queryRaw<DomainElementRow[]>(Prisma.sql`
       INSERT INTO core.domain_elements (
@@ -163,7 +206,10 @@ export async function postGovernanceKeyActivityCatalogHandler(request: Request) 
         name,
         title,
         description,
+        rationale,
         is_active,
+        is_hard_gate,
+        criticality,
         id_lider,
         id_frequency,
         created_at,
@@ -176,7 +222,13 @@ export async function postGovernanceKeyActivityCatalogHandler(request: Request) 
         ${name},
         ${name},
         ${description},
+        jsonb_build_object(
+          'riskWeight', ${riskWeight}::int,
+          'cascadeFactor', ${cascadeFactor}::double precision
+        ),
         ${isActive},
+        ${isHardGate},
+        ${riskWeight}::smallint,
         ${id_lider ? Prisma.sql`${id_lider}::uuid` : null},
         ${id_frequency ? Prisma.sql`${id_frequency}::uuid` : null},
         now(),
@@ -209,6 +261,9 @@ export async function putGovernanceKeyActivityCatalogHandler(request: Request) {
     description?: string;
     responsible?: string;
     frequency?: string;
+    riskWeight?: string | number;
+    cascadeFactor?: string | number;
+    isHardGate?: boolean;
     isActive?: boolean;
   };
 
@@ -223,6 +278,17 @@ export async function putGovernanceKeyActivityCatalogHandler(request: Request) {
   const description = String(body.description ?? '').trim() || null;
   const id_lider = String(body.responsible ?? '').trim() || null;
   const id_frequency = String(body.frequency ?? '').trim() || null;
+  const isHardGate = body.isHardGate === true;
+  const riskWeightRaw = Number(body.riskWeight);
+  const riskWeight =
+    Number.isFinite(riskWeightRaw) && riskWeightRaw >= 1 && riskWeightRaw <= 5
+      ? Math.round(riskWeightRaw)
+      : 1;
+  const cascadeFactorRaw = Number(body.cascadeFactor);
+  const cascadeFactor =
+    Number.isFinite(cascadeFactorRaw) && cascadeFactorRaw >= 0 && cascadeFactorRaw <= 1
+      ? cascadeFactorRaw
+      : 0;
   const isActive = body.isActive !== false;
 
   const updated = await prisma.$queryRaw<DomainElementRow[]>(Prisma.sql`
@@ -232,8 +298,14 @@ export async function putGovernanceKeyActivityCatalogHandler(request: Request) {
       name = ${name},
       title = ${name},
       description = ${description},
+      rationale = jsonb_build_object(
+        'riskWeight', ${riskWeight}::int,
+        'cascadeFactor', ${cascadeFactor}::double precision
+      ),
       id_lider = ${id_lider ? Prisma.sql`${id_lider}::uuid` : null},
       id_frequency = ${id_frequency ? Prisma.sql`${id_frequency}::uuid` : null},
+      is_hard_gate = ${isHardGate},
+      criticality = ${riskWeight}::smallint,
       is_active = ${isActive},
       updated_at = now()
     WHERE id = ${id}::uuid
@@ -259,28 +331,50 @@ export async function deleteGovernanceKeyActivityCatalogHandler(request: Request
     throw ApiError.badRequest('companyId, reinoId and process/domain are required');
   }
 
-  const updatedRows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-    UPDATE core.domain_elements
-    SET is_active = false, updated_at = now()
-    WHERE id = ${id}::uuid
-      AND element_type = 'ACTIVITY'
-      AND EXISTS (
-        SELECT 1
-        FROM core.map_domain_element mde
-        JOIN core.map_reino_domain mrd
-          ON mrd.domain_id = mde.domain_id
-        JOIN core.map_company_x_reino mcr
-          ON mcr.reino_id = mrd.reino_id
-        WHERE mde.element_id = core.domain_elements.id
-          AND mde.domain_id = ${selectedDomainId}::uuid
-          AND mrd.reino_id = ${reinoId}::uuid
-          AND mcr.company_id = ${companyId}::uuid
-          AND COALESCE(mcr.is_active, true) = true
-      )
-    RETURNING id
+  const contextRows = await prisma.$queryRaw<Array<{ ok: number }>>(Prisma.sql`
+    SELECT 1 AS ok
+    FROM core.map_domain_element mde
+    JOIN core.map_reino_domain mrd
+      ON mrd.domain_id = mde.domain_id
+    JOIN core.map_company_x_reino mcr
+      ON mcr.reino_id = mrd.reino_id
+    JOIN core.domain_elements de
+      ON de.id = mde.element_id
+    WHERE de.id = ${id}::uuid
+      AND de.element_type = 'ACTIVITY'
+      AND mde.domain_id = ${selectedDomainId}::uuid
+      AND mrd.reino_id = ${reinoId}::uuid
+      AND mcr.company_id = ${companyId}::uuid
+      AND COALESCE(mcr.is_active, true) = true
+    LIMIT 1
   `);
-  if (!updatedRows[0]) throw ApiError.notFound('Activity not found in selected context');
+  if (!contextRows[0]) throw ApiError.notFound('Activity not found in selected context');
 
+  await prisma.$executeRaw(Prisma.sql`
+    DELETE FROM core.map_domain_element
+    WHERE domain_id = ${selectedDomainId}::uuid
+      AND element_id = ${id}::uuid
+  `);
 
-  return Response.json({ ok: true });
+  const remainingMappings = await prisma.$queryRaw<Array<{ total: bigint }>>(Prisma.sql`
+    SELECT COUNT(*)::bigint AS total
+    FROM core.map_domain_element
+    WHERE element_id = ${id}::uuid
+  `);
+
+  if (Number(remainingMappings[0]?.total ?? 0) === 0) {
+    try {
+      await prisma.$executeRaw(Prisma.sql`
+        DELETE FROM core.domain_elements
+        WHERE id = ${id}::uuid
+          AND element_type = 'ACTIVITY'
+      `);
+    } catch (error) {
+      throw ApiError.badRequest(
+        'No se pudo eliminar físicamente la actividad porque tiene dependencias en otras tablas.'
+      );
+    }
+  }
+
+  return Response.json({ ok: true, deletedPhysical: Number(remainingMappings[0]?.total ?? 0) === 0 });
 }
