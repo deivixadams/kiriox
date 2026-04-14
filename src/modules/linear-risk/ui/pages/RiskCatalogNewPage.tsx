@@ -266,21 +266,6 @@ export default function RiskCatalogNewPage() {
 
       setSuccess(isEdit ? 'Riesgo actualizado correctamente.' : 'Riesgo creado correctamente.');
       await loadRows(form.significant_activity_id, String(data.id || ''));
-
-      if (!isEdit) {
-        if (returnTo.startsWith('/modelo/gobernanza/actividades-claves')) {
-          router.push(returnTo);
-          return;
-        }
-        const params = new URLSearchParams();
-        if (draft) params.set('draft', draft);
-        params.set('step', '2');
-        params.set('from_new_risk', '1');
-        params.set('selected_risk_id', String(data.id));
-        if (rowTempId) params.set('row_temp_id', rowTempId);
-        params.set('significant_activity_id', form.significant_activity_id);
-        router.push(`${returnTo}?${params.toString()}`);
-      }
     } finally {
       setSaving(false);
     }
