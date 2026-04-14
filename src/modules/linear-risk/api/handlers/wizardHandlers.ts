@@ -78,6 +78,10 @@ type RiskCatalogByActivityRow = {
   risk_description: string | null;
   risk_category: string | null;
   is_active?: boolean;
+  risk_emerging_source_id?: string | null;
+  risk_emerging_status_id?: string | null;
+  risk_factor_id?: string | null;
+  operational_risk_loss_event_type_id?: string | null;
 };
 
 type LinearDraftRow = {
@@ -1003,17 +1007,22 @@ export async function getLinearRiskRisksBySignificantActivityHandler(request: Re
 
     const rows = await prisma.$queryRaw<RiskCatalogByActivityRow[]>(Prisma.sql`
       SELECT
-        rc.risk_catalog_id::text AS risk_catalog_id,
-        rc.significant_activity_id::text AS significant_activity_id,
-        rc.risk_code,
-        rc.risk_name,
-        rc.risk_description,
-        rc.risk_category,
-        rc.is_active
-      FROM core.risk_catalog rc
-      WHERE rc.significant_activity_id = ${significantActivityId}::uuid
-        AND COALESCE(rc.is_active, true) = true
-      ORDER BY rc.risk_name ASC
+        r.id::text AS risk_catalog_id,
+        mer.element_id::text AS significant_activity_id,
+        r.code AS risk_code,
+        r.name AS risk_name,
+        r.description AS risk_description,
+        r.risk_type AS risk_category,
+        r.is_active,
+        r.risk_emerging_source_id::text AS risk_emerging_source_id,
+        r.risk_emerging_status_id::text AS risk_emerging_status_id,
+        r.risk_factor_id::text AS risk_factor_id,
+        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id
+      FROM core.risk r
+      JOIN core.map_elements_risk mer ON mer.risk_id = r.id
+      WHERE mer.element_id = ${significantActivityId}::uuid
+        AND COALESCE(r.is_active, true) = true
+      ORDER BY r.name ASC
     `);
 
     return NextResponse.json({
@@ -1025,6 +1034,10 @@ export async function getLinearRiskRisksBySignificantActivityHandler(request: Re
         risk_description: row.risk_description || '',
         risk_category: row.risk_category || '',
         is_active: Boolean(row.is_active ?? true),
+        risk_emerging_source_id: row.risk_emerging_source_id || null,
+        risk_emerging_status_id: row.risk_emerging_status_id || null,
+        risk_factor_id: row.risk_factor_id || null,
+        operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
       })),
     });
   } catch (error) {
@@ -1045,15 +1058,20 @@ export async function getLinearRiskCatalogRiskHandler(request: Request) {
     if (riskId && UUID_REGEX.test(riskId)) {
       const rows = await prisma.$queryRaw<RiskCatalogByActivityRow[]>(Prisma.sql`
         SELECT
-          rc.risk_catalog_id::text AS risk_catalog_id,
-          rc.significant_activity_id::text AS significant_activity_id,
-          rc.risk_code,
-          rc.risk_name,
-          rc.risk_description,
-          rc.risk_category,
-          rc.is_active
-        FROM core.risk_catalog rc
-        WHERE rc.risk_catalog_id = ${riskId}::uuid
+          r.id::text AS risk_catalog_id,
+          mer.element_id::text AS significant_activity_id,
+          r.code AS risk_code,
+          r.name AS risk_name,
+          r.description AS risk_description,
+          r.risk_type AS risk_category,
+          r.is_active,
+          r.risk_emerging_source_id::text AS risk_emerging_source_id,
+          r.risk_emerging_status_id::text AS risk_emerging_status_id,
+          r.risk_factor_id::text AS risk_factor_id,
+          r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id
+        FROM core.risk r
+        LEFT JOIN core.map_elements_risk mer ON mer.risk_id = r.id
+        WHERE r.id = ${riskId}::uuid
         LIMIT 1
       `);
       const row = rows[0];
@@ -1066,6 +1084,10 @@ export async function getLinearRiskCatalogRiskHandler(request: Request) {
         risk_description: row.risk_description || '',
         risk_category: row.risk_category || '',
         is_active: Boolean(row.is_active ?? true),
+        risk_emerging_source_id: row.risk_emerging_source_id || null,
+        risk_emerging_status_id: row.risk_emerging_status_id || null,
+        risk_factor_id: row.risk_factor_id || null,
+        operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
       });
     }
 
@@ -1091,6 +1113,10 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
       risk_description?: string | null;
       risk_category?: string | null;
       is_active?: boolean;
+      risk_emerging_source_id?: string | null;
+      risk_emerging_status_id?: string | null;
+      risk_factor_id?: string | null;
+      operational_risk_loss_event_type_id?: string | null;
     };
     const significantActivityId = String(body.significant_activity_id || '').trim();
     const riskCode = String(body.risk_code || '').trim();
@@ -1105,35 +1131,78 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
     if (!riskCode) return NextResponse.json({ error: 'risk_code es obligatorio.' }, { status: 400 });
     if (!riskName) return NextResponse.json({ error: 'risk_name es obligatorio.' }, { status: 400 });
 
+    const codeResult = await prisma.$queryRaw<Array<{ codigo_reino: string }>>(Prisma.sql`
+      SELECT mcr.reino_id::text as codigo_reino 
+      FROM core.map_domain_element mde
+      JOIN core.map_reino_domain mrd ON mrd.domain_id = mde.domain_id
+      JOIN core.map_company_x_reino mcr ON mcr.reino_id = mrd.reino_id
+      WHERE mde.element_id = ${significantActivityId}::uuid
+      LIMIT 1
+    `);
+    const codigoReino = codeResult[0]?.codigo_reino || null;
+
     const rows = await prisma.$queryRaw<RiskCatalogByActivityRow[]>(Prisma.sql`
-      INSERT INTO core.risk_catalog (
-        significant_activity_id,
-        risk_code,
-        risk_name,
-        risk_description,
-        risk_category,
-        is_active,
-        created_at,
-        updated_at
+      WITH inserted_risk AS (
+        INSERT INTO core.risk (
+          code,
+          name,
+          risk_type,
+          description,
+          status,
+          risk_layer_id,
+          risk_origen,
+          codigo_reino,
+          is_active,
+          risk_emerging_source_id,
+          risk_emerging_status_id,
+          risk_factor_id,
+          operational_risk_loss_event_type_id,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          ${riskCode},
+          ${riskName},
+          ${riskCategory || 'linear'},
+          ${riskDescription || null},
+          'active',
+          2,
+          'LINEAR_WIZARD',
+          ${codigoReino},
+          ${isActive},
+          ${body.risk_emerging_source_id ? Prisma.sql`${body.risk_emerging_source_id}::bigint` : Prisma.sql`NULL`},
+          ${body.risk_emerging_status_id ? Prisma.sql`${body.risk_emerging_status_id}::bigint` : Prisma.sql`NULL`},
+          ${body.risk_factor_id ? Prisma.sql`${body.risk_factor_id}::bigint` : Prisma.sql`NULL`},
+          ${body.operational_risk_loss_event_type_id ? Prisma.sql`${body.operational_risk_loss_event_type_id}::bigint` : Prisma.sql`NULL`},
+          now(),
+          now()
+        )
+        RETURNING id, code, name, description, risk_type, is_active, risk_emerging_source_id, risk_emerging_status_id, risk_factor_id, operational_risk_loss_event_type_id
+      ),
+      inserted_map AS (
+        INSERT INTO core.map_elements_risk (
+          element_id,
+          risk_id,
+          link_strength
+        )
+        SELECT ${significantActivityId}::uuid, id, 3
+        FROM inserted_risk
+        RETURNING element_id, risk_id
       )
-      VALUES (
-        ${significantActivityId}::uuid,
-        ${riskCode},
-        ${riskName},
-        ${riskDescription || null},
-        ${riskCategory || null},
-        ${isActive},
-        now(),
-        now()
-      )
-      RETURNING
-        risk_catalog_id::text AS risk_catalog_id,
-        significant_activity_id::text AS significant_activity_id,
-        risk_code,
-        risk_name,
-        risk_description,
-        risk_category,
-        is_active
+      SELECT 
+        r.id::text AS risk_catalog_id,
+        m.element_id::text AS significant_activity_id,
+        r.code AS risk_code,
+        r.name AS risk_name,
+        r.description AS risk_description,
+        r.risk_type AS risk_category,
+        r.is_active,
+        r.risk_emerging_source_id::text AS risk_emerging_source_id,
+        r.risk_emerging_status_id::text AS risk_emerging_status_id,
+        r.risk_factor_id::text AS risk_factor_id,
+        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id
+      FROM inserted_risk r
+      JOIN inserted_map m ON m.risk_id = r.id
     `);
     const row = rows[0];
     return NextResponse.json({
@@ -1144,6 +1213,10 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
       risk_description: row.risk_description || '',
       risk_category: row.risk_category || '',
       is_active: Boolean(row.is_active ?? true),
+      risk_emerging_source_id: row.risk_emerging_source_id || null,
+      risk_emerging_status_id: row.risk_emerging_status_id || null,
+      risk_factor_id: row.risk_factor_id || null,
+      operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
     });
   } catch (error: any) {
     console.error('Error creating risk catalog row:', error);
@@ -1164,6 +1237,10 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
       risk_description?: string | null;
       risk_category?: string | null;
       is_active?: boolean;
+      risk_emerging_source_id?: string | null;
+      risk_emerging_status_id?: string | null;
+      risk_factor_id?: string | null;
+      operational_risk_loss_event_type_id?: string | null;
     };
     const id = String(body.id || '').trim();
     const significantActivityId = String(body.significant_activity_id || '').trim();
@@ -1181,25 +1258,51 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
     if (!riskName) return NextResponse.json({ error: 'risk_name es obligatorio.' }, { status: 400 });
 
     const rows = await prisma.$queryRaw<RiskCatalogByActivityRow[]>(Prisma.sql`
-      UPDATE core.risk_catalog
-      SET
-        significant_activity_id = ${significantActivityId}::uuid,
-        risk_code = ${riskCode},
-        risk_name = ${riskName},
-        risk_description = ${riskDescription || null},
-        risk_category = ${riskCategory || null},
-        is_active = ${isActive},
-        updated_at = now()
-      WHERE risk_catalog_id = ${id}::uuid
-      RETURNING
-        risk_catalog_id::text AS risk_catalog_id,
-        significant_activity_id::text AS significant_activity_id,
-        risk_code,
-        risk_name,
-        risk_description,
-        risk_category,
-        is_active
+      WITH updated_risk AS (
+        UPDATE core.risk
+        SET
+          code = ${riskCode},
+          name = ${riskName},
+          description = ${riskDescription || null},
+          risk_type = ${riskCategory || 'linear'},
+          is_active = ${isActive},
+          risk_emerging_source_id = ${body.risk_emerging_source_id ? Prisma.sql`${body.risk_emerging_source_id}::bigint` : Prisma.sql`NULL`},
+          risk_emerging_status_id = ${body.risk_emerging_status_id ? Prisma.sql`${body.risk_emerging_status_id}::bigint` : Prisma.sql`NULL`},
+          risk_factor_id = ${body.risk_factor_id ? Prisma.sql`${body.risk_factor_id}::bigint` : Prisma.sql`NULL`},
+          operational_risk_loss_event_type_id = ${body.operational_risk_loss_event_type_id ? Prisma.sql`${body.operational_risk_loss_event_type_id}::bigint` : Prisma.sql`NULL`},
+          updated_at = now()
+        WHERE id = ${id}::uuid
+        RETURNING id, code, name, description, risk_type, is_active, risk_emerging_source_id, risk_emerging_status_id, risk_factor_id, operational_risk_loss_event_type_id
+      ),
+      updated_map AS (
+        UPDATE core.map_elements_risk
+        SET element_id = ${significantActivityId}::uuid
+        WHERE risk_id = ${id}::uuid
+        RETURNING element_id, risk_id
+      ),
+      missing_map AS (
+        INSERT INTO core.map_elements_risk (element_id, risk_id, link_strength)
+        SELECT ${significantActivityId}::uuid, ${id}::uuid, 3
+        WHERE NOT EXISTS (SELECT 1 FROM core.map_elements_risk WHERE risk_id = ${id}::uuid)
+        RETURNING element_id, risk_id
+      )
+      SELECT 
+        r.id::text AS risk_catalog_id,
+        COALESCE(m.element_id, mm.element_id)::text AS significant_activity_id,
+        r.code AS risk_code,
+        r.name AS risk_name,
+        r.description AS risk_description,
+        r.risk_type AS risk_category,
+        r.is_active,
+        r.risk_emerging_source_id::text AS risk_emerging_source_id,
+        r.risk_emerging_status_id::text AS risk_emerging_status_id,
+        r.risk_factor_id::text AS risk_factor_id,
+        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id
+      FROM updated_risk r
+      LEFT JOIN updated_map m ON m.risk_id = r.id
+      LEFT JOIN missing_map mm ON mm.risk_id = r.id
     `);
+    
     const row = rows[0];
     if (!row) return NextResponse.json({ error: 'Riesgo no encontrado.' }, { status: 404 });
 
@@ -1211,6 +1314,10 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
       risk_description: row.risk_description || '',
       risk_category: row.risk_category || '',
       is_active: Boolean(row.is_active ?? true),
+      risk_emerging_source_id: row.risk_emerging_source_id || null,
+      risk_emerging_status_id: row.risk_emerging_status_id || null,
+      risk_factor_id: row.risk_factor_id || null,
+      operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
     });
   } catch (error) {
     console.error('Error updating risk catalog row:', error);
@@ -1228,10 +1335,10 @@ export async function deleteLinearRiskCatalogRiskHandler(request: Request) {
     if (!UUID_REGEX.test(id)) return NextResponse.json({ error: 'id inválido.' }, { status: 400 });
 
     const rows = await prisma.$queryRaw<Array<{ risk_catalog_id: string }>>(Prisma.sql`
-      UPDATE core.risk_catalog
+      UPDATE core.risk
       SET is_active = false, updated_at = now()
-      WHERE risk_catalog_id = ${id}::uuid
-      RETURNING risk_catalog_id::text AS risk_catalog_id
+      WHERE id = ${id}::uuid
+      RETURNING id::text AS risk_catalog_id
     `);
     if (!rows[0]) return NextResponse.json({ error: 'Riesgo no encontrado.' }, { status: 404 });
     return NextResponse.json({ ok: true, id });

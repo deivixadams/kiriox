@@ -13,6 +13,10 @@ type RiskRow = {
   risk_description: string;
   risk_category: string;
   is_active: boolean;
+  risk_emerging_source_id?: string | null;
+  risk_emerging_status_id?: string | null;
+  risk_factor_id?: string | null;
+  operational_risk_loss_event_type_id?: string | null;
 };
 
 type ActivityMeta = {
@@ -45,6 +49,18 @@ export default function RiskCatalogNewPage() {
   const [activityComboOpen, setActivityComboOpen] = useState(false);
   const [allowAllActivities, setAllowAllActivities] = useState(!significantActivityId);
   const [aiLoading, setAiLoading] = useState(false);
+  const [classifications, setClassifications] = useState<{
+    risk_emerging_source: any[];
+    risk_emerging_status: any[];
+    risk_factor: any[];
+    operational_risk_loss_event_type: any[];
+  }>({
+    risk_emerging_source: [],
+    risk_emerging_status: [],
+    risk_factor: [],
+    operational_risk_loss_event_type: [],
+  });
+
   const [form, setForm] = useState({
     id: '',
     significant_activity_id: significantActivityId,
@@ -53,7 +69,20 @@ export default function RiskCatalogNewPage() {
     risk_description: '',
     risk_category: '',
     is_active: true,
+    risk_emerging_source_id: null as string | null,
+    risk_emerging_status_id: null as string | null,
+    risk_factor_id: null as string | null,
+    operational_risk_loss_event_type_id: null as string | null,
   });
+
+  React.useEffect(() => {
+    fetch('/api/linear-risk/catalog/risk-classifications')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) setClassifications(data);
+      })
+      .catch();
+  }, []);
 
   const canNavigate = useMemo(() => riskRows.length > 0, [riskRows.length]);
   const filteredActivityOptions = useMemo(() => {
@@ -77,6 +106,10 @@ export default function RiskCatalogNewPage() {
       risk_description: row.risk_description,
       risk_category: row.risk_category,
       is_active: row.is_active,
+      risk_emerging_source_id: row.risk_emerging_source_id || null,
+      risk_emerging_status_id: row.risk_emerging_status_id || null,
+      risk_factor_id: row.risk_factor_id || null,
+      operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
     });
   }, []);
 
@@ -175,6 +208,10 @@ export default function RiskCatalogNewPage() {
       risk_description: '',
       risk_category: '',
       is_active: true,
+      risk_emerging_source_id: null,
+      risk_emerging_status_id: null,
+      risk_factor_id: null,
+      operational_risk_loss_event_type_id: null,
     }));
   };
 
@@ -188,6 +225,10 @@ export default function RiskCatalogNewPage() {
       risk_description: '',
       risk_category: '',
       is_active: true,
+      risk_emerging_source_id: null,
+      risk_emerging_status_id: null,
+      risk_factor_id: null,
+      operational_risk_loss_event_type_id: null,
     }));
     setActivityMeta(activity);
     setActivitySearch('');
@@ -284,6 +325,10 @@ export default function RiskCatalogNewPage() {
           risk_description: form.risk_description.trim() || null,
           risk_category: form.risk_category.trim() || null,
           is_active: form.is_active,
+          risk_emerging_source_id: form.risk_emerging_source_id || null,
+          risk_emerging_status_id: form.risk_emerging_status_id || null,
+          risk_factor_id: form.risk_factor_id || null,
+          operational_risk_loss_event_type_id: form.operational_risk_loss_event_type_id || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -471,6 +516,66 @@ export default function RiskCatalogNewPage() {
               placeholder="Categoría del riesgo"
             />
           </label>
+
+          
+          <div className={styles.grid}>
+            <label className={styles.field}>
+              <span>Factor de Riesgo</span>
+              <select
+                className={styles.input}
+                value={form.risk_factor_id || ''}
+                onChange={(e) => setForm(prev => ({ ...prev, risk_factor_id: e.target.value || null }))}
+              >
+                <option value="">Seleccionar...</option>
+                {classifications.risk_factor.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.field}>
+              <span>Tipo de Evento (Basilea)</span>
+              <select
+                className={styles.input}
+                value={form.operational_risk_loss_event_type_id || ''}
+                onChange={(e) => setForm(prev => ({ ...prev, operational_risk_loss_event_type_id: e.target.value || null }))}
+              >
+                <option value="">Seleccionar...</option>
+                {classifications.operational_risk_loss_event_type.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className={styles.grid}>
+            <label className={styles.field}>
+              <span>Estado de Riesgo Emergente</span>
+              <select
+                className={styles.input}
+                value={form.risk_emerging_status_id || ''}
+                onChange={(e) => setForm(prev => ({ ...prev, risk_emerging_status_id: e.target.value || null }))}
+              >
+                <option value="">Seleccionar...</option>
+                {classifications.risk_emerging_status.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.field}>
+              <span>Fuente de Riesgo Emergente</span>
+              <select
+                className={styles.input}
+                value={form.risk_emerging_source_id || ''}
+                onChange={(e) => setForm(prev => ({ ...prev, risk_emerging_source_id: e.target.value || null }))}
+              >
+                <option value="">Seleccionar...</option>
+                {classifications.risk_emerging_source.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
 
           <label className={styles.switchRow}>
             <input

@@ -54,6 +54,6 @@ export async function deleteCompanyHandler(request: Request) {
       WHERE id = ${companyId}::uuid
     `);
 
-    return { ok: true };
+    return Response.json({ ok: true });
   });
 }
