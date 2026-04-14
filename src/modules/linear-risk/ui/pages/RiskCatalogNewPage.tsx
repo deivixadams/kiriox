@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 import styles from './SignificantActivityNewPage.module.css';
 
 type RiskRow = {
@@ -17,6 +17,8 @@ type RiskRow = {
   risk_emerging_status_id?: string | null;
   risk_factor_id?: string | null;
   operational_risk_loss_event_type_id?: string | null;
+  catalog_impact_id?: string | null;
+  catalog_probability_id?: string | null;
 };
 
 type ActivityMeta = {
@@ -45,12 +47,36 @@ export default function RiskCatalogNewPage() {
     risk_emerging_status: any[];
     risk_factor: any[];
     operational_risk_loss_event_type: any[];
+    catalog_probability: any[];
+    catalog_impact: any[];
   }>({
     risk_emerging_source: [],
     risk_emerging_status: [],
     risk_factor: [],
     operational_risk_loss_event_type: [],
+    catalog_probability: [],
+    catalog_impact: [],
   });
+
+  const [showImpactGuide, setShowImpactGuide] = useState(false);
+  const [impactGuideData, setImpactGuideData] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchImpactGuide = async () => {
+      try {
+        const res = await fetch('/api/linear-risk/catalog/impact-guide');
+        if (res.ok) {
+          const data = await res.json();
+          setImpactGuideData(data);
+        }
+      } catch (err) {
+        console.error('Error fetching impact guide:', err);
+      }
+    };
+    fetchImpactGuide();
+  }, []);
+
+
 
   const [form, setForm] = useState({
     id: '',
@@ -63,6 +89,8 @@ export default function RiskCatalogNewPage() {
     risk_emerging_status_id: null as string | null,
     risk_factor_id: null as string | null,
     operational_risk_loss_event_type_id: null as string | null,
+    catalog_impact_id: null as string | null,
+    catalog_probability_id: null as string | null,
   });
 
   React.useEffect(() => {
@@ -95,6 +123,8 @@ export default function RiskCatalogNewPage() {
       risk_emerging_status_id: row.risk_emerging_status_id || null,
       risk_factor_id: row.risk_factor_id || null,
       operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
+      catalog_impact_id: row.catalog_impact_id || null,
+      catalog_probability_id: row.catalog_probability_id || null,
     });
   }, []);
 
@@ -166,6 +196,8 @@ export default function RiskCatalogNewPage() {
       risk_emerging_status_id: null,
       risk_factor_id: null,
       operational_risk_loss_event_type_id: null,
+      catalog_impact_id: null,
+      catalog_probability_id: null,
     }));
   };
 
@@ -257,6 +289,8 @@ export default function RiskCatalogNewPage() {
           risk_emerging_status_id: form.risk_emerging_status_id || null,
           risk_factor_id: form.risk_factor_id || null,
           operational_risk_loss_event_type_id: form.operational_risk_loss_event_type_id || null,
+          catalog_impact_id: form.catalog_impact_id || null,
+          catalog_probability_id: form.catalog_probability_id || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -362,15 +396,56 @@ export default function RiskCatalogNewPage() {
             />
           </label>
 
-          <label className={styles.field}>
-            <span>Categoría del riesgo</span>
-            <input
-              className={styles.input}
-              value={form.risk_category}
-              onChange={(e) => setForm((prev) => ({ ...prev, risk_category: e.target.value }))}
-              placeholder="Categoría del riesgo"
-            />
-          </label>
+          <div className={styles.grid}>
+            <label className={styles.field}>
+              <span>Categoría del riesgo</span>
+              <input
+                className={styles.input}
+                value={form.risk_category}
+                onChange={(e) => setForm((prev) => ({ ...prev, risk_category: e.target.value }))}
+                placeholder="Categoría"
+              />
+            </label>
+            <label className={styles.field}>
+              <span>Probabilidad</span>
+              <select
+                className={styles.input}
+                value={form.catalog_probability_id || ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, catalog_probability_id: e.target.value || null }))}
+              >
+                <option value="">Seleccionar...</option>
+                {classifications.catalog_probability.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.code} - {opt.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.field}>
+              <span>
+                Impacto{' '}
+                <span 
+                  className={styles.blinkLabel} 
+                  onClick={() => setShowImpactGuide(true)}
+                  title="Ver guía de impacto"
+                >
+                  (Guía)
+                </span>
+              </span>
+              <select
+                className={styles.input}
+                value={form.catalog_impact_id || ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, catalog_impact_id: e.target.value || null }))}
+              >
+                <option value="">Seleccionar...</option>
+                {classifications.catalog_impact.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.code} - {opt.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           
           <div className={styles.grid}>
@@ -499,7 +574,54 @@ export default function RiskCatalogNewPage() {
             </div>
           </div>
         </form>
-      </div>
+
+      {showImpactGuide && (
+        <div className={styles.modalOverlay} onClick={() => setShowImpactGuide(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Guía de Evaluación de Impacto</h3>
+            </div>
+            <div className={styles.modalBody}>
+              {impactGuideData.map((item, idx) => {
+                const isHeader = Boolean(item.categoria);
+                
+                if (isHeader) {
+                  return (
+                    <div key={idx} className={styles.categoryHeader} style={{ marginTop: idx === 0 ? 0 : 24, borderRadius: '8px 8px 0 0' }}>
+                      <div className={styles.categoryTitle}>{item.categoria}</div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={idx} className={styles.criteriaItem} style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '100px 1fr 60px', 
+                    alignItems: 'center',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    borderTop: 'none'
+                  }}>
+                    <div className={styles.levelTag}>{item.level}</div>
+                    <div className={styles.criteriaText}>{item.description}</div>
+                    <div className={styles.criteriaScore}>{item.impact_score}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className={styles.modalFooter}>
+              <button 
+                type="button"
+                className={styles.primaryButton} 
+                onClick={() => setShowImpactGuide(false)}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
 }

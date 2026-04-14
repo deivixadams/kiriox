@@ -82,6 +82,8 @@ type RiskCatalogByActivityRow = {
   risk_emerging_status_id?: string | null;
   risk_factor_id?: string | null;
   operational_risk_loss_event_type_id?: string | null;
+  catalog_impact_id?: string | null;
+  catalog_probability_id?: string | null;
 };
 
 type LinearDraftRow = {
@@ -1080,7 +1082,9 @@ export async function getLinearRiskCatalogRiskHandler(request: Request) {
           r.risk_emerging_source_id::text AS risk_emerging_source_id,
           r.risk_emerging_status_id::text AS risk_emerging_status_id,
           r.risk_factor_id::text AS risk_factor_id,
-          r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id
+          r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id,
+          r.catalog_impact_id::text AS catalog_impact_id,
+          r.catalog_probability_id::text AS catalog_probability_id
         FROM core.risk r
         LEFT JOIN core.map_elements_risk mer ON mer.risk_id = r.id
         WHERE r.id = ${riskId}::uuid
@@ -1100,6 +1104,8 @@ export async function getLinearRiskCatalogRiskHandler(request: Request) {
         risk_emerging_status_id: row.risk_emerging_status_id || null,
         risk_factor_id: row.risk_factor_id || null,
         operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
+        catalog_impact_id: row.catalog_impact_id || null,
+        catalog_probability_id: row.catalog_probability_id || null,
       });
     }
 
@@ -1129,6 +1135,8 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
       risk_emerging_status_id?: string | null;
       risk_factor_id?: string | null;
       operational_risk_loss_event_type_id?: string | null;
+      catalog_impact_id?: string | null;
+      catalog_probability_id?: string | null;
     };
     const significantActivityId = String(body.significant_activity_id || '').trim();
     const inputRiskCode = String(body.risk_code || '').trim();
@@ -1168,6 +1176,8 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
           risk_emerging_status_id,
           risk_factor_id,
           operational_risk_loss_event_type_id,
+          catalog_impact_id,
+          catalog_probability_id,
           created_at,
           updated_at
         )
@@ -1184,10 +1194,12 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
           ${body.risk_emerging_status_id ? Prisma.sql`${body.risk_emerging_status_id}::bigint` : Prisma.sql`NULL`},
           ${body.risk_factor_id ? Prisma.sql`${body.risk_factor_id}::bigint` : Prisma.sql`NULL`},
           ${body.operational_risk_loss_event_type_id ? Prisma.sql`${body.operational_risk_loss_event_type_id}::bigint` : Prisma.sql`NULL`},
+          ${body.catalog_impact_id ? Prisma.sql`${body.catalog_impact_id}::bigint` : Prisma.sql`NULL`},
+          ${body.catalog_probability_id ? Prisma.sql`${body.catalog_probability_id}::bigint` : Prisma.sql`NULL`},
           now(),
           now()
         )
-        RETURNING id, code, name, description, risk_type, is_active, risk_emerging_source_id, risk_emerging_status_id, risk_factor_id, operational_risk_loss_event_type_id
+        RETURNING id, code, name, description, risk_type, is_active, risk_emerging_source_id, risk_emerging_status_id, risk_factor_id, operational_risk_loss_event_type_id, catalog_impact_id, catalog_probability_id
       ),
       inserted_map AS (
         INSERT INTO core.map_elements_risk (
@@ -1210,7 +1222,9 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
         r.risk_emerging_source_id::text AS risk_emerging_source_id,
         r.risk_emerging_status_id::text AS risk_emerging_status_id,
         r.risk_factor_id::text AS risk_factor_id,
-        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id
+        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id,
+        r.catalog_impact_id::text AS catalog_impact_id,
+        r.catalog_probability_id::text AS catalog_probability_id
       FROM inserted_risk r
       JOIN inserted_map m ON m.risk_id = r.id
     `);
@@ -1227,6 +1241,8 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
       risk_emerging_status_id: row.risk_emerging_status_id || null,
       risk_factor_id: row.risk_factor_id || null,
       operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
+      catalog_impact_id: row.catalog_impact_id || null,
+      catalog_probability_id: row.catalog_probability_id || null,
     });
   } catch (error: any) {
     console.error('Error creating risk catalog row:', error);
@@ -1251,6 +1267,8 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
       risk_emerging_status_id?: string | null;
       risk_factor_id?: string | null;
       operational_risk_loss_event_type_id?: string | null;
+      catalog_impact_id?: string | null;
+      catalog_probability_id?: string | null;
     };
     const id = String(body.id || '').trim();
     const significantActivityId = String(body.significant_activity_id || '').trim();
@@ -1279,9 +1297,11 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
           risk_emerging_status_id = ${body.risk_emerging_status_id ? Prisma.sql`${body.risk_emerging_status_id}::bigint` : Prisma.sql`NULL`},
           risk_factor_id = ${body.risk_factor_id ? Prisma.sql`${body.risk_factor_id}::bigint` : Prisma.sql`NULL`},
           operational_risk_loss_event_type_id = ${body.operational_risk_loss_event_type_id ? Prisma.sql`${body.operational_risk_loss_event_type_id}::bigint` : Prisma.sql`NULL`},
+          catalog_impact_id = ${body.catalog_impact_id ? Prisma.sql`${body.catalog_impact_id}::bigint` : Prisma.sql`NULL`},
+          catalog_probability_id = ${body.catalog_probability_id ? Prisma.sql`${body.catalog_probability_id}::bigint` : Prisma.sql`NULL`},
           updated_at = now()
         WHERE id = ${id}::uuid
-        RETURNING id, code, name, description, risk_type, is_active, risk_emerging_source_id, risk_emerging_status_id, risk_factor_id, operational_risk_loss_event_type_id
+        RETURNING id, code, name, description, risk_type, is_active, risk_emerging_source_id, risk_emerging_status_id, risk_factor_id, operational_risk_loss_event_type_id, catalog_impact_id, catalog_probability_id
       ),
       updated_map AS (
         UPDATE core.map_elements_risk
@@ -1306,7 +1326,9 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
         r.risk_emerging_source_id::text AS risk_emerging_source_id,
         r.risk_emerging_status_id::text AS risk_emerging_status_id,
         r.risk_factor_id::text AS risk_factor_id,
-        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id
+        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id,
+        r.catalog_impact_id::text AS catalog_impact_id,
+        r.catalog_probability_id::text AS catalog_probability_id
       FROM updated_risk r
       LEFT JOIN updated_map m ON m.risk_id = r.id
       LEFT JOIN missing_map mm ON mm.risk_id = r.id
@@ -1327,6 +1349,8 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
       risk_emerging_status_id: row.risk_emerging_status_id || null,
       risk_factor_id: row.risk_factor_id || null,
       operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
+      catalog_impact_id: row.catalog_impact_id || null,
+      catalog_probability_id: row.catalog_probability_id || null,
     });
   } catch (error) {
     console.error('Error updating risk catalog row:', error);
