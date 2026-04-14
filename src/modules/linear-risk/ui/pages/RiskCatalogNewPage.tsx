@@ -212,6 +212,10 @@ export default function RiskCatalogNewPage() {
   };
 
   const goBack = () => {
+    if (returnTo.startsWith('/modelo/gobernanza/actividades-claves')) {
+      router.push(returnTo);
+      return;
+    }
     const params = new URLSearchParams();
     if (draft) params.set('draft', draft);
     params.set('step', '2');
@@ -219,7 +223,7 @@ export default function RiskCatalogNewPage() {
   };
 
   const closeScreen = () => {
-    router.back();
+    goBack();
   };
 
   const handleDelete = async () => {
@@ -292,6 +296,10 @@ export default function RiskCatalogNewPage() {
       await loadRows(form.significant_activity_id, String(data.id || ''));
 
       if (!isEdit) {
+        if (returnTo.startsWith('/modelo/gobernanza/actividades-claves')) {
+          router.push(returnTo);
+          return;
+        }
         const params = new URLSearchParams();
         if (draft) params.set('draft', draft);
         params.set('step', '2');

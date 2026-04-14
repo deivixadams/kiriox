@@ -292,3 +292,7 @@ This file consolidates operational guidance extracted from:
 ## Note
 
 Siempre que necesites crear archivos temporales, bitácoras, respaldos o artefactos auxiliares, debes crearlos dentro de `xdata/`.
+
+
+# Note
+Any time you make a change on db update prisma

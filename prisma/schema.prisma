@@ -120,7 +120,6 @@ model corpus_catalog_status {
   framework_version                 framework_version[]
   jurisdiction                      jurisdiction[]
   obligation                        obligation[]
-  risk                              risk[]
   corpus_framework                  corpus_framework[]
   corpus_material_event             corpus_material_event[]
   corpus_parameter_set              corpus_parameter_set[]
@@ -750,9 +749,9 @@ model risk {
   risk_type                    String
   description                  String?
   status                       String                         @default("active")
+  is_active                    Boolean                        @default(true)
   created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
   updated_at                   DateTime                       @default(now()) @db.Timestamptz(6)
-  status_id                    Int?                           @db.SmallInt
   risk_type_id                 Int?                           @db.SmallInt
   risk_layer_id                Int                            @default(2) @db.SmallInt
   parent_risk_id               String?                        @db.Uuid
@@ -761,13 +760,13 @@ model risk {
   other_risk                   risk[]                         @relation("riskTorisk")
   corpus_catalog_risk_layer    corpus_catalog_risk_layer      @relation(fields: [risk_layer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_risk_layer_id")
   corpus_catalog_risk_type     corpus_catalog_risk_type?      @relation(fields: [risk_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_risk_type_id")
-  corpus_catalog_status        corpus_catalog_status?         @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_corpus_risk_status_id")
   corpus_control_artifact_risk corpus_control_artifact_risk[]
   corpus_material_event        corpus_material_event[]
   corpus_risk_source           corpus_risk_source[]
 
   @@index([parent_risk_id], map: "idx_corpus_risk_parent_risk_id")
   @@index([risk_layer_id], map: "idx_corpus_risk_risk_layer_id")
+  @@index([is_active], map: "idx_corpus_risk_is_active")
   @@schema("corpus")
   score_run_risk_draft run_risk_draft[]
 
@@ -2025,6 +2024,4 @@ model map_significant_activity_element {
   @@unique([significant_activity_id, element_id], map: "uq_map_significant_activity_element_pair")
   @@schema("core")
 }
-
-
 

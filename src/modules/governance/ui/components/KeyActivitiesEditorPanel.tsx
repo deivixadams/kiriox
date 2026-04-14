@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CirclePlus, Trash2 } from 'lucide-react';
 import styles from './RealmEditorPanel.module.css';
 import { useRegisterCommandSearch } from '@/shared/ui/command-search/useRegisterCommandSearch';
@@ -79,6 +79,8 @@ const initialForm = () => ({
 export function KeyActivitiesEditorPanel() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const RETURN_STATE_KEY = 'kiriox:governance:key-activities:return-state';
 
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [reinos, setReinos] = useState<ReinoOption[]>([]);
@@ -86,10 +88,10 @@ export function KeyActivitiesEditorPanel() {
   const [users, setUsers] = useState<UserOption[]>([]);
   const [frequencies, setFrequencies] = useState<FrequencyOption[]>([]);
 
-  const [selectedCompanyId, setSelectedCompanyId] = useState('');
-  const [selectedReinoId, setSelectedReinoId] = useState('');
-  const [selectedDomainId, setSelectedDomainId] = useState('');
-  const [selectedProcessId, setSelectedProcessId] = useState('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState(searchParams.get('companyId')?.trim() || '');
+  const [selectedReinoId, setSelectedReinoId] = useState(searchParams.get('reinoId')?.trim() || '');
+  const [selectedDomainId, setSelectedDomainId] = useState(searchParams.get('domainId')?.trim() || '');
+  const [selectedProcessId, setSelectedProcessId] = useState(searchParams.get('processId')?.trim() || '');
 
   const [form, setForm] = useState(initialForm);
 
@@ -102,6 +104,24 @@ export function KeyActivitiesEditorPanel() {
   const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    if (searchParams.get('restore_state') !== '1') return;
+    try {
+      const raw = window.sessionStorage.getItem(RETURN_STATE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { form?: typeof form };
+      if (parsed?.form && typeof parsed.form === 'object') {
+        setForm((prev) => ({
+          ...prev,
+          ...parsed.form,
+        }));
+      }
+      window.sessionStorage.removeItem(RETURN_STATE_KEY);
+    } catch {
+      // ignore restore errors
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadCompanies() {
@@ -395,10 +415,30 @@ export function KeyActivitiesEditorPanel() {
       setError('Selecciona empresa y actividad para registrar riesgo.');
       return;
     }
+    try {
+      window.sessionStorage.setItem(
+        RETURN_STATE_KEY,
+        JSON.stringify({
+          form,
+        })
+      );
+    } catch {
+      // ignore storage errors
+    }
+
+    const returnParams = new URLSearchParams({
+      restore_state: '1',
+      companyId: selectedCompanyId,
+      reinoId: selectedReinoId,
+      processId: selectedProcessId,
+      domainId: selectedDomainId,
+    });
+    const returnTo = `/modelo/gobernanza/actividades-claves?${returnParams.toString()}`;
+
     const params = new URLSearchParams({
       company_id: selectedCompanyId,
       significant_activity_id: activityId,
-      return_to: '/modelo/gobernanza/actividades-claves',
+      return_to: returnTo,
     });
     router.push(`/validacion/riesgo-lineal/riesgo/nuevo?${params.toString()}`);
   }
