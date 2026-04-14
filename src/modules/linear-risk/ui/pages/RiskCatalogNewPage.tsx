@@ -146,7 +146,7 @@ export default function RiskCatalogNewPage() {
 
   React.useEffect(() => {
     if (!form.significant_activity_id) return;
-    loadRows(form.significant_activity_id, form.id || undefined, !form.id);
+    loadRows(form.significant_activity_id, form.id || undefined, false);
     loadActivityMeta(form.significant_activity_id);
   }, [form.significant_activity_id, form.id, loadRows, loadActivityMeta]);
 
