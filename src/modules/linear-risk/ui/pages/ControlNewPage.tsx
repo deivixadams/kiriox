@@ -47,15 +47,18 @@ export default function ControlNewPage() {
     automation: CatalogOption[];
     frequency: CatalogOption[];
     effect_type: CatalogOption[];
+    responsible_roles: CatalogOption[];
   }>({
     control_type: [],
     automation: [],
     frequency: [],
     effect_type: [],
+    responsible_roles: [],
   });
 
   const [form, setForm] = useState({
     control_id: '',
+    code: '',
     name: '',
     description: '',
     control_type_id: 1,
@@ -72,6 +75,14 @@ export default function ControlNewPage() {
     rationale: '',
     coverage_notes: '',
   });
+
+  const generateNewControlMetadata = React.useCallback((name: string = '') => {
+    const newId = crypto.randomUUID();
+    const clean = (name || 'CTL').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const newCode = `CTL-${clean || 'NEW'}-${rand}`;
+    return { newId, newCode };
+  }, []);
 
   React.useEffect(() => {
     if (!riskId) {
@@ -94,6 +105,7 @@ export default function ControlNewPage() {
     setCursor(idx);
     setForm({
       control_id: row.control_id,
+      code: row.code,
       name: row.name,
       description: row.description,
       control_type_id: row.control_type_id,
@@ -141,11 +153,13 @@ export default function ControlNewPage() {
   }, [riskId]);
 
   const clearForNew = () => {
+    const { newId, newCode } = generateNewControlMetadata();
     setCursor(-1);
     setError(null);
     setSuccess(null);
     setForm({
-      control_id: '',
+      control_id: newId,
+      code: newCode,
       name: '',
       description: '',
       control_type_id: 1,
@@ -163,6 +177,13 @@ export default function ControlNewPage() {
       coverage_notes: '',
     });
   };
+
+  React.useEffect(() => {
+    if (riskId && !form.control_id && cursor === -1) {
+      const { newId, newCode } = generateNewControlMetadata();
+      setForm(prev => ({ ...prev, control_id: newId, code: newCode }));
+    }
+  }, [riskId, cursor, form.control_id, generateNewControlMetadata]);
 
   const navigate = (target: 'first' | 'prev' | 'next' | 'last') => {
     if (!canNavigate) return;
@@ -205,11 +226,14 @@ export default function ControlNewPage() {
     setSaving(true);
     try {
       await fetch('/api/auth/csrf');
+      const isEdit = cursor !== -1 || (form.control_id && controlRows.some(r => r.control_id === form.control_id));
       const res = await fetch('/api/linear-risk/catalog/control-catalog', {
-        method: 'POST',
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          control_id: form.control_id,
           risk_id: riskId,
+          code: form.code,
           name: form.name.trim(),
           description: form.description.trim(),
           control_type_id: form.control_type_id,
@@ -233,7 +257,7 @@ export default function ControlNewPage() {
         return;
       }
 
-      setSuccess('Control creado correctamente.');
+      setSuccess(isEdit ? 'Control actualizado correctamente.' : 'Control creado correctamente.');
       await loadRows(String(data.control_id || ''));
     } finally {
       setSaving(false);
@@ -274,9 +298,9 @@ export default function ControlNewPage() {
               <span>Código del control</span>
               <input
                 className={styles.input}
-                value={controlRows[cursor]?.code || '(se genera al guardar)'}
+                value={form.code || '(se genera al guardar)'}
                 readOnly
-                style={{ fontFamily: 'monospace', opacity: form.control_id ? 1 : 0.5 }}
+                style={{ fontFamily: 'monospace', opacity: 1 }}
               />
             </label>
             <label className={styles.field}>
@@ -382,10 +406,16 @@ export default function ControlNewPage() {
               <span>Rol responsable</span>
               <input
                 className={styles.input}
+                list="responsible_users"
                 value={form.owner_role}
                 onChange={(e) => setForm(prev => ({ ...prev, owner_role: e.target.value }))}
-                placeholder="Ej: Gerente de Riesgos"
+                placeholder="Seleccione o escriba el responsable"
               />
+              <datalist id="responsible_users">
+                {classifications.responsible_roles.map(opt => (
+                  <option key={opt.id} value={opt.name} />
+                ))}
+              </datalist>
             </label>
             <label className={styles.field}>
               <span>Tipo de efecto</span>
@@ -472,16 +502,16 @@ export default function ControlNewPage() {
 
           <div className={styles.actions}>
             <div className={styles.actionsLeft}>
-              <button type="button" className={styles.secondaryButton} onClick={() => navigate('first')} disabled={saving || !canNavigate || cursor <= 0}>
+              <button type="button" className={styles.secondaryButton} onClick={() => navigate('first')} disabled={saving || !canNavigate || cursor === 0}>
                 Primero
               </button>
-              <button type="button" className={styles.secondaryButton} onClick={() => navigate('prev')} disabled={saving || !canNavigate || cursor <= 0}>
+              <button type="button" className={styles.secondaryButton} onClick={() => navigate('prev')} disabled={saving || !canNavigate || cursor === 0}>
                 Anterior
               </button>
-              <button type="button" className={styles.secondaryButton} onClick={() => navigate('next')} disabled={saving || !canNavigate || cursor >= controlRows.length - 1 || cursor < 0}>
+              <button type="button" className={styles.secondaryButton} onClick={() => navigate('next')} disabled={saving || !canNavigate || (cursor >= controlRows.length - 1 && cursor !== -1)}>
                 Siguiente
               </button>
-              <button type="button" className={styles.secondaryButton} onClick={() => navigate('last')} disabled={saving || !canNavigate || cursor >= controlRows.length - 1}>
+              <button type="button" className={styles.secondaryButton} onClick={() => navigate('last')} disabled={saving || !canNavigate || cursor === controlRows.length - 1}>
                 Final
               </button>
             </div>

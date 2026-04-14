@@ -456,22 +456,24 @@ async function getInherentSeedRows(draftPk: bigint): Promise<DraftInherentSeedRo
       di.notes AS draft_item_notes,
       dir.risk_assessment_draft_item_risk_id,
       dir.risk_catalog_id::text AS risk_catalog_id,
-      rc.risk_code,
-      rc.risk_name,
-      rc.risk_description,
-      cp.name AS probability_name,
+      rc.code AS risk_code,
+      rc.name AS risk_name,
+      rc.description AS risk_description,
       dir.rationale,
-      cp.numeric_value AS probability_value,
-      ci.name AS impact_name,
-      ci.numeric_value AS impact_value,
-      dir.inherent_risk_score
+      dir.inherent_risk_score,
+      COALESCE(cp_dir.name, cp_rc.name) AS probability_name,
+      COALESCE(cp_dir.numeric_value, cp_rc.numeric_value) AS probability_value,
+      COALESCE(ci_dir.name, ci_rc.name) AS impact_name,
+      COALESCE(ci_dir.numeric_value, ci_rc.numeric_value) AS impact_value
     FROM core.risk_assessment_draft_item di
     JOIN core.domain_elements sa ON sa.id = di.significant_activity_id AND sa.element_type = 'ACTIVITY'
     LEFT JOIN core.risk_assessment_draft_item_risk dir
       ON dir.risk_assessment_draft_item_id = di.risk_assessment_draft_item_id
-    LEFT JOIN core.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
-    LEFT JOIN core.catalog_probability cp ON cp.catalog_probability_id = dir.catalog_probability_id
-    LEFT JOIN core.catalog_impact ci ON ci.catalog_impact_id = dir.catalog_impact_id
+    LEFT JOIN core.risk rc ON rc.id = dir.risk_catalog_id
+    LEFT JOIN core.catalog_probability cp_dir ON cp_dir.catalog_probability_id = dir.catalog_probability_id
+    LEFT JOIN core.catalog_impact ci_dir ON ci_dir.catalog_impact_id = dir.catalog_impact_id
+    LEFT JOIN core.catalog_probability cp_rc ON cp_rc.catalog_probability_id = rc.catalog_probability_id
+    LEFT JOIN core.catalog_impact ci_rc ON ci_rc.catalog_impact_id = rc.catalog_impact_id
     WHERE di.risk_assessment_draft_id = ${draftPk}
       AND COALESCE(di.is_deleted, false) = false
     ORDER BY di.sort_order ASC, di.risk_assessment_draft_item_id ASC, dir.risk_assessment_draft_item_risk_id ASC
@@ -1031,7 +1033,9 @@ export async function getLinearRiskRisksBySignificantActivityHandler(request: Re
         r.risk_emerging_source_id::text AS risk_emerging_source_id,
         r.risk_emerging_status_id::text AS risk_emerging_status_id,
         r.risk_factor_id::text AS risk_factor_id,
-        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id
+        r.operational_risk_loss_event_type_id::text AS operational_risk_loss_event_type_id,
+        r.catalog_impact_id::text AS catalog_impact_id,
+        r.catalog_probability_id::text AS catalog_probability_id
       FROM core.risk r
       JOIN core.map_elements_risk mer ON mer.risk_id = r.id
       WHERE mer.element_id = ${significantActivityId}::uuid
@@ -1052,6 +1056,8 @@ export async function getLinearRiskRisksBySignificantActivityHandler(request: Re
         risk_emerging_status_id: row.risk_emerging_status_id || null,
         risk_factor_id: row.risk_factor_id || null,
         operational_risk_loss_event_type_id: row.operational_risk_loss_event_type_id || null,
+        catalog_impact_id: row.catalog_impact_id || null,
+        catalog_probability_id: row.catalog_probability_id || null,
       })),
     });
   } catch (error) {
@@ -1190,12 +1196,12 @@ export async function postLinearRiskCatalogRiskHandler(request: Request) {
           'LINEAR_WIZARD',
           ${codigoReino},
           ${isActive},
-          ${body.risk_emerging_source_id ? Prisma.sql`${body.risk_emerging_source_id}::bigint` : Prisma.sql`NULL`},
-          ${body.risk_emerging_status_id ? Prisma.sql`${body.risk_emerging_status_id}::bigint` : Prisma.sql`NULL`},
-          ${body.risk_factor_id ? Prisma.sql`${body.risk_factor_id}::bigint` : Prisma.sql`NULL`},
-          ${body.operational_risk_loss_event_type_id ? Prisma.sql`${body.operational_risk_loss_event_type_id}::bigint` : Prisma.sql`NULL`},
-          ${body.catalog_impact_id ? Prisma.sql`${body.catalog_impact_id}::bigint` : Prisma.sql`NULL`},
-          ${body.catalog_probability_id ? Prisma.sql`${body.catalog_probability_id}::bigint` : Prisma.sql`NULL`},
+          ${body.risk_emerging_source_id ? BigInt(body.risk_emerging_source_id) : null},
+          ${body.risk_emerging_status_id ? BigInt(body.risk_emerging_status_id) : null},
+          ${body.risk_factor_id ? BigInt(body.risk_factor_id) : null},
+          ${body.operational_risk_loss_event_type_id ? BigInt(body.operational_risk_loss_event_type_id) : null},
+          ${body.catalog_impact_id ? BigInt(body.catalog_impact_id) : null},
+          ${body.catalog_probability_id ? BigInt(body.catalog_probability_id) : null},
           now(),
           now()
         )
@@ -1293,12 +1299,12 @@ export async function putLinearRiskCatalogRiskHandler(request: Request) {
           description = ${riskDescription || null},
           risk_type = ${riskCategory || 'linear'},
           is_active = ${isActive},
-          risk_emerging_source_id = ${body.risk_emerging_source_id ? Prisma.sql`${body.risk_emerging_source_id}::bigint` : Prisma.sql`NULL`},
-          risk_emerging_status_id = ${body.risk_emerging_status_id ? Prisma.sql`${body.risk_emerging_status_id}::bigint` : Prisma.sql`NULL`},
-          risk_factor_id = ${body.risk_factor_id ? Prisma.sql`${body.risk_factor_id}::bigint` : Prisma.sql`NULL`},
-          operational_risk_loss_event_type_id = ${body.operational_risk_loss_event_type_id ? Prisma.sql`${body.operational_risk_loss_event_type_id}::bigint` : Prisma.sql`NULL`},
-          catalog_impact_id = ${body.catalog_impact_id ? Prisma.sql`${body.catalog_impact_id}::bigint` : Prisma.sql`NULL`},
-          catalog_probability_id = ${body.catalog_probability_id ? Prisma.sql`${body.catalog_probability_id}::bigint` : Prisma.sql`NULL`},
+          risk_emerging_source_id = ${body.risk_emerging_source_id ? BigInt(body.risk_emerging_source_id) : null},
+          risk_emerging_status_id = ${body.risk_emerging_status_id ? BigInt(body.risk_emerging_status_id) : null},
+          risk_factor_id = ${body.risk_factor_id ? BigInt(body.risk_factor_id) : null},
+          operational_risk_loss_event_type_id = ${body.operational_risk_loss_event_type_id ? BigInt(body.operational_risk_loss_event_type_id) : null},
+          catalog_impact_id = ${body.catalog_impact_id ? BigInt(body.catalog_impact_id) : null},
+          catalog_probability_id = ${body.catalog_probability_id ? BigInt(body.catalog_probability_id) : null},
           updated_at = now()
         WHERE id = ${id}::uuid
         RETURNING id, code, name, description, risk_type, is_active, risk_emerging_source_id, risk_emerging_status_id, risk_factor_id, operational_risk_loss_event_type_id, catalog_impact_id, catalog_probability_id
@@ -2145,7 +2151,9 @@ export async function postControlHandler(request: Request) {
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = (await request.json()) as {
+      control_id?: string;
       risk_id?: string;
+      code?: string;
       name?: string;
       description?: string;
       control_type_id?: number;
@@ -2163,7 +2171,9 @@ export async function postControlHandler(request: Request) {
       coverage_notes?: string | null;
     };
 
+    const controlId = String(body.control_id || '').trim();
     const riskId = String(body.risk_id || '').trim();
+    const inputCode = String(body.code || '').trim();
     const controlName = String(body.name || '').trim();
     const controlDescription = String(body.description || '').trim();
     const controlTypeId = Number(body.control_type_id) || 1;
@@ -2186,7 +2196,8 @@ export async function postControlHandler(request: Request) {
     if (!controlName) return NextResponse.json({ error: 'name es obligatorio.' }, { status: 400 });
     if (!controlDescription) return NextResponse.json({ error: 'description es obligatorio.' }, { status: 400 });
 
-    const controlCode = buildInternalControlCode(controlName);
+    const finalControlId = controlId && UUID_REGEX.test(controlId) ? controlId : null;
+    const controlCode = inputCode || buildInternalControlCode(controlName);
 
     // Get reino_id and framework_version_id from the risk
     const riskMeta = await prisma.$queryRaw<Array<{ reino_id: string; codigo_reino: string; fvid: string | null }>>(Prisma.sql`
@@ -2214,15 +2225,21 @@ export async function postControlHandler(request: Request) {
     const reinoId = meta.reino_id;
     const codigoReino = meta.codigo_reino || null;
 
-    // Fallback for framework_version_id: use existing from map, or find any from reinoId
     let frameworkVersionId = meta.fvid;
     if (!frameworkVersionId) {
+      // Fallback: Try to find ANY framework version from confirmed table or existing maps
       const fvRows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-        SELECT fv.id::text AS id
-        FROM corpus."_Delete_framework_version" fv
-        LIMIT 1
+        SELECT framework_version_id::text AS id FROM core.map_risk_control LIMIT 1
       `);
       frameworkVersionId = fvRows[0]?.id || null;
+    }
+    
+    if (!frameworkVersionId) {
+       // Last resort: if still null, we can't map it, but we should at least try to find a valid one from the system
+       const sysFv = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+         SELECT id::text FROM corpus.framework_version WHERE status = 'active' LIMIT 1
+       `);
+       frameworkVersionId = sysFv[0]?.id || null;
     }
     if (!frameworkVersionId) {
       return NextResponse.json({ error: 'No se encontró framework_version_id disponible.' }, { status: 500 });
@@ -2231,7 +2248,7 @@ export async function postControlHandler(request: Request) {
     const rows = await prisma.$queryRaw<ControlByRiskRow[]>(Prisma.sql`
       WITH inserted_control AS (
         INSERT INTO core.control (
-          code, name, description,
+          id, code, name, description,
           control_type_id, automation_id, frequency_id,
           owner_role, control_objective, control_scope,
           evidence_required, is_hard_gate, required_test,
@@ -2239,6 +2256,7 @@ export async function postControlHandler(request: Request) {
           reino_id, codigo_reino,
           rationale
         ) VALUES (
+          COALESCE(${finalControlId}::uuid, gen_random_uuid()),
           ${controlCode},
           ${controlName},
           ${controlDescription},
@@ -2288,43 +2306,183 @@ export async function postControlHandler(request: Request) {
   }
 }
 
-export async function getControlClassificationsHandler() {
+export async function putControlHandler(request: Request) {
   try {
     const auth = await getAuthContext();
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const body = (await request.json()) as {
+      control_id?: string;
+      risk_id?: string;
+      name?: string;
+      description?: string;
+      control_type_id?: number;
+      automation_id?: number;
+      frequency_id?: number;
+      owner_role?: string | null;
+      control_objective?: string | null;
+      control_scope?: string | null;
+      evidence_required?: boolean;
+      is_hard_gate?: boolean;
+      required_test?: boolean;
+      mitigation_strength?: number;
+      effect_type?: string;
+      rationale?: string | null;
+      coverage_notes?: string | null;
+    };
+
+    const controlId = String(body.control_id || '').trim();
+    const riskId = String(body.risk_id || '').trim();
+    const controlName = String(body.name || '').trim();
+    const controlDescription = String(body.description || '').trim();
+    const controlTypeId = Number(body.control_type_id) || 1;
+    const automationId = Number(body.automation_id) || 1;
+    const frequencyId = Number(body.frequency_id) || 3;
+    const ownerRole = typeof body.owner_role === 'string' ? body.owner_role.trim() : null;
+    const controlObjective = typeof body.control_objective === 'string' ? body.control_objective.trim() : null;
+    const controlScope = typeof body.control_scope === 'string' ? body.control_scope.trim() : null;
+    const evidenceRequired = body.evidence_required !== false;
+    const isHardGate = body.is_hard_gate === true;
+    const requiredTest = body.required_test !== false;
+    const mitigationStrength = Number(body.mitigation_strength) || 3;
+    const effectType = String(body.effect_type || 'prevent').trim();
+    const mapRationale = typeof body.rationale === 'string' ? body.rationale.trim() : null;
+    const coverageNotes = typeof body.coverage_notes === 'string' ? body.coverage_notes.trim() : null;
+
+    if (!UUID_REGEX.test(controlId)) return NextResponse.json({ error: 'control_id inválido.' }, { status: 400 });
+    if (!UUID_REGEX.test(riskId)) return NextResponse.json({ error: 'risk_id inválido.' }, { status: 400 });
+    if (!controlName) return NextResponse.json({ error: 'name es obligatorio.' }, { status: 400 });
+
+    const rows = await prisma.$queryRaw<ControlByRiskRow[]>(Prisma.sql`
+      WITH updated_control AS (
+        UPDATE core.control
+        SET
+          name = ${controlName},
+          description = ${controlDescription},
+          control_type_id = ${controlTypeId},
+          automation_id = ${automationId},
+          frequency_id = ${frequencyId},
+          owner_role = ${ownerRole},
+          control_objective = ${controlObjective},
+          control_scope = ${controlScope},
+          evidence_required = ${evidenceRequired},
+          is_hard_gate = ${isHardGate},
+          required_test = ${requiredTest},
+          updated_at = now()
+        WHERE id = ${controlId}::uuid
+        RETURNING *
+      ),
+      updated_map AS (
+        UPDATE core.map_risk_control
+        SET
+          mitigation_strength = ${mitigationStrength},
+          effect_type = ${effectType},
+          rationale = ${mapRationale},
+          coverage_notes = ${coverageNotes}
+        WHERE control_id = ${controlId}::uuid AND risk_id = ${riskId}::uuid
+        RETURNING *
+      ),
+      inserted_map AS (
+        INSERT INTO core.map_risk_control (
+          control_id, risk_id, mitigation_strength, framework_version_id, effect_type, rationale, coverage_notes
+        )
+        SELECT ${controlId}::uuid, ${riskId}::uuid, ${mitigationStrength}, 
+               (SELECT framework_version_id FROM core.map_risk_control WHERE risk_id = ${riskId}::uuid LIMIT 1), 
+               ${effectType}, ${mapRationale}, ${coverageNotes}
+        WHERE NOT EXISTS (SELECT 1 FROM core.map_risk_control WHERE control_id = ${controlId}::uuid AND risk_id = ${riskId}::uuid)
+        RETURNING *
+      )
+      SELECT
+        c.id::text AS control_id,
+        COALESCE(um.risk_id, im.risk_id)::text AS risk_id,
+        c.code, c.name, c.description,
+        c.control_type_id, c.automation_id, c.frequency_id,
+        c.owner_role, c.control_objective, c.control_scope,
+        c.evidence_required, c.is_hard_gate, c.required_test, c.status,
+        COALESCE(um.mitigation_strength, im.mitigation_strength) AS mitigation_strength,
+        COALESCE(um.effect_type, im.effect_type) AS effect_type,
+        COALESCE(um.rationale, im.rationale) AS rationale,
+        COALESCE(um.coverage_notes, im.coverage_notes) AS coverage_notes
+      FROM updated_control c
+      LEFT JOIN updated_map um ON um.control_id = c.id
+      LEFT JOIN inserted_map im ON im.control_id = c.id
+    `);
+
+    return NextResponse.json(rows[0]);
+  } catch (error) {
+    console.error('Error updating control:', error);
+    return NextResponse.json({ error: 'No se pudo actualizar el control.' }, { status: 500 });
+  }
+}
+
+export async function getControlClassificationsHandler() {
+  const control_type = [
+    { id: 1, name: 'Preventivo' },
+    { id: 2, name: 'Detectivo' },
+    { id: 3, name: 'Correctivo' },
+  ];
+  const automation = [
+    { id: 1, name: 'Manual' },
+    { id: 2, name: 'Semi-automático' },
+    { id: 3, name: 'Automático' },
+  ];
+  const frequency = [
+    { id: 1, name: 'Diaria' },
+    { id: 2, name: 'Semanal' },
+    { id: 3, name: 'Mensual' },
+    { id: 4, name: 'Trimestral' },
+    { id: 5, name: 'Anual' },
+  ];
+  const effect_type = [
+    { id: 'prevent', name: 'Prevenir' },
+    { id: 'detect', name: 'Detectar' },
+    { id: 'corrective', name: 'Correctivo' },
+    { id: 'preventive', name: 'Preventivo' },
+    { id: 'detective', name: 'Detective' },
+    { id: 'respond', name: 'Responder' },
+    { id: 'evidence', name: 'Evidencia' },
+    { id: 'resilience', name: 'Resiliencia' },
+    { id: 'governance', name: 'Gobernanza' },
+  ];
+
+  try {
+    const auth = await getAuthContext();
+    let responsible_roles: any[] = [];
+    
+    if (auth && auth.tenantId) {
+      try {
+        const users = await prisma.$queryRaw<Array<{ id: string; name: string | null; last_name: string | null }>>(Prisma.sql`
+          SELECT id::text AS id, name, last_name
+          FROM security.security_users
+          WHERE company_id = ${auth.tenantId}::uuid
+            AND is_active = true
+          ORDER BY name ASC
+        `);
+        responsible_roles = users.map(u => ({
+          id: u.id,
+          name: `${u.name || '(sin nombre)'}${u.last_name ? ' ' + u.last_name : ''}`
+        }));
+      } catch (dbErr) {
+        console.error('Error fetching users for classifications:', dbErr);
+      }
+    }
+
     return NextResponse.json({
-      control_type: [
-        { id: 1, name: 'Preventivo' },
-        { id: 2, name: 'Detectivo' },
-        { id: 3, name: 'Correctivo' },
-      ],
-      automation: [
-        { id: 1, name: 'Manual' },
-        { id: 2, name: 'Semi-automático' },
-        { id: 3, name: 'Automático' },
-      ],
-      frequency: [
-        { id: 1, name: 'Diaria' },
-        { id: 2, name: 'Semanal' },
-        { id: 3, name: 'Mensual' },
-        { id: 4, name: 'Trimestral' },
-        { id: 5, name: 'Anual' },
-      ],
-      effect_type: [
-        { id: 'prevent', name: 'Prevenir' },
-        { id: 'detect', name: 'Detectar' },
-        { id: 'corrective', name: 'Correctivo' },
-        { id: 'preventive', name: 'Preventivo' },
-        { id: 'detective', name: 'Detectivo' },
-        { id: 'respond', name: 'Responder' },
-        { id: 'evidence', name: 'Evidencia' },
-        { id: 'resilience', name: 'Resiliencia' },
-        { id: 'governance', name: 'Gobernanza' },
-      ],
+      control_type,
+      automation,
+      frequency,
+      effect_type,
+      responsible_roles
     });
   } catch (error) {
-    console.error('Error fetching control classifications:', error);
-    return NextResponse.json({ error: 'No se pudieron cargar las clasificaciones.' }, { status: 500 });
+    console.error('Error in classifications handler:', error);
+    // Return at least the basics even on error if possible, but NextResponse needs a response
+    return NextResponse.json({
+      control_type,
+      automation,
+      frequency,
+      effect_type,
+      responsible_roles: []
+    });
   }
 }
