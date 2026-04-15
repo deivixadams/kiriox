@@ -124,6 +124,15 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
         order: 214.5,
       },
       {
+        key: 'risk-treatment',
+        label: 'Tratamiento de riesgo',
+        href: '/validacion/tratamiento',
+        icon: 'ShieldPlus',
+        module: 'linear-risk',
+        permission: 'risk.linear.read',
+        order: 214.6,
+      },
+      {
         key: 'benchmark',
         label: 'Benchmarking',
         href: '/score/dashboard',
