@@ -208,7 +208,8 @@ async function buildRuleBasedGraph(
     focus === 'element' ||
     focus === 'elemento' ||
     text.includes('elemento') ||
-    text.includes('obligaci');
+    text.includes('obligaci') ||
+    text.includes('actividad');
 
   if (isControlFocus) return buildControlFocusedGraph(context);
   if (isElementFocus) return buildElementFocusedGraph(context);
@@ -236,30 +237,35 @@ async function buildRuleBasedGraph(
     case 'resilience':
       return buildResilienceGraph(context);
     case 'fragility':
+    case 'fragility_priority':
       return buildFragilityPriorityGraph(context);
     case 'interventions':
       return buildInterventionsGraph(context);
     case 'high_impact_low_redundancy':
       return buildHighImpactLowRedundancyGraph(context);
+    case 'node':
     default:
-      return [];
+      if (text.includes('impacto')) return buildGenericStructuralGraph(context, 'high_impact');
+      if (text.includes('riesgo')) return buildRiskFocusedGraph(context);
+      return buildGenericStructuralGraph(context);
   }
 }
 
-function resolveFocusFromText(text: string) {
-  if (text.includes('dominio')) return 'domain';
-  if (text.includes('hard gate')) return 'hard_gate';
-  if (text.includes('dependency root')) return 'dependency_root';
-  if (text.includes('puentes') || text.includes('bridge')) return 'bridge';
-  if (text.includes('collapse_trigger') || text.includes('ruptura catastrófica')) return 'collapse_trigger';
-  if (text.includes('propaga') || text.includes('paths') || text.includes('propagation')) return 'propagation_paths';
-  if (text.includes('fragilidad')) return 'fragility';
-  if (text.includes('intervenciones')) return 'interventions';
-  if (text.includes('baja redundancia')) return 'high_impact_low_redundancy';
-  if (text.includes('dependencia estructural')) return 'excessive_dependency';
-  if (text.includes('resiliencia')) return 'resilience';
-  if (text.includes('impacto sistémico de la falla de un hard gate')) return 'hard_gate_failure_impact';
-  if (text.includes('dependencias estructurales') && text.includes('hard gate')) return 'hard_gate_dependencies';
+function resolveFocusFromText(text: string): string {
+  const t = text.toLowerCase();
+  if (t.includes('dominio')) return 'domain';
+  if (t.includes('hard gate')) return 'hard_gate';
+  if (t.includes('dependency root')) return 'dependency_root';
+  if (t.includes('puentes') || t.includes('bridge')) return 'bridge';
+  if (t.includes('collapse_trigger') || t.includes('ruptura catastrófica')) return 'collapse_trigger';
+  if (t.includes('propaga') || t.includes('paths') || t.includes('propagation')) return 'propagation_paths';
+  if (t.includes('fragilidad')) return 'fragility';
+  if (t.includes('intervenciones')) return 'interventions';
+  if (t.includes('baja redundancia')) return 'high_impact_low_redundancy';
+  if (t.includes('dependencia estructural')) return 'excessive_dependency';
+  if (t.includes('resiliencia')) return 'resilience';
+  if (t.includes('impacto sistémico de la falla de un hard gate')) return 'hard_gate_failure_impact';
+  if (t.includes('dependencias estructurales') && t.includes('hard gate')) return 'hard_gate_dependencies';
   return '';
 }
 
@@ -317,6 +323,23 @@ async function buildDomainImpactGraph(context: ExecutionContext) {
     ...params
   );
   const nodes = buildNodes(rows);
+  const domainIds = nodes.map((n) => n.id);
+
+  if (domainIds.length > 0) {
+    const neighbors = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT dst_node_id as node_id, dst_node_code as node_code, dst_node_name as node_name, dst_node_type as node_type
+       FROM views._v_graph_edges_master
+       WHERE src_node_id = ANY($1::uuid[])
+       LIMIT 6`,
+      [domainIds]
+    );
+    neighbors.forEach((n) => {
+      if (!nodes.find((ex) => ex.id === n.node_id)) {
+        nodes.push({ id: n.node_id, label: n.node_name || n.node_code || n.node_id, type: n.node_type });
+      }
+    });
+  }
+
   const edges = await buildEdgesAmong(nodes.map((n) => n.id));
   return toElements(nodes, edges);
 }
@@ -827,6 +850,52 @@ async function buildElementFocusedGraph(context: ExecutionContext) {
       });
     });
   });
+
+  return toElements(nodes, edges);
+}
+
+async function buildGenericStructuralGraph(context: ExecutionContext, type: 'high_impact' | 'generic' = 'generic') {
+  let where = '';
+  const params: any[] = [];
+  if (context.reinoId) {
+    params.push(context.reinoId);
+    where = `AND reino_id = $${params.length}::uuid `;
+  }
+
+  const orderBy = type === 'high_impact' ? 'failure_impact_score DESC' : 'node_name ASC';
+
+  const rows = await prisma.$queryRawUnsafe<any[]>(
+    `SELECT failed_node_id as node_id, failed_node_code as node_code, failed_node_name as node_name, failed_node_type as node_type
+     FROM views._v_graph_failure_impact
+     WHERE 1=1 ${where}
+     ORDER BY ${orderBy}
+     LIMIT 5`,
+    ...params
+  );
+
+  const nodes = buildNodes(rows);
+  const edges = await buildEdgesAmong(nodes.map((n) => n.id));
+
+  // For generic graphs, we REALLY want some edges, so let's expand out once
+  if (edges.length === 0 && nodes.length > 0) {
+    const nodeIds = nodes.map(n => n.id);
+    const neighbors = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT dst_node_id as node_id, dst_node_code as node_code, dst_node_name as node_name, dst_node_type as node_type
+       FROM views._v_graph_edges_master
+       WHERE src_node_id = ANY($1::uuid[])
+       LIMIT 5`,
+       [nodeIds]
+    );
+    
+    neighbors.forEach(n => {
+      if (!nodes.find(existing => existing.id === n.node_id)) {
+        nodes.push({ id: n.node_id, label: n.node_name || n.node_code || n.node_id, type: n.node_type });
+      }
+    });
+
+    const finalEdges = await buildEdgesAmong(nodes.map(n => n.id));
+    return toElements(nodes, finalEdges);
+  }
 
   return toElements(nodes, edges);
 }
