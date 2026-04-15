@@ -115,6 +115,15 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
         order: 214,
       },
       {
+        key: 'risk-kri',
+        label: 'KRI',
+        href: '/validacion/kri',
+        icon: 'Activity',
+        module: 'linear-risk',
+        permission: 'risk.linear.read',
+        order: 214.5,
+      },
+      {
         key: 'benchmark',
         label: 'Benchmarking',
         href: '/score/dashboard',
