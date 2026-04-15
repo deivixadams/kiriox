@@ -67,6 +67,7 @@ type Props = {
   impactCatalog: ScaleOption[];
   catalogActivities: SignificantActivityCatalogOption[];
   loadingCatalog: boolean;
+  draftId?: string | null;
   onChange: (next: SignificantActivityDraftItem[]) => void;
   onChangeMitigationByRiskKey: (next: Record<string, { controlId: string; coveragePct: number }>) => void;
   onOpenCreateActivity: (tempId: string) => void;
@@ -133,6 +134,7 @@ export default function SignificantActivitiesStep({
   impactCatalog,
   catalogActivities,
   loadingCatalog,
+  draftId,
   onChange,
   onChangeMitigationByRiskKey,
   onOpenCreateActivity,
@@ -694,6 +696,7 @@ export default function SignificantActivitiesStep({
         open={isHeatmapOpen}
         rows={heatmapRows}
         onClose={() => setIsHeatmapOpen(false)}
+        draftId={draftId}
       />
     </div>
   );

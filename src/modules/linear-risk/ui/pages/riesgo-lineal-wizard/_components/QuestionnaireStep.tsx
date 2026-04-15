@@ -47,6 +47,13 @@ type DraftRiskAnalysisRow = {
   mitigatingControlName?: string | null;
   mitigatingControlDescription?: string | null;
   mitigatingControlHowToEvaluate?: string | null;
+  availableControls?: Array<{
+    id: string;
+    name: string;
+    code: string | null;
+    description: string | null;
+    coverageNotes?: string | null;
+  }>;
 };
 
 const pairKey = (riskId: string, controlId: string) => `${riskId}::${controlId}`;
@@ -85,7 +92,7 @@ export default function QuestionnaireStep({ draftId, riskIds, evaluations, onCha
         const payload = await res.json();
         const rows = Array.isArray(payload?.rows) ? (payload.rows as DraftRiskAnalysisRow[]) : [];
 
-        const orderedRiskIds: string[] = [];
+        let orderedRiskIds: string[] = [];
         const seenRisk = new Set<string>();
         const byRisk: Record<string, ControlItem[]> = {};
         const seenPair = new Set<string>();
@@ -99,28 +106,49 @@ export default function QuestionnaireStep({ draftId, riskIds, evaluations, onCha
             byRisk[riskId] = byRisk[riskId] || [];
           }
 
-          const controlId = String(row?.mitigatingControlId || '').trim();
-          if (!controlId) return;
+          if (Array.isArray(row.availableControls) && row.availableControls.length > 0) {
+            row.availableControls.forEach(ctrl => {
+              const controlId = String(ctrl.id).trim();
+              if (!controlId) return;
+              const key = pairKey(riskId, controlId);
+              if (seenPair.has(key)) return;
+              seenPair.add(key);
 
-          const key = pairKey(riskId, controlId);
-          if (seenPair.has(key)) return;
-          seenPair.add(key);
-
-          byRisk[riskId].push({
-            id: controlId,
-            name: row.mitigatingControlName || 'Control sin nombre',
-            description: row.mitigatingControlDescription || null,
-            coverageNotes: row.mitigatingControlHowToEvaluate || null
-          });
+              byRisk[riskId].push({
+                id: controlId,
+                name: ctrl.name || 'Control sin nombre',
+                description: ctrl.description || null,
+                coverageNotes: null
+              });
+            });
+          } else {
+            const controlId = String(row?.mitigatingControlId || '').trim();
+            if (controlId) {
+              const key = pairKey(riskId, controlId);
+              if (!seenPair.has(key)) {
+                seenPair.add(key);
+                byRisk[riskId].push({
+                  id: controlId,
+                  name: row.mitigatingControlName || 'Control sin nombre',
+                  description: row.mitigatingControlDescription || null,
+                  coverageNotes: row.mitigatingControlHowToEvaluate || null
+                });
+              }
+            }
+          }
         });
 
         setEffectiveRiskIds(orderedRiskIds);
         setControlsByRisk(byRisk);
 
         if (orderedRiskIds.length === 0) {
-          setRisks([]);
-          setActiveRiskId(null);
-          return;
+          if (riskIds && riskIds.length > 0) {
+            orderedRiskIds = riskIds;
+          } else {
+            setRisks([]);
+            setActiveRiskId(null);
+            return;
+          }
         }
 
         const fallbackRisks = orderedRiskIds.map((riskId) => {

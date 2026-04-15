@@ -169,6 +169,14 @@ export default function RiesgoLinealWizardClient() {
   const [aiLoadingFields, setAiLoadingFields] = useState<Record<string, boolean>>({});
   const [finalizing, setFinalizing] = useState(false);
   const [autoTitle, setAutoTitle] = useState('');
+
+  const riskIds = useMemo(() => {
+    const ids = new Set<string>();
+    activities.forEach((item) => {
+      if (item.inherent_risk_catalog_id) ids.add(item.inherent_risk_catalog_id);
+    });
+    return Array.from(ids);
+  }, [activities]);
   const selectionAppliedRef = useRef<string>('');
 
   const loadContextOptions = useCallback(async () => {
@@ -476,14 +484,18 @@ export default function RiesgoLinealWizardClient() {
     const res = await fetch(`/api/linear-risk/drafts/${draftId}/activities`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: normalized, companyId: context.companyId || null }),
+      body: JSON.stringify({
+        items: normalized,
+        mitigationByRiskKey,
+        companyId: context.companyId || null 
+      }),
     });
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
       throw new Error(payload?.error || 'No se pudo guardar las actividades.');
     }
     return true;
-  }, [draftId, activities, context.companyId]);
+  }, [draftId, activities, mitigationByRiskKey, context.companyId]);
 
   const persistControls = useCallback(async () => {
     if (!draftId) return true;
@@ -783,6 +795,7 @@ export default function RiesgoLinealWizardClient() {
         <SignificantActivitiesStep
           items={activities}
           mitigationByRiskKey={mitigationByRiskKey}
+          draftId={draftId}
           probabilityCatalog={scales.probabilityCatalog}
           impactCatalog={scales.impactCatalog}
           catalogActivities={activityCatalog}
@@ -803,14 +816,18 @@ export default function RiesgoLinealWizardClient() {
             await persistActivities();
             await saveDraft();
           }}
-          onNext={nextStep}
+          onNext={async () => {
+            await persistActivities();
+            await saveDraft();
+            nextStep();
+          }}
         />
       )}
 
       {step === 3 && (
         <QuestionnaireStep
           draftId={draftId}
-          riskIds={[]}
+          riskIds={riskIds}
           evaluations={questionnaire}
           onChange={setQuestionnaire}
           onBack={prevStep}

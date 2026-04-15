@@ -41,6 +41,7 @@ type RiskHeatmapModalProps = {
   open: boolean;
   rows: HeatmapRow[];
   onClose: () => void;
+  draftId?: string | null;
 };
 
 type MetricMode = 'inherent' | 'residual';
@@ -156,9 +157,33 @@ function resolveCoords(row: HeatmapRow, metric: MetricMode): { probability: numb
   return { probability: fallbackAxis, impact: fallbackAxis };
 }
 
-export default function RiskHeatmapModal({ open, rows, onClose }: RiskHeatmapModalProps) {
+export default function RiskHeatmapModal({ open, rows, onClose, draftId }: RiskHeatmapModalProps) {
   const [metric, setMetric] = useState<MetricMode>('residual');
   const chartRef = useRef<HTMLDivElement | null>(null);
+
+  const handleClose = () => {
+    if (draftId) {
+      const canvas = chartRef.current?.querySelector('canvas') as HTMLCanvasElement | null;
+      if (canvas) {
+        const offscreen = document.createElement('canvas');
+        offscreen.width = canvas.width;
+        offscreen.height = canvas.height;
+        const ctx = offscreen.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+          ctx.drawImage(canvas, 0, 0);
+          const base64 = offscreen.toDataURL('image/png').split(',')[1];
+          fetch(`/api/linear-risk/drafts/${draftId}/heatmap`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64 }),
+          }).catch(() => {});
+        }
+      }
+    }
+    onClose();
+  };
 
   const prepared = useMemo(() => {
     const validRows = rows
@@ -360,23 +385,24 @@ export default function RiskHeatmapModal({ open, rows, onClose }: RiskHeatmapMod
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') handleClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Mapa de calor de riesgo" onClick={onClose}>
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Mapa de calor de riesgo" onClick={handleClose}>
       <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
         <div className={styles.header}>
           <div className={styles.titleBlock}>
             <h3 className={styles.title}>Mapa de Calor de Riesgo</h3>
             <p className={styles.subtitle}>Matriz de auditoría 5x5 basada en Probabilidad vs Impacto</p>
           </div>
-          <button type="button" className={styles.closeButton} onClick={onClose}>
+          <button type="button" className={styles.closeButton} onClick={handleClose}>
             Cerrar
           </button>
         </div>

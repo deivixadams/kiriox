@@ -182,20 +182,135 @@ const formatDate = (value?: string | null) => {
   return parsed.toLocaleDateString('es-DO', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-async function renderLinearRiskReportDocx(data: Record<string, any>) {
+/**
+ * Injects a PNG image into a rendered DOCX buffer by replacing the paragraph
+ * that contains the text marker `__HEATMAP__` with an inline OOXML image element.
+ * The template must have {{mapa_calor}} where the image should appear.
+ */
+function injectHeatmapIntoDocx(docxBuffer: Buffer, imageBuffer: Buffer): Buffer {
+  const zip = new PizZip(docxBuffer);
+
+  // 1 — add the image file into the media folder
+  zip.file('word/media/heatmap.png', imageBuffer);
+
+  // 2 — register the image relationship
+  const relsPath = 'word/_rels/document.xml.rels';
+  const rId = 'rIdHeatmap1';
+  let relsXml = zip.file(relsPath)?.asText() || '';
+  if (!relsXml.includes(rId)) {
+    relsXml = relsXml.replace(
+      '</Relationships>',
+      `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/heatmap.png"/></Relationships>`
+    );
+    zip.file(relsPath, relsXml);
+  }
+
+  // 3 — ensure PNG content type is declared
+  const ctPath = '[Content_Types].xml';
+  let ctXml = zip.file(ctPath)?.asText() || '';
+  if (!ctXml.includes('image/png')) {
+    ctXml = ctXml.replace(
+      '</Types>',
+      '<Default Extension="png" ContentType="image/png"/></Types>'
+    );
+    zip.file(ctPath, ctXml);
+  }
+
+  // 4 — build the inline drawing XML (dimensions in EMUs; 550×340 px at 96 dpi)
+  const cx = 5238750; // 550 px
+  const cy = 3238500; // 340 px
+  const imageParaXml = [
+    '<w:p>',
+    '<w:pPr><w:jc w:val="center"/></w:pPr>',
+    '<w:r><w:drawing>',
+    `<wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">`,
+    `<wp:extent cx="${cx}" cy="${cy}"/>`,
+    '<wp:effectExtent l="0" t="0" r="0" b="0"/>',
+    '<wp:docPr id="99" name="Mapa de Calor" descr="Mapa de calor de riesgo"/>',
+    '<wp:cNvGraphicFramePr>',
+    '<a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>',
+    '</wp:cNvGraphicFramePr>',
+    '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">',
+    '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">',
+    '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">',
+    '<pic:nvPicPr>',
+    '<pic:cNvPr id="0" name="Mapa de Calor"/>',
+    '<pic:cNvPicPr><a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr>',
+    '</pic:nvPicPr>',
+    '<pic:blipFill>',
+    `<a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>`,
+    '<a:srcRect/><a:stretch><a:fillRect/></a:stretch>',
+    '</pic:blipFill>',
+    '<pic:spPr bwMode="auto">',
+    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>`,
+    '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
+    '<a:noFill/>',
+    '</pic:spPr>',
+    '</pic:pic>',
+    '</a:graphicData>',
+    '</a:graphic>',
+    '</wp:inline>',
+    '</w:drawing></w:r>',
+    '</w:p>',
+  ].join('');
+
+  // 5 — find the paragraph containing the marker and replace it
+  const docXml = zip.file('word/document.xml')?.asText() || '';
+  const marker = '__HEATMAP__';
+
+  if (docXml.includes(marker)) {
+    const markerIdx = docXml.indexOf(marker);
+
+    // Walk backwards to find the <w:p> opening tag (not <w:pPr>, <w:pStyle>, etc.)
+    let paraStart = -1;
+    let searchIdx = markerIdx;
+    while (searchIdx >= 0) {
+      const found = docXml.lastIndexOf('<w:p', searchIdx);
+      if (found === -1) break;
+      const next = docXml[found + 4];
+      if (next === '>' || next === ' ') { paraStart = found; break; }
+      searchIdx = found - 1;
+    }
+
+    const paraEnd = docXml.indexOf('</w:p>', markerIdx) + '</w:p>'.length;
+
+    if (paraStart !== -1 && paraEnd > paraStart) {
+      const newDocXml = docXml.slice(0, paraStart) + imageParaXml + docXml.slice(paraEnd);
+      zip.file('word/document.xml', newDocXml);
+    }
+  }
+
+  return zip.generate({ type: 'nodebuffer' }) as unknown as Buffer;
+}
+
+async function renderLinearRiskReportDocx(data: Record<string, any>, draftId: string) {
   const templatePath = path.resolve('C:\\_CRE\\PLANTILLA_INFORME.docx');
   const content = await fs.readFile(templatePath, 'binary');
   const zip = new PizZip(content);
+
+  // Check for saved heatmap
+  const heatmapPath = path.resolve(`C:\\_CRE\\mapa\\${draftId}.png`);
+  let heatmapBuffer: Buffer | null = null;
+  try { heatmapBuffer = await fs.readFile(heatmapPath); } catch { /* not saved yet */ }
 
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
     linebreaks: true,
     delimiters: { start: '{{', end: '}}' },
-    modules: []
+    modules: [],
   });
 
-  doc.render({ ...data });
-  return doc.getZip().generate({ type: 'nodebuffer' });
+  // Pass a plain text marker so docxtemplater never touches a Buffer.
+  // The marker is replaced with real image XML in the post-processing step.
+  doc.render({ ...data, mapa_calor: heatmapBuffer ? '__HEATMAP__' : '' });
+
+  let docxBuffer = doc.getZip().generate({ type: 'nodebuffer' }) as unknown as Buffer;
+
+  if (heatmapBuffer) {
+    docxBuffer = injectHeatmapIntoDocx(docxBuffer, heatmapBuffer);
+  }
+
+  return docxBuffer;
 }
 
 async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: string, draft: LinearDraftRow) {
@@ -230,8 +345,8 @@ async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: st
     SELECT
       COALESCE(sa.name, sa.title, sa.code) AS activity_name,
       sa.code AS activity_code,
-      rc.risk_name,
-      rc.risk_description,
+      rc.name AS risk_name,
+      rc.description AS risk_description,
       cp.name AS probability_name,
       cp.numeric_value AS probability_value,
       ci.name AS impact_name,
@@ -240,7 +355,7 @@ async function buildLinearRiskReportData(auth: { tenantId: string }, draftId: st
     FROM core.risk_assessment_draft_item di
     JOIN core.domain_elements sa ON sa.id = di.significant_activity_id AND sa.element_type = 'ACTIVITY'
     LEFT JOIN core.risk_assessment_draft_item_risk dir ON dir.risk_assessment_draft_item_id = di.risk_assessment_draft_item_id
-    LEFT JOIN core.risk_catalog rc ON rc.risk_catalog_id = dir.risk_catalog_id
+    LEFT JOIN core.risk rc ON rc.id = dir.risk_catalog_id
     LEFT JOIN core.catalog_probability cp ON cp.catalog_probability_id = dir.catalog_probability_id
     LEFT JOIN core.catalog_impact ci ON ci.catalog_impact_id = dir.catalog_impact_id
     WHERE di.risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
@@ -1362,48 +1477,28 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
       getInherentSeedRows(draft.risk_assessment_draft_id),
     ]);
 
-    const controlCatalog = await prisma.$queryRaw<Array<{ id: string; code: string | null; name: string; description: string | null }>>(Prisma.sql`
-      SELECT
-        c.control_id::text AS id,
-        NULL::text AS code,
-        c.name AS name,
-        c.description AS description
-      FROM core.control_catalog c
-      ORDER BY c.name ASC
-    `);
-
-    let mappedControlsByRisk = new Map<string, Array<{ id: string; name: string; code: string | null; description: string | null }>>();
-    try {
-      const rows = await prisma.$queryRaw<Array<{
-        risk_catalog_id: string;
-        control_id: string;
-        control_name: string;
-        control_code: string | null;
-        control_description: string | null;
-      }>>(Prisma.sql`
-        SELECT
-          m.catalog_lineal_risk_id::text AS risk_catalog_id,
-          c.control_id::text AS control_id,
-          c.name AS control_name,
-          NULL::text AS control_code,
-          c.description AS control_description
-        FROM core.map_lineal_risk_risk_control m
-        JOIN core.control_catalog c
-          ON c.control_id = m.catalog_lineal_control_id
-      `);
-      for (const row of rows) {
-        const current = mappedControlsByRisk.get(row.risk_catalog_id) ?? [];
-        current.push({
-          id: row.control_id,
-          name: row.control_name,
-          code: row.control_code,
-          description: row.control_description,
-        });
-        mappedControlsByRisk.set(row.risk_catalog_id, current);
-      }
-    } catch {
-      mappedControlsByRisk = new Map();
-    }
+    const selectedControlIds = Array.from(
+      new Set(
+        storedRows
+          .map((row) => String(row?.mitigatingControlId || '').trim())
+          .filter((id) => UUID_REGEX.test(id))
+      )
+    );
+    const selectedControlMetaRows = selectedControlIds.length > 0
+      ? await prisma.$queryRaw<Array<{ id: string; code: string | null; name: string; description: string | null }>>(Prisma.sql`
+          SELECT
+            c.id::text AS id,
+            c.code AS code,
+            c.name AS name,
+            c.description AS description
+          FROM core.control c
+          WHERE c.id = ANY(${selectedControlIds}::uuid[])
+            AND c.status = 'active'
+        `)
+      : [];
+    const selectedControlMetaMap = new Map(
+      selectedControlMetaRows.map((control) => [control.id, control] as const)
+    );
 
     const savedByCompositeKey = new Map<string, RiskRowInput>();
     for (const saved of storedRows) {
@@ -1428,19 +1523,18 @@ export async function getLinearRiskDraftAnalysisHandler(_request: Request, { par
       const compositeKey = `${draftItemId}::${riskCatalogId}`;
       const saved = savedByCompositeKey.get(compositeKey);
 
-      const availableControls =
-        (riskCatalogId && mappedControlsByRisk.get(riskCatalogId)) ||
-        controlCatalog.map((c) => ({ id: c.id, name: c.name, code: c.code, description: c.description }));
       const selectedControlId = String(saved?.mitigatingControlId || '').trim();
-      const validControlId = selectedControlId && availableControls.some((c) => c.id === selectedControlId) ? selectedControlId : null;
+      const selectedControlMeta = selectedControlId ? selectedControlMetaMap.get(selectedControlId) ?? null : null;
+      const availableControls = selectedControlMeta
+        ? [{ id: selectedControlMeta.id, name: selectedControlMeta.name, code: selectedControlMeta.code, description: selectedControlMeta.description }]
+        : [];
+      const validControlId = selectedControlMeta ? selectedControlMeta.id : null;
 
       const coverageRaw = Number(saved?.coveragePct ?? NaN);
       const coveragePct = Number.isFinite(coverageRaw) ? Math.max(0, Math.min(100, Math.round(coverageRaw))) : 0;
       const residualScore = inherentRisk == null
         ? null
         : Number((inherentRisk * (1 - coveragePct / 100)).toFixed(6));
-      const selectedControlMeta = validControlId ? availableControls.find((c) => c.id === validControlId) ?? null : null;
-
       let inherentScale: RiskScaleRow | null = null;
       let residualScale: RiskScaleRow | null = null;
       if (inherentRisk != null) {
@@ -1521,24 +1615,37 @@ async function resolveRiskCatalogId(
   name: string,
   description: string | null,
 ) {
-  const existing = await prisma.$queryRaw<{ risk_catalog_id: string }[]>(Prisma.sql`
-    SELECT risk_catalog_id::text AS risk_catalog_id
-    FROM core.risk_catalog
-    WHERE risk_code = ${code}
-      AND (
-        (${significantActivityId ? Prisma.sql`${significantActivityId}::uuid` : Prisma.sql`NULL`} IS NULL AND significant_activity_id IS NULL)
-        OR significant_activity_id = ${significantActivityId ? Prisma.sql`${significantActivityId}::uuid` : Prisma.sql`NULL`}
-      )
+  const existing = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT id::text AS id
+    FROM core.risk
+    WHERE code = ${code}
     LIMIT 1
   `);
-  if (existing[0]) return existing[0].risk_catalog_id;
 
-  const inserted = await prisma.$queryRaw<{ risk_catalog_id: string }[]>(Prisma.sql`
-    INSERT INTO core.risk_catalog (significant_activity_id, risk_code, risk_name, risk_description, risk_category, is_active, created_at, updated_at)
-    VALUES (${significantActivityId ? Prisma.sql`${significantActivityId}::uuid` : Prisma.sql`NULL`}, ${code}, ${name}, ${description}, 'general', true, now(), now())
-    RETURNING risk_catalog_id::text AS risk_catalog_id
-  `);
-  return inserted[0].risk_catalog_id;
+  let riskId = existing[0]?.id || null;
+
+  if (!riskId) {
+    const inserted = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      INSERT INTO core.risk (code, name, description, risk_type, is_active, created_at, updated_at, risk_layer_id, risk_origen)
+      VALUES (${code}, ${name}, ${description}, 'linear', true, now(), now(), 2, 'LINEAR_WIZARD')
+      RETURNING id::text AS id
+    `);
+    riskId = inserted[0].id;
+  }
+
+  if (significantActivityId && riskId) {
+    await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO core.map_elements_risk (element_id, risk_id, link_strength)
+      SELECT ${significantActivityId}::uuid, ${riskId}::uuid, 3
+      WHERE NOT EXISTS (
+        SELECT 1 FROM core.map_elements_risk
+        WHERE element_id = ${significantActivityId}::uuid
+          AND risk_id = ${riskId}::uuid
+      )
+    `);
+  }
+
+  return riskId;
 }
 
 export async function putLinearRiskDraftAnalysisHandler(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -1603,7 +1710,11 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
     const draft = await findDraft(draftId, auth.tenantId);
     if (!draft) return NextResponse.json({ error: 'Draft no encontrado' }, { status: 404 });
 
-    const body = (await request.json()) as { items?: ActivityItemInput[]; companyId?: string | null };
+    const body = (await request.json()) as { 
+      items?: ActivityItemInput[]; 
+      companyId?: string | null;
+      mitigationByRiskKey?: Record<string, { controlId: string; coveragePct: number }>;
+    };
     const items = Array.isArray(body.items) ? body.items : [];
     const selectedCompanyIdRaw = String(body.companyId || '').trim();
     const selectedCompanyId = UUID_REGEX.test(selectedCompanyIdRaw) ? selectedCompanyIdRaw : null;
@@ -1642,6 +1753,9 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
       DELETE FROM core.risk_assessment_draft_item
       WHERE risk_assessment_draft_id = ${draft.risk_assessment_draft_id}
     `);
+
+    const mitigationByRiskKey = body.mitigationByRiskKey || {};
+    const riskAnalysisRows: RiskRowInput[] = [];
 
     for (let idx = 0; idx < items.length; idx += 1) {
       const item = items[idx];
@@ -1709,44 +1823,135 @@ export async function putLinearRiskDraftActivitiesHandler(request: Request, draf
         RETURNING risk_assessment_draft_item_id
       `);
 
-      const probability = Number(item.inherent_probability ?? NaN);
-      const impact = Number(item.inherent_impact ?? NaN);
-      if (Number.isFinite(probability) && Number.isFinite(impact)) {
-        const pId = await resolveProbId(probability);
-        const iId = await resolveImpactId(impact);
-        if (pId && iId) {
-          const score = Number((probability * impact).toFixed(6));
-          const riskCode = `${code}-IR`;
-          const riskName = item.inherent_risk_description?.trim() || `Riesgo inherente de ${name}`;
-          let riskCatalogId: string | null = null;
-          if (item.inherent_risk_catalog_id && UUID_REGEX.test(String(item.inherent_risk_catalog_id))) {
-            const existing = await prisma.$queryRaw<Array<{ risk_catalog_id: string }>>(Prisma.sql`
-              SELECT risk_catalog_id::text AS risk_catalog_id
-              FROM core.risk_catalog
-              WHERE risk_catalog_id = ${String(item.inherent_risk_catalog_id)}::uuid
-                AND significant_activity_id = ${activity.significant_activity_id}::uuid
-                AND COALESCE(is_active, true) = true
-              LIMIT 1
-            `);
-            riskCatalogId = existing[0]?.risk_catalog_id ?? null;
-          }
-          if (!riskCatalogId) {
-            riskCatalogId = await resolveRiskCatalogId(activity.significant_activity_id, riskCode, riskName, item.inherent_risk_description?.trim() || null);
-          }
+      const mappedActivityRisks = await prisma.$queryRaw<Array<{
+        risk_id: string;
+        risk_code: string | null;
+        risk_name: string | null;
+        risk_description: string | null;
+        risk_type: string | null;
+        catalog_probability_id: bigint | null;
+        catalog_impact_id: bigint | null;
+        probability_value: number | null;
+        impact_value: number | null;
+      }>>(Prisma.sql`
+        SELECT
+          r.id::text AS risk_id,
+          r.code AS risk_code,
+          r.name AS risk_name,
+          r.description AS risk_description,
+          r.risk_type,
+          r.catalog_probability_id,
+          r.catalog_impact_id,
+          cp.numeric_value AS probability_value,
+          ci.numeric_value AS impact_value
+        FROM core.risk r
+        JOIN core.map_elements_risk mer ON mer.risk_id = r.id
+        LEFT JOIN core.catalog_probability cp ON cp.catalog_probability_id = r.catalog_probability_id
+        LEFT JOIN core.catalog_impact ci ON ci.catalog_impact_id = r.catalog_impact_id
+        WHERE mer.element_id = ${activity.significant_activity_id}::uuid
+          AND COALESCE(r.is_active, true) = true
+        ORDER BY r.name ASC
+      `);
 
+      let effectiveRisks = mappedActivityRisks;
+      if (effectiveRisks.length === 0) {
+        const riskCode = `${code}-IR`;
+        const riskName = item.inherent_risk_description?.trim() || `Riesgo inherente de ${name}`;
+        const fallbackRiskId = await resolveRiskCatalogId(
+          activity.significant_activity_id,
+          riskCode,
+          riskName,
+          item.inherent_risk_description?.trim() || null
+        );
+        if (fallbackRiskId) {
+          effectiveRisks = [{
+            risk_id: fallbackRiskId,
+            risk_code: riskCode,
+            risk_name: riskName,
+            risk_description: item.inherent_risk_description?.trim() || null,
+            risk_type: 'general',
+            catalog_probability_id: null,
+            catalog_impact_id: null,
+            probability_value: null,
+            impact_value: null,
+          }];
+        }
+      }
+
+      const defaultProbability = Number(item.inherent_probability ?? NaN);
+      const defaultImpact = Number(item.inherent_impact ?? NaN);
+      const seenRiskIds = new Set<string>();
+
+      for (const risk of effectiveRisks) {
+        const mappedRiskId = String(risk.risk_id || '').trim();
+        const riskCode = String(risk.risk_code || '').trim() || `${code}-IR`;
+        const riskName = String(risk.risk_name || '').trim() || `Riesgo inherente de ${name}`;
+        const riskCatalogId = UUID_REGEX.test(mappedRiskId)
+          ? mappedRiskId
+          : await resolveRiskCatalogId(
+              activity.significant_activity_id,
+              riskCode,
+              riskName,
+              risk.risk_description || item.inherent_risk_description?.trim() || null
+            );
+        if (!riskCatalogId || seenRiskIds.has(riskCatalogId)) continue;
+        seenRiskIds.add(riskCatalogId);
+
+        const probabilityFromRisk = Number(risk.probability_value ?? NaN);
+        const impactFromRisk = Number(risk.impact_value ?? NaN);
+        const probability = Number.isFinite(probabilityFromRisk)
+          ? probabilityFromRisk
+          : (Number.isFinite(defaultProbability) ? defaultProbability : null);
+        const impact = Number.isFinite(impactFromRisk)
+          ? impactFromRisk
+          : (Number.isFinite(defaultImpact) ? defaultImpact : null);
+        const score = probability != null && impact != null ? Number((probability * impact).toFixed(6)) : null;
+
+        const mitigationKeyByActivity = `${activity.significant_activity_id}::${riskCatalogId}`;
+        const mitigationKeyByTempId = `${item.tempId}::${riskCatalogId}`;
+        const mit = mitigationByRiskKey[mitigationKeyByActivity] || mitigationByRiskKey[mitigationKeyByTempId];
+        const coveragePct = Number.isFinite(Number(mit?.coveragePct))
+          ? Math.max(0, Math.min(100, Math.round(Number(mit?.coveragePct))))
+          : 0;
+        const residualScore = score == null ? null : Number((score * (1 - coveragePct / 100)).toFixed(6));
+
+        riskAnalysisRows.push({
+          draftItemId: String(draftItem[0].risk_assessment_draft_item_id),
+          riskCatalogId,
+          mitigatingControlId: mit?.controlId || null,
+          coveragePct,
+          probability,
+          impact,
+          residualScore,
+        });
+
+        let probabilityCatalogId = risk.catalog_probability_id;
+        let impactCatalogId = risk.catalog_impact_id;
+        if (!probabilityCatalogId && probability != null) {
+          probabilityCatalogId = await resolveProbId(probability);
+        }
+        if (!impactCatalogId && impact != null) {
+          impactCatalogId = await resolveImpactId(impact);
+        }
+
+        if (probabilityCatalogId && impactCatalogId && score != null) {
           await prisma.$executeRaw(Prisma.sql`
             INSERT INTO core.risk_assessment_draft_item_risk (
               risk_assessment_draft_item_id, risk_catalog_id, catalog_probability_id, catalog_impact_id,
               inherent_risk_score, inherent_risk_level, inherent_risk_trend, rationale, created_at, updated_at
             ) VALUES (
-              ${draftItem[0].risk_assessment_draft_item_id}, ${riskCatalogId}, ${pId}, ${iId},
-              ${score}, ${mapRiskLevel(score)}, 'stable', ${item.inherent_risk_description?.trim() || null}, now(), now()
+              ${draftItem[0].risk_assessment_draft_item_id}, ${riskCatalogId}, ${probabilityCatalogId}, ${impactCatalogId},
+              ${score}, ${mapRiskLevel(score)}, 'stable', ${risk.risk_description || item.inherent_risk_description?.trim() || null}, now(), now()
             )
           `);
         }
       }
     }
 
+    await updateWizardNotes(draft.risk_assessment_draft_id, { 
+      activities: items,
+      riskAnalysisRows 
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Error saving activities:', error);
@@ -1914,6 +2119,30 @@ export async function postLinearRiskDraftFinalizeHandler(draftId: string) {
   }
 }
 
+export async function postLinearRiskDraftHeatmapHandler(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await getAuthContext();
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { id } = await params;
+    const draft = await findDraft(id, auth.tenantId);
+    if (!draft) return NextResponse.json({ error: 'Draft no encontrado' }, { status: 404 });
+
+    const body = await request.json();
+    const base64 = String(body?.image || '');
+    if (!base64) return NextResponse.json({ error: 'No image provided' }, { status: 400 });
+
+    const buffer = Buffer.from(base64, 'base64');
+    const dir = path.resolve('C:\\_CRE\\mapa');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, `${id}.png`), buffer);
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('Error saving heatmap:', error);
+    return NextResponse.json({ error: 'No se pudo guardar el mapa de calor' }, { status: 500 });
+  }
+}
+
 export async function postLinearRiskDraftReportHandler(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getAuthContext();
@@ -1926,7 +2155,7 @@ export async function postLinearRiskDraftReportHandler(request: Request, { param
 
     await ensureLinearRiskFinal(auth, draft);
     const data = await buildLinearRiskReportData(auth, id, draft);
-    const buffer = await renderLinearRiskReportDocx(data);
+    const buffer = await renderLinearRiskReportDocx(data, id);
 
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
