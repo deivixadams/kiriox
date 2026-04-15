@@ -122,14 +122,16 @@ export function GraphQuestionRenderer({ data, design }: { data: any[]; design?: 
   }, [data, design]);
 
   useEffect(() => {
+    if (!containerRef.current || elements.length === 0) return;
     let mounted = true;
+    let cy: any = null;
+
     const renderGraph = async () => {
-      if (!containerRef.current || elements.length === 0) return;
       const cytoscapeImport = (await import('cytoscape')) as any;
       const cytoscape = (cytoscapeImport.default ?? cytoscapeImport) as any;
       if (!mounted || !containerRef.current) return;
 
-      const cy = cytoscape({
+      cy = cytoscape({
         container: containerRef.current,
         elements,
         layout: {
@@ -151,14 +153,12 @@ export function GraphQuestionRenderer({ data, design }: { data: any[]; design?: 
         .selector('edge')
         .style({ 'font-size': 5 })
         .update();
-
-      return () => cy.destroy();
     };
 
-    const cleanup = renderGraph();
+    renderGraph();
     return () => {
       mounted = false;
-      if (cleanup instanceof Function) cleanup();
+      if (cy) cy.destroy();
     };
   }, [elements]);
 

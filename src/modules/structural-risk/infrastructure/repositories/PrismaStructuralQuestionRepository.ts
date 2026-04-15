@@ -202,7 +202,7 @@ async function buildRuleBasedGraph(
   context: ExecutionContext
 ) {
   const text = `${question.code} ${question.question}`.toLowerCase();
-  const focus = String(question.graph_design?.focus || '').toLowerCase();
+  const focus = String(question.graph_design?.focus || question.graph_design?.focus_type || '').toLowerCase();
   const isControlFocus = focus === 'control' || text.includes('control');
   const isElementFocus =
     focus === 'element' ||

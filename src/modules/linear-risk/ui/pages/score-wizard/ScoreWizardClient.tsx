@@ -468,8 +468,11 @@ export default function ScoreWizardClient() {
                     <>
                       {fullGraphLoading && <div className={styles.emptyState}>Cargando grafo completo...</div>}
                       {fullGraphError && <div className={styles.emptyState}>{fullGraphError}</div>}
-                      {!fullGraphLoading && !fullGraphError && (
+                      {!fullGraphLoading && !fullGraphError && fullGraphElements.length > 0 && (
                         <GraphQuestionRenderer data={fullGraphElements} design={executionResult?.graph_design} />
+                      )}
+                      {!fullGraphLoading && !fullGraphError && fullGraphElements.length === 0 && (
+                        <div className={styles.emptyState}>Sin nodos disponibles en el grafo.</div>
                       )}
                     </>
                   ) : (

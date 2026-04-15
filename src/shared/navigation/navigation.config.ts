@@ -106,6 +106,15 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
         order: 213,
       },
       {
+        key: 'risk-events',
+        label: 'Eventos',
+        href: '/validacion/eventos',
+        icon: 'CalendarRange',
+        module: 'linear-risk',
+        permission: 'risk.linear.read',
+        order: 214,
+      },
+      {
         key: 'benchmark',
         label: 'Benchmarking',
         href: '/score/dashboard',

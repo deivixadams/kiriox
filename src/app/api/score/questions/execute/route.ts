@@ -10,9 +10,6 @@ export const POST = withModuleAccess('structural-risk', 'risk.structural.run', a
     if (!code) {
       return NextResponse.json({ error: 'Question code is required' }, { status: 400 });
     }
-    if (!context?.companyId) {
-      return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
-    }
     
     const repository = new PrismaStructuralQuestionRepository();
     const useCase = new ExecuteMainQuestionUseCase(repository);
