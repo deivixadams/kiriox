@@ -44,24 +44,32 @@ export async function postRiskTreatmentHandler(request: Request) {
     throw ApiError.badRequest('risk_id, title, treatment_type and status are required');
   }
 
-  const treatment = await prisma.risk_treatment.create({
-    data: {
-      risk_id,
-      title,
-      treatment_type,
-      status,
-      justification,
-      description,
-      decision_date: decision_date ? new Date(decision_date) : null,
-      planned_start_date: planned_start_date ? new Date(planned_start_date) : null,
-      planned_end_date: planned_end_date ? new Date(planned_end_date) : null,
-      next_review_date: next_review_date ? new Date(next_review_date) : null,
-      residual_risk_expected,
-      notes
-    }
-  });
+  try {
+    const treatment = await prisma.risk_treatment.create({
+      data: {
+        risk_id,
+        title,
+        treatment_type,
+        status,
+        justification,
+        description,
+        decision_date: decision_date ? new Date(decision_date) : null,
+        planned_start_date: planned_start_date ? new Date(planned_start_date) : null,
+        planned_end_date: planned_end_date ? new Date(planned_end_date) : null,
+        next_review_date: next_review_date ? new Date(next_review_date) : null,
+        residual_risk_expected: residual_risk_expected?.toString(),
+        notes
+      }
+    });
 
-  return Response.json(treatment, { status: 201 });
+    return Response.json(treatment, { status: 201 });
+  } catch (error: any) {
+    console.error('Error creating risk treatment:', error);
+    return Response.json(
+      { error: 'Error creating risk treatment', details: error.message },
+      { status: 500 }
+    );
+  }
 }
 
 export async function getRiskTreatmentsHandler(request: Request) {
@@ -72,17 +80,25 @@ export async function getRiskTreatmentsHandler(request: Request) {
     throw ApiError.badRequest('riskId is required');
   }
 
-  const treatments = await prisma.risk_treatment.findMany({
-    where: { risk_id: riskId },
-    include: {
-      actions: true,
-      responsibles: true,
-      evidences: true
-    },
-    orderBy: { created_at: 'desc' }
-  });
+  try {
+    const treatments = await prisma.risk_treatment.findMany({
+      where: { risk_id: riskId },
+      include: {
+        actions: true,
+        responsibles: true,
+        evidences: true
+      },
+      orderBy: { created_at: 'desc' }
+    });
 
-  return Response.json({ items: treatments });
+    return Response.json({ items: treatments });
+  } catch (error: any) {
+    console.error('Error fetching risk treatments:', error);
+    return Response.json(
+      { error: 'Error fetching risk treatments', details: error.message },
+      { status: 500 }
+    );
+  }
 }
 
 export async function updateRiskTreatmentHandler(request: Request, { params }: { params: { id: string } }) {

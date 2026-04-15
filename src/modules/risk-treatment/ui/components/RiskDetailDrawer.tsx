@@ -52,7 +52,6 @@ export function RiskDetailDrawer({ risk, onClose }: RiskDetailDrawerProps) {
       <div className={styles.drawer} onClick={e => e.stopPropagation()}>
         <header className={styles.header}>
           <div className={styles.riskInfo}>
-            <span className={styles.code}>{risk.code}</span>
             <h2>{risk.name}</h2>
           </div>
           <button className={styles.closeBtn} onClick={onClose}><X size={24} /></button>

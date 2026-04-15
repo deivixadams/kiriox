@@ -41,7 +41,7 @@ export function TreatmentForm({ riskId, onSuccess, onCancel }: TreatmentFormProp
         onSuccess();
       } else {
         const data = await res.json();
-        setError(data.error || 'Error al guardar el tratamiento');
+        setError(data.details || data.error || 'Error al guardar el tratamiento');
       }
     } catch (err) {
       setError('Error de conexión');
