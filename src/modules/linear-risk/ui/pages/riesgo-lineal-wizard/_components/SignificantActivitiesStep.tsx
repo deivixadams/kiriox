@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Flame, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Download, Flame, Plus, Trash2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import styles from './SignificantActivitiesStep.module.css';
 import RiskHeatmapModal from './RiskHeatmapModal';
 
@@ -458,6 +459,103 @@ export default function SignificantActivitiesStep({
     setIsHeatmapOpen(true);
   };
 
+  const handleExport = () => {
+    if (normalizedItems.length === 0) {
+      setError('No hay datos para exportar.');
+      return;
+    }
+
+    const exportData: any[] = [];
+    
+    normalizedItems.forEach((item) => {
+      const activityId = item.significant_activity_id;
+      if (!activityId) return;
+      
+      const risks = riskOptionsByActivity[activityId] || [];
+      
+      if (risks.length === 0) {
+        exportData.push({
+          'Código': item.activity_code,
+          'Actividad': item.activity_name,
+          'Descripción Actividad': item.activity_description,
+          'Título Riesgo': '—',
+          'Descripción Riesgo': '—',
+          'Impacto': '—',
+          'Probabilidad': '—',
+          'Valor': '—',
+          'Control Mitigante': '—',
+          '% Cobertura': '—',
+          'Riesgo Residual': '—'
+        });
+      } else {
+        risks.forEach((risk) => {
+          const probabilityValue =
+            risk.probability_value != null
+              ? Number(risk.probability_value)
+              : (risk.catalog_probability_id ? probabilityById.get(String(risk.catalog_probability_id)) ?? null : null);
+          const impactValue =
+            risk.impact_value != null
+              ? Number(risk.impact_value)
+              : (risk.catalog_impact_id ? impactById.get(String(risk.catalog_impact_id)) ?? null : null);
+          const value = computeRiskValue(probabilityValue, impactValue);
+          const mitigation = getMitigation(activityId, risk.id);
+          const residualValue = value == null ? null : Number((value * (1 - mitigation.coveragePct / 100)).toFixed(6));
+          const selectedControl = (controlsByRisk[risk.id] || []).find((c) => c.id === mitigation.controlId) || null;
+
+          exportData.push({
+            'Código': item.activity_code,
+            'Actividad': item.activity_name,
+            'Descripción Actividad': item.activity_description,
+            'Título Riesgo': risk.risk_name || '—',
+            'Descripción Riesgo': risk.risk_description || '—',
+            'Impacto': impactValue ?? '—',
+            'Probabilidad': probabilityValue ?? '—',
+            'Valor': value ?? '—',
+            'Control Mitigante': selectedControl?.name || '—',
+            '% Cobertura': `${mitigation.coveragePct}%`,
+            'Riesgo Residual': residualValue ?? '—'
+          });
+        });
+      }
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Análisis de Riesgo");
+
+    // Anchos de columna
+    worksheet['!cols'] = [
+      { wch: 12 }, // Código
+      { wch: 35 }, // Actividad
+      { wch: 50 }, // Desc Actividad
+      { wch: 35 }, // Título Riesgo
+      { wch: 50 }, // Desc Riesgo
+      { wch: 10 }, // Impacto
+      { wch: 12 }, // Probabilidad
+      { wch: 10 }, // Valor
+      { wch: 30 }, // Control
+      { wch: 12 }, // Cobertura
+      { wch: 15 }, // Residual
+    ];
+
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '');
+    const filename = `riskAnalisis-${dateStr}-${timeStr}.xlsx`;
+
+    // Generar buffer y descargar manualmente para evitar efectos de navegación o pérdida de foco
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className={styles.root}>
       <div className={styles.header}>
@@ -687,6 +785,18 @@ export default function SignificantActivitiesStep({
           <button className={styles.ghostButton} onClick={handleSave}>Guardar</button>
           <button className={styles.heatmapButton} onClick={handleHeatmapClick} type="button">
             <Flame size={16} /> Mapa de calor
+          </button>
+          <button 
+            className={styles.ghostButton} 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleExport();
+            }} 
+            type="button" 
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Download size={16} /> Exportar
           </button>
           <button className={styles.primaryButton} onClick={handleNext}>Continuar</button>
         </div>
