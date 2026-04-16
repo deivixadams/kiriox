@@ -4,7 +4,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   {
     key: 'dashboard',
     label: 'Dashboard',
-    href: '/score/dashboard',
+    href: '/score/dashboard2',
     icon: 'LayoutDashboard',
     module: 'core',
     order: 10,
@@ -122,6 +122,15 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
         module: 'linear-risk',
         permission: 'risk.linear.read',
         order: 214.5,
+      },
+      {
+        key: 'risk-treatment',
+        label: 'Tratamiento de riesgo',
+        href: '/validacion/tratamiento',
+        icon: 'ShieldPlus',
+        module: 'linear-risk',
+        permission: 'risk.linear.read',
+        order: 214.6,
       },
       {
         key: 'benchmark',

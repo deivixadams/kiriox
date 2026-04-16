@@ -1,16 +1,14 @@
-const { Client } = require('pg');
-require('dotenv').config();
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 async function main() {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
-  await client.connect();
   try {
-    const res = await client.query('SELECT COUNT(*) FROM core."_borrame-significant_activity"');
-    console.log('Count:', res.rows[0].count);
-  } catch (err) {
-    console.error('Error:', err.message);
+    const count = await prisma.$queryRaw`SELECT count(*) FROM core.risk_treatment`;
+    console.log('Count:', count);
+  } catch (e) {
+    console.error('Error:', e.message);
   } finally {
-    await client.end();
+    await prisma.$disconnect();
   }
 }
 

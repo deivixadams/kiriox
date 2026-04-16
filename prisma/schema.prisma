@@ -770,7 +770,7 @@ model risk {
   score_run_risk_draft run_risk_draft[]
 
   score_run_risk run_risk[]
-
+  risk_treatments risk_treatment[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -1323,6 +1323,7 @@ model security_users {
   user_x_rbac          user_x_rbac[]
   owned_processes      process[]
   company_user_roles   security_company_user_role[]
+  risk_treatment_responsibles risk_treatment_responsible[]
 
   @@schema("security")
 }
@@ -2021,5 +2022,88 @@ model map_significant_activity_element {
   element                            core_domain_elements   @relation(fields: [element_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "map_significant_activity_element_element_id_fkey")
 
   @@unique([significant_activity_id, element_id], map: "uq_map_significant_activity_element_pair")
+  @@schema("core")
+}
+
+model risk_treatment {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  risk_id                 String    @db.Uuid
+  title                   String    @db.VarChar(255)
+  treatment_type          String    @db.VarChar(50) // mitigate | transfer | accept | avoid
+  status                  String    @db.VarChar(50) // planned | in_progress | completed | cancelled
+  justification           String?   @db.Text
+  description             String?   @db.Text
+  decision_date           DateTime? @db.Date
+  planned_start_date      DateTime? @db.Date
+  planned_end_date        DateTime? @db.Date
+  next_review_date        DateTime? @db.Date
+  residual_risk_expected  String?   @db.VarChar(50)
+  notes                   String?   @db.Text
+  created_at              DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime  @default(now()) @db.Timestamptz(6)
+
+  risk          risk     @relation(fields: [risk_id], references: [id])
+  actions       risk_treatment_action[]
+  responsibles  risk_treatment_responsible[]
+  evidences     risk_treatment_evidence[]
+
+  @@schema("core")
+}
+
+model risk_treatment_action {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  treatment_id  String    @db.Uuid
+  description   String    @db.Text
+  status        String    @db.VarChar(50) // pending | done
+  due_date      DateTime? @db.Date
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+
+  treatment     risk_treatment @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+  responsibles  risk_treatment_responsible[]
+  evidences     risk_treatment_evidence[]
+
+  @@schema("core")
+}
+
+model risk_treatment_responsible {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  treatment_id      String?   @db.Uuid
+  action_id         String?   @db.Uuid
+  responsible_id    String    @db.Uuid
+  responsible_name  String    @db.VarChar(255)
+  responsible_email String    @db.VarChar(255)
+  responsible_area  String?   @db.VarChar(100)
+  responsible_role  String?   @db.VarChar(100)
+  assigned_at       DateTime  @default(now()) @db.Timestamptz(6)
+  due_date          DateTime? @db.Date
+  is_primary        Boolean   @default(false)
+  is_active         Boolean   @default(true)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+
+  treatment         risk_treatment? @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+  action            risk_treatment_action? @relation(fields: [action_id], references: [id], onDelete: Cascade)
+  user              security_users @relation(fields: [responsible_id], references: [id])
+
+  @@schema("core")
+}
+
+model risk_treatment_evidence {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  treatment_id    String?   @db.Uuid
+  action_id       String?   @db.Uuid
+  filename        String    @db.VarChar(255)
+  original_name   String    @db.VarChar(255)
+  file_path       String    @db.Text
+  file_size       Int
+  mime_type       String    @db.VarChar(100)
+  uploaded_at     DateTime  @default(now()) @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+
+  treatment       risk_treatment? @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+  action          risk_treatment_action? @relation(fields: [action_id], references: [id], onDelete: Cascade)
+
   @@schema("core")
 }
