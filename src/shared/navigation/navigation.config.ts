@@ -4,7 +4,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   {
     key: 'dashboard',
     label: 'Dashboard',
-    href: '/score/dashboard',
+    href: '/score/dashboard2',
     icon: 'LayoutDashboard',
     module: 'core',
     order: 10,

@@ -1,0 +1,121 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+  padding: 22px 22px 32px;
+  background:
+    radial-gradient(circle at top left,  rgba(14, 165, 233, 0.1),  transparent 30%),
+    radial-gradient(circle at top right, rgba(168, 85, 247, 0.08), transparent 26%),
+    radial-gradient(circle at bottom,    rgba(52, 211, 153, 0.05), transparent 40%),
+    linear-gradient(180deg, rgba(9, 16, 34, 0.97), rgba(4, 9, 20, 1));
+}
+
+/* Zonas 2+3 */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  transition: grid-template-columns 280ms ease;
+}
+
+.workspaceWithPanel {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.canvasCard {
+  position: relative;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(9, 14, 30, 0.92));
+  backdrop-filter: blur(22px);
+  box-shadow: 0 24px 64px rgba(2, 6, 23, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  min-height: 600px;
+}
+
+.canvasOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #64748b;
+  font-size: 14px;
+  z-index: 10;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(56, 189, 248, 0.14);
+  border-top-color: #38bdf8;
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.errorMsg {
+  color: #fb7185;
+  font-size: 14px;
+  text-align: center;
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+.retryBtn {
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: rgba(56, 189, 248, 0.1);
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms;
+}
+
+.retryBtn:hover {
+  background: rgba(56, 189, 248, 0.18);
+}
+
+/* Panel lateral */
+.nodePanel {
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(9, 14, 30, 0.94));
+  backdrop-filter: blur(22px);
+  box-shadow: 0 24px 64px rgba(2, 6, 23, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  max-height: 700px;
+  display: none;
+}
+
+.nodePanelVisible {
+  display: block;
+}
+
+@media (max-width: 1100px) {
+  .workspaceWithPanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nodePanelVisible {
+    display: block;
+  }
+}
+
+@media (max-width: 800px) {
+  .page {
+    padding: 14px 14px 24px;
+  }
+
+  .canvasCard {
+    min-height: 480px;
+  }
+}
