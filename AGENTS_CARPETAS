@@ -1,0 +1,738 @@
+Para Kiriox GRI, en Next.js 15, con estándar de clase mundial, la estructura correcta no es “por tipo técnico” sino **por dominio + capacidad + responsabilidad**.
+
+La regla matriz debe ser esta:
+
+**todo es componente**, pero no todo es componente visual.
+Hay componentes de:
+
+* interfaz,
+* aplicación,
+* dominio,
+* infraestructura.
+
+Y en frontend:
+
+* **cada componente visual vive en su propia carpeta**,
+* **cada componente visual tiene su propio `.module.css`**,
+* el sistema conserva solo una capa global mínima para `layout`, `tokens`, `reset`, temas y utilidades visuales compartidas.
+
+La arquitectura que le conviene a Kiriox es esta:
+
+```txt
+src/
+  app/
+    (public)/
+      layout.tsx
+      page.tsx
+      login/
+        page.tsx
+
+    (workspace)/
+      layout.tsx
+      dashboard/
+        page.tsx
+      linear-risk/
+        page.tsx
+      structural-risk/
+        page.tsx
+      audit/
+        page.tsx
+      simulation/
+        page.tsx
+      governance/
+        page.tsx
+      evidence/
+        page.tsx
+      settings/
+        page.tsx
+
+    api/
+      auth/
+        route.ts
+      linear-risk/
+        assessments/
+          route.ts
+      structural-risk/
+        runs/
+          route.ts
+      audit/
+        findings/
+          route.ts
+
+    globals.css
+
+  modules/
+    core/
+      domain/
+        entities/
+        value-objects/
+        services/
+        rules/
+      application/
+        use-cases/
+        dto/
+        mappers/
+      infrastructure/
+        repositories/
+        queries/
+        prisma/
+      ui/
+        components/
+        screens/
+
+    governance/
+      domain/
+      application/
+      infrastructure/
+      ui/
+
+    security/
+      domain/
+      application/
+      infrastructure/
+      ui/
+
+    linear-risk/
+      domain/
+        entities/
+        services/
+        formulas/
+        policies/
+      application/
+        use-cases/
+        dto/
+        mappers/
+      infrastructure/
+        repositories/
+        queries/
+      ui/
+        components/
+        screens/
+
+    structural-risk/
+      domain/
+        entities/
+        graph/
+        metrics/
+        formulas/
+        simulation/
+        policies/
+      application/
+        use-cases/
+        dto/
+        mappers/
+      infrastructure/
+        repositories/
+        graph-builders/
+        queries/
+      ui/
+        components/
+        screens/
+
+    audit/
+      domain/
+      application/
+      infrastructure/
+      ui/
+
+    evidence/
+      domain/
+      application/
+      infrastructure/
+      ui/
+
+    simulation/
+      domain/
+      application/
+      infrastructure/
+      ui/
+
+    shared/
+      domain/
+      application/
+      infrastructure/
+      ui/
+
+  components/
+    layout/
+      AppShell/
+        AppShell.tsx
+        AppShell.module.css
+      Sidebar/
+        Sidebar.tsx
+        Sidebar.module.css
+      Topbar/
+        Topbar.tsx
+        Topbar.module.css
+      WorkspaceHeader/
+        WorkspaceHeader.tsx
+        WorkspaceHeader.module.css
+
+    glass/
+      GlassPanel/
+        GlassPanel.tsx
+        GlassPanel.module.css
+      GlassCard/
+        GlassCard.tsx
+        GlassCard.module.css
+      GlassToolbar/
+        GlassToolbar.tsx
+        GlassToolbar.module.css
+      GlassModal/
+        GlassModal.tsx
+        GlassModal.module.css
+
+    data-display/
+      MetricCard/
+        MetricCard.tsx
+        MetricCard.module.css
+      ScoreBadge/
+        ScoreBadge.tsx
+        ScoreBadge.module.css
+      TrendIndicator/
+        TrendIndicator.tsx
+        TrendIndicator.module.css
+      EmptyState/
+        EmptyState.tsx
+        EmptyState.module.css
+
+    charts/
+      RiskHeatmap/
+        RiskHeatmap.tsx
+        RiskHeatmap.module.css
+      StructuralGraphView/
+        StructuralGraphView.tsx
+        StructuralGraphView.module.css
+      FragilityBarChart/
+        FragilityBarChart.tsx
+        FragilityBarChart.module.css
+
+    forms/
+      Field/
+        Field.tsx
+        Field.module.css
+      Select/
+        Select.tsx
+        Select.module.css
+      SearchInput/
+        SearchInput.tsx
+        SearchInput.module.css
+      FilterBar/
+        FilterBar.tsx
+        FilterBar.module.css
+
+  lib/
+    auth/
+    access/
+    navigation/
+    prisma/
+    telemetry/
+    validation/
+    math/
+    graph/
+
+  hooks/
+    useWorkspace.ts
+    usePermissions.ts
+    useFilters.ts
+    useGlassTheme.ts
+
+  providers/
+    AppProviders.tsx
+    ThemeProvider.tsx
+    SessionProvider.tsx
+    WorkspaceProvider.tsx
+
+  styles/
+    tokens.css
+    themes.css
+    glass.css
+    layout.css
+    utilities.css
+
+  types/
+    api.ts
+    graph.ts
+    risk.ts
+    audit.ts
+```
+
+Ahora, la lógica correcta detrás de esa estructura es esta.
+
+## 1. `app/` debe ser delgado
+
+`app/` no debe contener lógica de negocio real.
+Debe contener:
+
+* rutas,
+* layouts,
+* carga inicial,
+* composición de pantallas,
+* APIs HTTP.
+
+Es decir, `app/` enruta; `modules/` piensa.
+
+Ejemplo correcto:
+
+```tsx
+// src/app/(workspace)/structural-risk/page.tsx
+import { StructuralRiskScreen } from '@/modules/structural-risk/ui/screens/StructuralRiskScreen/StructuralRiskScreen';
+
+export default function Page() {
+  return <StructuralRiskScreen />;
+}
+```
+
+## 2. `modules/` es el corazón del sistema
+
+Kiriox no es una app visual. Es un sistema de riesgo, auditoría, simulación y evidencia.
+Por eso la estructura correcta es modular por capacidad de negocio:
+
+* `core`
+* `security`
+* `governance`
+* `linear-risk`
+* `structural-risk`
+* `audit`
+* `evidence`
+* `simulation`
+
+Cada módulo debe tener cuatro capas:
+
+```txt
+domain/
+application/
+infrastructure/
+ui/
+```
+
+### `domain/`
+
+Aquí vive la verdad conceptual:
+
+* entidades,
+* value objects,
+* reglas,
+* fórmulas,
+* invariantes,
+* semántica del sistema.
+
+Ejemplo en `structural-risk/domain/`:
+
+* `StructuralNode.ts`
+* `PropagationEdge.ts`
+* `FragilityScore.ts`
+* `HardGatePolicy.ts`
+* `CascadePolicy.ts`
+
+### `application/`
+
+Aquí vive la orquestación:
+
+* casos de uso,
+* DTOs,
+* transformaciones,
+* coordinación entre repositorios y dominio.
+
+Ejemplo:
+
+* `RunStructuralAssessment.ts`
+* `PrioritizeCriticalNodes.ts`
+* `SimulateCascadeFailure.ts`
+
+### `infrastructure/`
+
+Aquí vive el detalle técnico:
+
+* Prisma,
+* queries,
+* repositorios,
+* gateways,
+* adaptadores.
+
+### `ui/`
+
+Aquí vive la interfaz propia del módulo:
+
+* screens,
+* component composition,
+* view logic.
+
+## 3. Estructura correcta de cada pantalla
+
+Cada pantalla importante debe vivir en su propia carpeta:
+
+```txt
+src/modules/structural-risk/ui/screens/StructuralRiskScreen/
+  StructuralRiskScreen.tsx
+  StructuralRiskScreen.module.css
+  StructuralRiskScreen.types.ts
+```
+
+Y dentro de esa pantalla, debes descomponer por bloques funcionales:
+
+```txt
+src/modules/structural-risk/ui/components/
+  StructuralSummaryPanel/
+    StructuralSummaryPanel.tsx
+    StructuralSummaryPanel.module.css
+
+  CriticalNodesTable/
+    CriticalNodesTable.tsx
+    CriticalNodesTable.module.css
+
+  CascadePathsPanel/
+    CascadePathsPanel.tsx
+    CascadePathsPanel.module.css
+
+  HardGatesCoveragePanel/
+    HardGatesCoveragePanel.tsx
+    HardGatesCoveragePanel.module.css
+```
+
+La regla es simple:
+
+**una responsabilidad visual = una carpeta = un componente = un CSS module.**
+
+## 4. Estructura correcta de componentes
+
+Un componente serio de Kiriox debe tener esta forma:
+
+```txt
+MetricCard/
+  MetricCard.tsx
+  MetricCard.module.css
+  MetricCard.types.ts
+  MetricCard.utils.ts
+```
+
+No siempre necesitas los cuatro archivos, pero esa es la forma correcta de crecer sin desorden.
+
+Ejemplo:
+
+```tsx
+// MetricCard.tsx
+import styles from './MetricCard.module.css';
+
+type MetricCardProps = {
+  label: string;
+  value: string;
+  hint?: string;
+};
+
+export function MetricCard({ label, value, hint }: MetricCardProps) {
+  return (
+    <article className={styles.card}>
+      <span className={styles.label}>{label}</span>
+      <strong className={styles.value}>{value}</strong>
+      {hint ? <p className={styles.hint}>{hint}</p> : null}
+    </article>
+  );
+}
+```
+
+## 5. Glassmorphism: dónde debe vivir
+
+Glassmorphism no debe estar disperso arbitrariamente por todos los CSS.
+Debe existir como una **capa de diseño sistemática**.
+
+La arquitectura visual correcta es:
+
+### Capa global mínima
+
+En `styles/`:
+
+* `tokens.css`
+* `themes.css`
+* `glass.css`
+* `layout.css`
+* `utilities.css`
+
+### `tokens.css`
+
+Define variables fundacionales:
+
+```css
+:root {
+  --bg-primary: #07111f;
+  --bg-secondary: #0c1726;
+  --surface-glass: rgba(255, 255, 255, 0.08);
+  --surface-glass-strong: rgba(255, 255, 255, 0.14);
+  --border-glass: rgba(255, 255, 255, 0.16);
+  --text-primary: rgba(255, 255, 255, 0.96);
+  --text-secondary: rgba(255, 255, 255, 0.72);
+  --blur-md: 18px;
+  --blur-lg: 28px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --shadow-glass: 0 10px 30px rgba(0, 0, 0, 0.22);
+  --gradient-accent: linear-gradient(135deg, rgba(124, 92, 255, 0.35), rgba(38, 208, 206, 0.18));
+}
+```
+
+### `glass.css`
+
+Define patrones reutilizables:
+
+```css
+.glass-surface {
+  background: var(--surface-glass);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-surface-strong {
+  background: var(--surface-glass-strong);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  box-shadow: var(--shadow-glass);
+}
+```
+
+Pero los componentes no deben depender de clases globales arbitrarias.
+Deben **consumir tokens**, no copiar estilos.
+
+Ejemplo dentro de `GlassCard.module.css`:
+
+```css
+.card {
+  background: var(--surface-glass);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+}
+```
+
+Así logras dos cosas:
+
+* consistencia visual total,
+* aislamiento por componente.
+
+## 6. Regla de layout global
+
+Sí debe existir un layout global, pero con alcance limitado.
+
+Debe encargarse de:
+
+* fondos,
+* grid principal,
+* sidebar shell,
+* topbar shell,
+* spacing sistémico,
+* tema.
+
+No debe encargarse de estilos internos de pantallas ni de widgets del dominio.
+
+La división correcta es:
+
+### Global
+
+* `AppShell`
+* `Sidebar`
+* `Topbar`
+* `MainWorkspace`
+
+### Local por módulo
+
+* paneles,
+* tablas,
+* cards,
+* visualizaciones,
+* formularios,
+* insights.
+
+## 7. Cómo debe pensar el agente la organización de carpetas
+
+Tu agente debe seguir estas reglas duras:
+
+### Regla 1
+
+No crear componentes gigantes.
+
+Si un archivo supera la responsabilidad de una sola unidad visual o una sola intención de negocio, se divide.
+
+### Regla 2
+
+No mezclar lógica de dominio con JSX.
+
+Las fórmulas, transformación de datos y decisiones de negocio viven en:
+
+* `domain/`
+* `application/`
+* `lib/math/`
+* `lib/graph/`
+
+Nunca incrustadas desordenadamente dentro del componente.
+
+### Regla 3
+
+Cada componente visual tiene su propio CSS module.
+
+### Regla 4
+
+`globals.css` solo para:
+
+* reset,
+* body/html,
+* tipografía base,
+* scrollbars,
+* variables globales delegadas,
+* layout fundacional.
+
+### Regla 5
+
+Los componentes compartidos van en `src/components/`;
+los componentes específicos de módulo van en `src/modules/<modulo>/ui/components/`.
+
+### Regla 6
+
+Una pantalla compone componentes; no reimplementa bloques.
+
+### Regla 7
+
+La distinción Kiriox debe reflejarse en carpetas:
+
+* `linear-risk` separado de `structural-risk`.
+
+Nunca mezclar matriz impacto/probabilidad con lógica de grafo en el mismo módulo.
+
+## 8. Estructura ideal para Kiriox GRI
+
+Kiriox debe reflejar su ontología real.
+
+La cadena que debe atravesar el sistema es:
+
+**Reino → Elemento → Riesgo → Control → Prueba → Evidencia**
+
+Entonces la estructura de dominio debe permitir eso con claridad.
+
+Ejemplo:
+
+```txt
+src/modules/core/domain/entities/
+  Reino.ts
+  Elemento.ts
+  Riesgo.ts
+  Control.ts
+  Prueba.ts
+  Evidencia.ts
+```
+
+Y sus relaciones deben vivir en servicios o agregados del dominio, no en componentes de UI.
+
+## 9. Cómo debe verse un módulo maduro
+
+Ejemplo `structural-risk`:
+
+```txt
+src/modules/structural-risk/
+  domain/
+    entities/
+      StructuralNode.ts
+      StructuralEdge.ts
+      HardGate.ts
+    formulas/
+      fragility.ts
+      concentration.ts
+      propagation.ts
+      score.ts
+    services/
+      buildGraph.ts
+      detectCriticalNodes.ts
+      detectCascadePaths.ts
+    policies/
+      hardGatePolicy.ts
+      redundancyPolicy.ts
+
+  application/
+    use-cases/
+      RunStructuralModel.ts
+      GetCriticalNodes.ts
+      GetCascadeAnalysis.ts
+      PrioritizeInterventions.ts
+    dto/
+      StructuralRunDTO.ts
+      CriticalNodeDTO.ts
+
+  infrastructure/
+    repositories/
+      StructuralRiskRepository.ts
+    queries/
+      structural-risk.queries.ts
+
+  ui/
+    screens/
+      StructuralRiskScreen/
+        StructuralRiskScreen.tsx
+        StructuralRiskScreen.module.css
+
+    components/
+      StructuralSummaryPanel/
+        StructuralSummaryPanel.tsx
+        StructuralSummaryPanel.module.css
+      CriticalNodesTable/
+        CriticalNodesTable.tsx
+        CriticalNodesTable.module.css
+      CascadeFlowPanel/
+        CascadeFlowPanel.tsx
+        CascadeFlowPanel.module.css
+      HardGateAlertCard/
+        HardGateAlertCard.tsx
+        HardGateAlertCard.module.css
+```
+
+Eso sí es clase mundial.
+Porque:
+
+* separa semántica,
+* separa cálculo,
+* separa acceso a datos,
+* separa interfaz,
+* y sigue siendo auditable.
+
+## 10. Qué no debe hacer nunca el agente
+
+Nunca debe producir esto:
+
+```txt
+src/components/
+  Dashboard.tsx
+  Sidebar.tsx
+  Table.tsx
+  RiskPage.tsx
+  styles.css
+```
+
+Eso no es arquitectura. Eso es acumulación.
+
+Tampoco debe producir esto:
+
+```txt
+src/app/structural-risk/page.tsx
+```
+
+con 800 líneas de JSX, queries, fórmulas y handlers mezclados.
+
+Tampoco debe centralizar todos los estilos del sistema en un solo CSS.
+Eso destruye mantenibilidad, encapsulación y trazabilidad visual.
+
+## 11. La decisión final correcta
+
+La estructura que debe aprender tu agente para Kiriox GRI es esta:
+
+* **Next.js App Router como shell de rutas**
+* **`modules/` como corazón por capacidad**
+* **componentización estricta por responsabilidad**
+* **CSS Module por componente**
+* **capa global mínima para layout, tokens y Glassmorphism**
+* **distinción rígida entre motor lineal y motor estructural**
+* **dominio trazable según Reino → Elemento → Riesgo → Control → Prueba → Evidencia**
+
+Esa es la estructura correcta para un sistema serio, auditable, escalable y visualmente premium.
+
+Puedo convertir esto ahora en un archivo `ARCHITECTURE_FRONTEND_KIRIOX.md` listo para que lo use tu agente como guía maestra.

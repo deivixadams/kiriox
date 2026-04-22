@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { APP_SHORT_NAME } from "@/config/app";
 import {
   Activity,
   Archive,
@@ -279,24 +278,24 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 0.75rem", marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <div
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "var(--primary-glow)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Shield size={20} color="white" />
-          </div>
-          {!collapsed && (
-            <h1 className="gradient-text" style={{ fontSize: "1.25rem", fontWeight: "bold", letterSpacing: "0.1rem" }}>
-              {APP_SHORT_NAME}
-            </h1>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {collapsed ? (
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                background: "var(--primary-glow)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
+              <img src="/logo.svg" alt="Logo" style={{ width: "28px", height: "28px", objectFit: "contain" }} />
+            </div>
+          ) : (
+            <img src="/logo.svg" alt="Logo" style={{ height: "44px", maxWidth: "180px", objectFit: "contain" }} />
           )}
         </div>
       </div>

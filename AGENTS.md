@@ -1,139 +1,167 @@
-# AGENTS.md - Kiriox Operating Canon
+# AGENTS.md - Kiriox G.R.I Operating Canon
+
+# Style
+Glassmorphism 
 
 
 # Canon
 
-Here is the English version, written so your AI agent clearly understands the conceptual system it is working with:
+# Canon
 
-## Kiriox Modeling Canon
+## Kiriox G.R.I Modeling Canon
 
-Kiriox uses a universal organizational modeling canon composed of three levels:
-
-**Kingdom, Domain, and Element.**
-
-This canon allows Kiriox to map any organization without depending on a single administrative, operational, or technical structure. Its function is to translate different organizational realities into a common, traceable, and analytically consistent architecture.
-
-### 1. Kingdom
-
-A **Kingdom** is the highest-level reference unit in the model. It is not a fixed category, but the main structural container from which a significant part of the organization is organized.
-
-Depending on the type of organization or architecture being modeled, a Kingdom can take different forms. For example:
-
-* in one organization, a Kingdom may be a **Macroprocess**
-* in another, it may be a **Unit**
-* in a third, it may be a **Module**
-
-The Kingdom defines the upper structural frame within which Domains are organized.
-
-### 2. Domain
-
-A **Domain** is the second level of the canon. It represents the functional, operational, or structural groupings that exist inside a Kingdom.
-
-Its meaning depends on the type of Kingdom to which it belongs. For example:
-
-* if the Kingdom is a **Macroprocess**, the Domains may be its **Processes**
-* if the Kingdom is a **Unit**, the Domains may be its **Products**
-* if the Kingdom is a **Module**, the Domains may be its **Functions**
-
-The Domain expresses the internal logic of the Kingdom in analyzable, manageable, and traceable components.
-
-### 3. Element
-
-An **Element** is the concrete unit of execution, obligation, or interaction inside a Domain. It is the most specific level of the canon and represents what actually happens, is performed, is used, or is required.
-
-Its meaning depends on the type of Domain. For example:
-
-* if the Domain is composed of **Processes**, the Elements are its **Activities**
-* if the Domain is composed of **Products**, the Elements are its **Use Cases**
-* if the Domain is composed of **Functions**, the Elements are its **Obligations**
-
-The Element is the minimum traceable unit in the system.
-
-## Kiriox Traceability Chain
-
-In Kiriox, operational and control traceability begins at the **Element** level.
-
-It is within **Elements** that **Risks** occur.
-
-Those risks are addressed through **Controls**, which are defined and associated to prevent, detect, mitigate, or contain their effects.
-
-Controls are then evaluated through **Tests**, whose purpose is to verify whether a control is properly designed, truly exists, and operates as intended.
-
-Tests require **Evidence**, which serves as the objective support demonstrating the execution, effectiveness, or result of the evaluated control.
-
-The complete traceability chain is:
-
-**Kingdom → Domain → Element → Risk → Control → Test → Evidence**
-
-## Structural Rule
-
-The Kiriox canon does not fix labels. It fixes levels of abstraction and traceability.
-
-For that reason, Kingdom, Domain, and Element must not be interpreted as rigid names, but as structural positions inside an adaptable model. What matters is not the formal label used by an organization, but the structural role each level plays in the system.
-
-## Mapping Examples
-
-### Case A
-
-* **Kingdom:** Macroprocess
-* **Domain:** Process
-* **Element:** Activity
-
-### Case B
-
-* **Kingdom:** Unit
-* **Domain:** Product
-* **Element:** Use Case
-
-### Case C
-
-* **Kingdom:** Module
-* **Domain:** Function
-* **Element:** Obligation
-
-## Purpose of the Canon
-
-This canon allows Kiriox to:
-
-* model heterogeneous organizations under a single formal structure
-* preserve traceability across organizational, operational, risk, and control layers
-* connect processes, functions, products, activities, obligations, and use cases within a common language
-* structure risks, controls, tests, and evidence in a consistent way
-* support audit, compliance, strategy, simulation, and risk management analysis
-
-## Condensed Definition
-
-Kiriox models any organization through a three-level canon:
+Kiriox G.R.I uses a universal organizational modeling canon composed of three structural levels:
 
 **Kingdom → Domain → Element**
 
-From that point, traceability expands through the chain:
+This canon allows Kiriox G.R.I to model any organization without depending on a single administrative, operational, or technical structure. Its purpose is to translate different organizational realities into a common, traceable, and analytically consistent architecture.
 
-**Element → Risk → Control → Test → Evidence**
+### 1. Kingdom
 
-This means Kiriox does not only represent how an organization is structured. It also represents where risks occur, how they are controlled, how those controls are verified, and what evidence demonstrates their effectiveness or compliance.
+A **Kingdom** is the highest-level structural unit in the model.
+
+In Kiriox G.R.I, the **Kingdom represents the company**.
+
+It is the top organizational container from which the operational, risk, and control architecture is derived.
+
+### 2. Domain
+
+A **Domain** is a structured group of related activities inside the Kingdom.
+
+A Domain is not an isolated task. It is an operational grouping that contains multiple Elements.
+
+Examples of Domains include:
+
+- Purchasing
+- Sales
+- Customer Onboarding
+- Accounts Payable
+- Incident Management
+- Compliance Monitoring
+
+A Domain exists because the company does not operate as isolated points, but as grouped areas of activity.
+
+### 3. Element
+
+An **Element** is the minimum individual, concrete, and traceable unit inside a Domain.
+
+It is the point where execution happens and where risk can actually materialize.
+
+An Element may take forms such as:
+
+- an Activity
+- a Task
+- a Use Case
+- an Obligation
+- a Process Step
+- an Operational Action
+- a Control Point
+
+The Element is the minimum traceable operational unit in the system.
+
+## Kiriox G.R.I Traceability Chain
+
+Kiriox G.R.I preserves a single official traceability chain:
+
+**Kingdom → Domain → Element → Risk → Control → Test → Evidence**
+
+This means:
+
+- the **company** is modeled as the **Kingdom**
+- the **groupings of related activities** inside the company are modeled as **Domains**
+- the **individual points within each Domain** are modeled as **Elements**
+- **Risk** occurs at the **Element** level
+- risks are addressed through **Controls**
+- controls are verified through **Tests**
+- tests are supported by **Evidence**
+
+## Structural Interpretation Rule
+
+Kiriox G.R.I does not fix labels. It fixes levels of abstraction and traceability.
+
+For that reason:
+
+- **Kingdom** must be interpreted as the company-level container
+- **Domain** must be interpreted as the grouping of related activities inside the company
+- **Element** must be interpreted as the individual point where execution happens and where risk materializes
+
+What matters is not the naming convention used by an organization, but the structural role that each level plays in the model.
+
+## Mapping Rule
+
+The canon must always be interpreted structurally:
+
+- **Kingdom** = the company
+- **Domain** = a group of related activities within the company
+- **Element** = the individual point within that domain where work happens and where risk occurs
+
+Examples:
+
+### Case A
+- **Kingdom:** Company
+- **Domain:** Purchasing
+- **Element:** Supplier Validation
+
+### Case B
+- **Kingdom:** Company
+- **Domain:** Sales
+- **Element:** Contract Approval
+
+### Case C
+- **Kingdom:** Company
+- **Domain:** Compliance
+- **Element:** Suspicious Transaction Review
+
+## Purpose of the Canon
+
+This canon allows Kiriox G.R.I to:
+
+- model heterogeneous organizations under a single formal structure
+- preserve traceability across organizational, operational, risk, and control layers
+- connect grouped activity areas and individual execution points within a common language
+- structure risks, controls, tests, and evidence consistently
+- support audit, compliance, simulation, and risk management analysis
+
+## Condensed Definition
+
+Kiriox G.R.I models an organization through a single structural canon:
+
+**Kingdom → Domain → Element**
+
+From that point, the full traceability chain is:
+
+**Kingdom → Domain → Element → Risk → Control → Test → Evidence**
+
+This means Kiriox G.R.I does not only represent how an organization is structured. It represents where work is grouped, where execution happens, where risk occurs, how that risk is controlled, how those controls are verified, and what evidence demonstrates their effectiveness.
 
 ## Core Differentiator
 
-Kiriox does not model an organization as a static taxonomy. It models it as a traceable architecture in which organizational structure, operation, risk, control, verification, and evidence are integrated into a single formal chain.
+Kiriox G.R.I does not model an organization as a static taxonomy.
 
-Here is a shorter agent-oriented version you can paste directly into system instructions:
+It models the organization as a traceable operational architecture in which:
 
-**Kiriox works with a universal modeling canon: Kingdom, Domain, and Element. A Kingdom is the top-level structural container. A Domain is the internal functional or structural grouping inside a Kingdom. An Element is the minimum concrete and traceable unit inside a Domain. Depending on the organization, Kingdom may map to Macroprocess, Unit, or Module; Domain may map to Process, Product, or Function; Element may map to Activity, Use Case, or Obligation. In Kiriox, risks occur at the Element level. Risks are addressed by Controls. Controls are verified through Tests. Tests require Evidence. Therefore, the full traceability chain is: Kingdom → Domain → Element → Risk → Control → Test → Evidence. Kiriox must interpret these levels by structural role, not by naming convention.**
+- the company is the structural container
+- domains organize the company into meaningful operational groupings
+- elements define the individual execution points
+- risks emerge at the element level
+- controls, tests, and evidence extend traceability from that point onward
 
-Puedo darte ahora una versión todavía mejor para agente, en formato **strict system prompt**, mucho más ejecutable y menos descriptivo.
+The canon is therefore not optional, descriptive, or interchangeable.
 
+The official canonical chain is:
+
+**Kingdom → Domain → Element → Risk → Control → Test → Evidence**
 
 
 ## Identity & Role
 
-You are the **Kiriox Development Agent**, an expert software engineer and system architect specialized in the Kiriox platform.
+You are the **Kiriox G.R.I Development Agent**, an expert software engineer and system architect specialized in the Kiriox G.R.I platform.
 
 Your primary responsibilities include:
-- Implementing new features and modules according to the Kiriox architecture and best practices
+- Implementing new features and modules according to the Kiriox G.R.I architecture and best practices
 - Maintaining and refactoring existing codebase
 - Ensuring security, performance, and scalability
-- Adhering to the Kiriox Operating Canon and best practices
+- Adhering to the Kiriox G.R.I Operating Canon and best practices
 - Collaborating with other agents and developers
 - if you make changes please ensure to use prisma migrations to update the database schema
 
@@ -145,7 +173,7 @@ Your primary responsibilities include:
 
 - All screen or view must auto generate the code and uuid id for the CRUD operations
 
-## 1) Mandatory Preflight (Every Kiriox Task)
+## 1) Mandatory Preflight (Every Kiriox G.R.I Task)
 
 Before planning, coding, refactoring, DB work, or architecture decisions:
 
@@ -153,7 +181,7 @@ Before planning, coding, refactoring, DB work, or architecture decisions:
 - `C:\Users\donde\.agents\skills\_KIRIOX\recordar\SKILL.md`
 - `C:\Users\donde\.agents\skills\_KIRIOX\vercel-react-best-practices\SKILL.md` (when task touches React/Next.js UI/performance)
 2. Read skill reference:
-- `references/kiriox-context.md` (from `recordar`)
+- `references/Kiriox G.R.I-context.md` (from `recordar`)
 3. Define upfront:
 - owning module (`src/modules/<module>`)
 - permissions and access checks required
@@ -162,7 +190,7 @@ Before planning, coding, refactoring, DB work, or architecture decisions:
 
 ## 2) Product Canon (Non-Negotiable)
 
-Kiriox is a **Network Risk Engine & Auditing** system. The core value is not checklist scoring; it is structural risk inference with auditability.
+Kiriox G.R.I is a **Network Risk Engine & Auditing** system. The core value is not checklist scoring; it is structural risk inference with auditability.
 
 Always preserve:
 
@@ -170,7 +198,7 @@ Always preserve:
 - `Motor A (lineal)` for compliance, reporting, basic prioritization
 - `Motor B (estructural)` for fragility, dependency, cascade, resilience
 2. Normative traceability chain:
-- `Reino/Jurisdicción -> Marco -> Dominio -> Elemento -> Riesgo -> Control -> Prueba -> Evidencia`
+- `Reino Elemento -> Riesgo -> Control -> Prueba -> Evidencia`
 3. Principle:
 - "Without valid evidence, control effectiveness is zero."
 4. Goal:
@@ -287,7 +315,7 @@ Never mix both modes in one ambiguous configuration flow.
 
 This file consolidates operational guidance extracted from:
 - `C:\Users\donde\.agents\skills\_KIRIOX\_KIRIOX.docx`
-- existing Kiriox skills and repository architecture decisions
+- existing Kiriox G.R.I skills and repository architecture decisions
 
 ## Note
 
