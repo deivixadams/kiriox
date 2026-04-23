@@ -9,29 +9,39 @@ import {
   BarChart3,
   Bell,
   Binary,
-  Building2,
+  BookOpen,
   BriefcaseBusiness,
+  Building2,
+  CalendarRange,
   CalendarCheck2,
   CheckSquare,
   ChevronDown,
   ClipboardCheck,
   Clock3,
   Cpu,
+  FileText,
   FlaskConical,
   GitBranch,
   History,
+  Home,
+  Layers,
+  Map,
   LayoutDashboard,
   ListChecks,
   Network,
+  Radar,
   Scale,
+  Settings,
   Shield,
   ShieldAlert,
+  ShieldPlus,
   ShieldX,
   SlidersHorizontal,
   Target,
   Trophy,
   UserRoundCheck,
   Users,
+  Workflow,
 } from "lucide-react";
 import type { ResolvedNavigationItem } from "@/shared/navigation";
 
@@ -62,6 +72,16 @@ const ICON_MAP: Record<string, any> = {
   Binary,
   Building2,
   Target,
+  Settings,
+  Workflow,
+  CalendarRange,
+  ShieldPlus,
+  Home,
+  Radar,
+  Layers,
+  Map,
+  FileText,
+  BookOpen,
 };
 
 function resolveIcon(iconName?: string) {
@@ -115,6 +135,8 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
         const sectionExpanded = expandedSections[item.key] ?? true;
         const active = isActiveItem(item);
         const leftPadding = `${0.75 + depth * 0.4}rem`;
+        const iconColor = depth > 0 ? "#ffffff" : "var(--primary)";
+        const disabledIconColor = depth > 0 ? "rgba(255,255,255,0.45)" : "var(--muted)";
         const dividerStyle = depth === 0 && hasChildren
           ? { borderBottom: "1px solid rgba(220, 220, 220, 0.22)", paddingBottom: "0.35rem", marginBottom: "0.35rem" }
           : undefined;
@@ -139,7 +161,7 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
                     cursor: "not-allowed",
                   }}
                 >
-                  <Icon size={depth > 0 ? 16 : 18} color="var(--muted)" />
+                  <Icon size={depth > 0 ? 16 : 18} color={disabledIconColor} />
                   {!collapsed && (
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
                       {item.label}
@@ -182,7 +204,7 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
                   background: active ? "var(--primary-glow)" : "transparent",
                 }}
               >
-                <Icon size={depth > 0 ? 16 : 18} color="var(--primary)" />
+                <Icon size={depth > 0 ? 16 : 18} color={iconColor} />
                 {!collapsed && (
                   <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
                     {item.label}
@@ -227,7 +249,7 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
                 }}
               >
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.65rem", fontWeight: 600 }}>
-                  <Icon size={depth > 0 ? 15 : 16} color="var(--primary)" />
+                  <Icon size={depth > 0 ? 15 : 16} color={iconColor} />
                   {item.label}
                 </span>
                 <ChevronDown
@@ -240,7 +262,7 @@ export default function Sidebar({ items, loading = false }: SidebarProps) {
               </button>
             ) : (
               <div style={{ padding: `0.65rem 0.75rem 0.65rem ${leftPadding}`, opacity: 0.3 }}>
-                <Icon size={16} color="var(--primary)" />
+                <Icon size={16} color={iconColor} />
               </div>
             )}
 

@@ -77,82 +77,15 @@ model map_elements_risk {
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model map_risk_control {
-  control_id           String  @db.Uuid
-  risk_id              String  @db.Uuid
-  mitigation_strength  Int     @db.SmallInt
-  framework_version_id String  @db.Uuid
-  effect_type          String
-  rationale            String?
-  coverage_notes       String?
+  control_id          String  @db.Uuid
+  risk_id             String  @db.Uuid
+  mitigation_strength Int     @db.SmallInt
+  effect_type         String
+  rationale           Json?
+  coverage_notes      String?
 
   @@ignore
   @@schema("core")
-}
-
-model security_rbac {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code        String   @unique
-  name        String
-  description String?
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime @default(now()) @db.Timestamptz(6)
-
-  @@map("role")
-  @@schema("security")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model security_user_scope {
-  id                   String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id              String   @db.Uuid
-  jurisdiction_id      String?  @db.Uuid
-  framework_version_id String?  @db.Uuid
-  domain_id            String?  @db.Uuid
-  is_allowed           Boolean  @default(true)
-  created_at           DateTime @default(now()) @db.Timestamptz(6)
-  created_by           String?  @db.Uuid
-
-  @@ignore
-  @@schema("security")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model security_user_token {
-  id         String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String    @db.Uuid
-  token_hash String
-  token_type String
-  expires_at DateTime  @db.Timestamptz(6)
-  used_at    DateTime? @db.Timestamptz(6)
-  created_at DateTime  @default(now()) @db.Timestamptz(6)
-  created_by String?   @db.Uuid
-
-  @@ignore
-  @@schema("security")
-}
-
-model security_users {
-  id                          String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                       String                       @unique @db.VarChar(255)
-  password_hash               String
-  name                        String?                      @db.VarChar(255)
-  last_name                   String?
-  whatsapp                    String?
-  is_active                   Boolean?                     @default(true)
-  must_change_password        Boolean                      @default(true)
-  activation_status           String                       @default("pending")
-  role_id                     String?                      @db.Uuid
-  created_at                  DateTime?                    @default(now()) @db.Timestamp(6)
-  updated_at                  DateTime?                    @default(now()) @db.Timestamp(6)
-  last_login_at               DateTime?                    @db.Timestamptz(6)
-  password_updated_at         DateTime?                    @db.Timestamptz(6)
-  company_id                  String?                      @db.Uuid
-  risk_treatment_responsibles risk_treatment_responsible[]
-  map_users_x_roles           map_users_x_roles[]
-  company                     borrame_company?             @relation(fields: [company_id], references: [id], map: "fk_security_users_company_id")
-
-  @@schema("security")
 }
 
 model security_module {
@@ -178,68 +111,6 @@ model security_permission {
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("permission")
-  @@schema("security")
-}
-
-model security_role_permission {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role_id         String   @db.Uuid
-  permission_code String
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime @default(now()) @db.Timestamptz(6)
-
-  @@unique([role_id, permission_code])
-  @@map("role_permission")
-  @@schema("security")
-}
-
-model security_company_module {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id     String    @db.Uuid
-  module_code    String
-  is_enabled     Boolean   @default(true)
-  license_status String    @default("active")
-  starts_at      DateTime? @db.Timestamptz(6)
-  ends_at        DateTime? @db.Timestamptz(6)
-  metadata       Json      @default("{}")
-  created_at     DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
-
-  @@unique([company_id, module_code])
-  @@map("company_module")
-  @@schema("security")
-}
-
-model security_company_license {
-  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id        String          @db.Uuid
-  module_code       String
-  license_payload   Json
-  license_signature String
-  issued_at         DateTime        @default(now()) @db.Timestamptz(6)
-  expires_at        DateTime?       @db.Timestamptz(6)
-  status            String          @default("active")
-  created_at        DateTime        @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime        @default(now()) @db.Timestamptz(6)
-  company           borrame_company @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([company_id, module_code], map: "uq_company_license_company_module")
-  @@map("company_license")
-  @@schema("security")
-}
-
-model security_company_user_role {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String   @db.Uuid
-  user_id    String   @db.Uuid
-  role_id    String   @db.Uuid
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
-
-  @@unique([company_id, user_id, role_id])
-  @@map("company_user_role")
   @@schema("security")
 }
 
@@ -354,7 +225,7 @@ model risk_treatment {
   notes                  String?
   created_at             DateTime?                    @default(now()) @db.Timestamptz(6)
   updated_at             DateTime?                    @default(now()) @db.Timestamptz(6)
-  risk                   risks                        @relation(fields: [risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  risk                   borrame_risks                @relation(fields: [risk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   actions                risk_treatment_action[]
   evidences              risk_treatment_evidence[]
   responsibles           risk_treatment_responsible[]
@@ -393,7 +264,7 @@ model risk_treatment_responsible {
   created_at        DateTime?              @default(now()) @db.Timestamptz(6)
   updated_at        DateTime?              @default(now()) @db.Timestamptz(6)
   action            risk_treatment_action? @relation(fields: [action_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user              security_users         @relation(fields: [responsible_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user              users                  @relation(fields: [responsible_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   treatment         risk_treatment?        @relation(fields: [treatment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("core")
@@ -420,27 +291,22 @@ model risk_treatment_evidence {
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model controls {
-  id                 String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code               String
-  name               String
-  control_type_id    Int      @db.SmallInt
-  automation_id      Int      @db.SmallInt
-  frequency_id       Int      @db.SmallInt
-  description        String
-  owner_role         String?
-  evidence_required  Boolean  @default(true)
-  status             String   @default("active")
-  status_id          Int      @default(2) @db.SmallInt
-  created_at         DateTime @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime @default(now()) @db.Timestamptz(6)
-  control_objective  String?
-  control_scope      String?
-  is_hard_gate       Boolean  @default(false)
-  rationale          Json     @default("{}")
-  primary_cf_risk_id String?  @db.Uuid
-  required_test      Boolean  @default(true)
-  reino_id           String   @db.Uuid
-  codigo_reino       String?
+  id                String        @id(map: "pk_controls") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code              String
+  name              String
+  control_type_id   String        @db.Uuid
+  frequency_id      String        @db.Uuid
+  description       String
+  status_id         Int           @default(2) @db.SmallInt
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime      @default(now()) @db.Timestamptz(6)
+  control_objective String?
+  is_hard_gate      Boolean       @default(false)
+  rationale         Json          @default("{}")
+  is_active         Boolean       @default(true)
+  is_automation     Boolean       @default(false)
+  control_types     control_types @relation(fields: [control_type_id], references: [id], map: "fk_controls_control_type")
+  tests             tests[]
 
   @@map("_controls")
   @@ignore
@@ -450,62 +316,24 @@ model controls {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model controls_evaluation {
-  id                   String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  control_id           String    @db.Uuid
-  dimension_id         String    @db.Uuid
-  code                 String
-  title                String
-  evaluation_guidance  String
-  pass_criteria        String
-  fail_criteria        String
-  evaluator_steps      Json
-  evidence_required    String
-  evidence_min_spec    String?
-  sample_guidance      String?
-  notes                String?
-  status               String    @default("draft")
-  is_active            Boolean   @default(true)
-  framework_version_id String?   @db.Uuid
-  effective_from       DateTime  @default(now()) @db.Timestamptz(6)
-  effective_to         DateTime? @db.Timestamptz(6)
-  created_at           DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime  @default(now()) @db.Timestamptz(6)
-
-  @@map("_controls_evaluation")
-  @@ignore
-  @@schema("core")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model domains {
-  id                         String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  framework_version_id       String   @db.Uuid
-  code                       String
-  name                       String
-  description                String?
-  status                     String   @default("active")
-  created_at                 DateTime @default(now()) @db.Timestamptz(6)
-  updated_at                 DateTime @default(now()) @db.Timestamptz(6)
-  domain_type_id             String?  @db.Uuid
-  risk_scope_id              String?  @db.Uuid
-  supervisory_relevance_id   String?  @db.Uuid
-  weight_factor_id           String?  @db.Uuid
-  applicability_rule_id      String?  @db.Uuid
-  inherent_risk_relevance    Boolean?
-  risk_management_relevance  Boolean?
-  emerging_risk_flag         Boolean?
-  requires_specialist_review Boolean?
-  mtrix_status_id            String?  @db.Uuid
-  codigo_reino               String?
-  lider_id                   String?  @db.Uuid
-  process_id                 String?  @db.Uuid
-  domain_category            BigInt?
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kingdom_id     String       @db.Uuid
+  code           String
+  name           String
+  description    String?
+  status         Boolean      @default(true)
+  domain_type_id String       @db.Uuid
+  lider_id       String?      @db.Uuid
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime     @default(now()) @db.Timestamptz(6)
+  domain_types   domain_types @relation(fields: [domain_type_id], references: [id], map: "fk_domains_domain_type")
+  kingdom        kingdom      @relation(fields: [kingdom_id], references: [id], map: "fk_domains_kingdom")
+  users          users?       @relation(fields: [lider_id], references: [id], map: "fk_domains_lider")
+  elements       elements[]
 
-  @@index([lider_id], map: "idx_core_domain_lider_id")
-  @@index([process_id], map: "idx_core_domain_process_id")
+  @@unique([kingdom_id, code], map: "uq_domains_code_per_kingdom")
+  @@unique([kingdom_id, name], map: "uq_domains_name_per_kingdom")
   @@map("_domains")
   @@ignore
   @@schema("core")
@@ -513,81 +341,41 @@ model domains {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model elements {
-  id                           String   @id(map: "domain_elements_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  element_type                 String
-  code                         String
-  name                         String?
-  title                        String?
-  description                  String?
-  statement                    String?
-  rationale                    Json?
-  is_active                    Boolean  @default(true)
-  is_hard_gate                 Boolean?
-  criticality                  Int?     @db.SmallInt
-  evidence_strength            Int?     @db.SmallInt
-  criticality_id               Int?     @db.SmallInt
-  evidence_strength_id         Int?     @db.SmallInt
-  evaluation_focus             String?
-  expected_evidence            String?
-  risk_implication             String?
-  inherent_risk_impact         Boolean?
-  control_effectiveness_impact Boolean?
-  sequence_order               Int?
-  created_at                   DateTime @default(now()) @db.Timestamptz(6)
-  updated_at                   DateTime @default(now()) @db.Timestamptz(6)
-  source_table                 String?
-  source_pk                    String?  @db.Uuid
-  codigo_reino                 String?
-  id_lider                     String?  @db.Uuid
-  id_frequency                 String?  @db.Uuid
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kingdom_id      String        @db.Uuid
+  domain_id       String        @db.Uuid
+  code            String
+  name            String
+  description     String?
+  is_active       Boolean       @default(true)
+  leader_id       String?       @db.Uuid
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime      @default(now()) @db.Timestamptz(6)
+  element_type_id String        @db.Uuid
+  domains         domains       @relation(fields: [domain_id], references: [id], map: "fk_elements_domain")
+  element_types   element_types @relation(fields: [element_type_id], references: [id], map: "fk_elements_element_type")
+  kingdom         kingdom       @relation(fields: [kingdom_id], references: [id], map: "fk_elements_kingdom")
+  users           users?        @relation(fields: [leader_id], references: [id], map: "fk_elements_leader")
 
+  @@unique([domain_id, code], map: "uq_elements_code_per_domain")
+  @@index([element_type_id], map: "idx_elements_element_type_id")
   @@map("_elements")
   @@schema("core")
 }
 
 model kingdom {
-  id          String   @id(map: "_1kingdom_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code        String   @unique(map: "_1kingdom_code_key") @db.VarChar(50)
-  name        String   @db.VarChar(200)
-  legal_name  String?  @db.VarChar(250)
+  id          String     @id(map: "_1kingdom_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String     @unique(map: "_1kingdom_code_key") @db.VarChar(50)
+  name        String     @db.VarChar(200)
+  legal_name  String?    @db.VarChar(250)
   description String?
-  status      Boolean  @default(true)
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  status      Boolean    @default(true)
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime   @default(now()) @db.Timestamptz(6)
+  domains     domains[]
+  elements    elements[]
 
   @@map("_kingdom")
-  @@schema("core")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model risks {
-  id                                  String           @unique(map: "core_risk_id_unique") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code                                String
-  name                                String
-  risk_type                           String
-  description                         String?
-  created_at                          DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at                          DateTime         @default(now()) @db.Timestamptz(6)
-  risk_type_id                        Int?             @db.SmallInt
-  risk_layer_id                       Int              @default(2) @db.SmallInt
-  parent_risk_id                      String?          @db.Uuid
-  risk_origen                         String
-  codigo_reino                        String?
-  is_active                           Boolean          @default(true)
-  risk_emerging_source_id             BigInt?
-  risk_emerging_status_id             BigInt?
-  risk_factor_id                      BigInt?
-  operational_risk_loss_event_type_id BigInt?
-  catalog_impact_id                   BigInt?
-  catalog_probability_id              BigInt?
-  risk_treatments                     risk_treatment[]
-
-  @@index([is_active], map: "idx_core_risk_is_active")
-  @@index([operational_risk_loss_event_type_id], map: "idx_risk_operational_risk_loss_event_type_id")
-  @@index([risk_emerging_source_id], map: "idx_risk_risk_emerging_source_id")
-  @@index([risk_emerging_status_id], map: "idx_risk_risk_emerging_status_id")
-  @@index([risk_factor_id], map: "idx_risk_risk_factor_id")
-  @@map("_risks")
   @@schema("core")
 }
 
@@ -716,81 +504,6 @@ model main_question {
   @@index([category], map: "idx_main_question_category")
   @@index([code], map: "idx_main_question_code")
   @@index([source_kind], map: "idx_main_question_source_kind")
-  @@schema("core")
-}
-
-model map_company_x_reino {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String   @db.Uuid
-  reino_id   String   @db.Uuid
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
-
-  @@unique([company_id, reino_id], map: "uq_map_company_x_reino_company_reino_active", where: raw("(is_active = true)"))
-  @@index([company_id], map: "idx_map_company_x_reino_company")
-  @@index([is_active], map: "idx_map_company_x_reino_is_active")
-  @@index([reino_id], map: "idx_map_company_x_reino_reino")
-  @@schema("core")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model map_domain_element {
-  id         String   @db.Uuid
-  map_code   String
-  domain_id  String   @db.Uuid
-  element_id String   @db.Uuid
-  is_primary Boolean  @default(true)
-  rationale  Json?
-  created_at DateTime @default(now()) @db.Timestamp(6)
-  updated_at DateTime @default(now()) @db.Timestamp(6)
-
-  @@ignore
-  @@schema("core")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model map_framework_reino_jurisdiction {
-  map_id               String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  framework_version_id String   @db.Uuid
-  reino_id             String   @db.Uuid
-  jurisdiction_id      String   @db.Uuid
-  map_code             String?
-  is_primary           Boolean? @default(false)
-  rationale            Json?
-  created_at           DateTime @default(now()) @db.Timestamp(6)
-  updated_at           DateTime @default(now()) @db.Timestamp(6)
-  relation_type        String
-
-  @@ignore
-  @@schema("core")
-}
-
-model map_lineal_risk_risk_control {
-  map_lineal_risk_risk_control_id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  catalog_lineal_risk_id          String   @db.Uuid
-  catalog_lineal_control_id       String   @db.Uuid
-  is_active                       Boolean  @default(true)
-  created_at                      DateTime @default(now()) @db.Timestamptz(6)
-  updated_at                      DateTime @default(now()) @db.Timestamptz(6)
-
-  @@unique([catalog_lineal_risk_id, catalog_lineal_control_id], map: "uq_map_lineal_risk_risk_control")
-  @@schema("core")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model map_reino_domain {
-  id            String   @db.Uuid
-  map_code      String
-  reino_id      String   @db.Uuid
-  domain_id     String   @db.Uuid
-  link_strength Decimal? @db.Decimal(5, 4)
-  rationale     Json?
-  created_at    DateTime @default(now()) @db.Timestamp(6)
-  updated_at    DateTime @default(now()) @db.Timestamp(6)
-
-  @@ignore
   @@schema("core")
 }
 
@@ -1220,13 +933,13 @@ model risk_scale {
 }
 
 model map_users_x_roles {
-  id             String         @id(map: "map_users_x_roles_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id        String         @db.Uuid
-  role_id        String         @db.Uuid
-  is_active      Boolean        @default(true)
-  created_at     DateTime       @default(now()) @db.Timestamp(6)
-  updated_at     DateTime       @default(now()) @db.Timestamp(6)
-  security_users security_users @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_map_users_x_roles_user")
+  id             String   @id(map: "map_users_x_roles_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String   @db.Uuid
+  role_id        String   @db.Uuid
+  is_active      Boolean  @default(true)
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+  updated_at     DateTime @default(now()) @db.Timestamp(6)
+  security_users users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_map_users_x_roles_user")
 
   @@map("_map_users_x_roles")
   @@schema("security")
@@ -1846,17 +1559,16 @@ model borrame_catalog_group {
 }
 
 model borrame_company {
-  id               String                     @id(map: "company_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code             String                     @unique(map: "company_code_key")
-  name             String
-  is_active        Boolean                    @default(true)
-  created_at       DateTime                   @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime                   @default(now()) @db.Timestamptz(6)
-  legal_name       String?
-  jurisdiction_id  String?                    @db.Uuid
-  description      String?
-  company_licenses security_company_license[]
-  users            security_users[]
+  id              String   @id(map: "company_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String   @unique(map: "company_code_key")
+  name            String
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  legal_name      String?
+  jurisdiction_id String?  @db.Uuid
+  description     String?
+  users           users[]
 
   @@map("_borrame_company")
   @@schema("z_borrame")
@@ -2172,4 +1884,416 @@ model borrame_run_test_draft {
   @@map("_borrame_run_test_draft")
   @@ignore
   @@schema("z_borrame")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model borrame_controls_evaluation {
+  id                   String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  control_id           String    @db.Uuid
+  dimension_id         String    @db.Uuid
+  code                 String
+  title                String
+  evaluation_guidance  String
+  pass_criteria        String
+  fail_criteria        String
+  evaluator_steps      Json
+  evidence_required    String
+  evidence_min_spec    String?
+  sample_guidance      String?
+  notes                String?
+  status               String    @default("draft")
+  is_active            Boolean   @default(true)
+  framework_version_id String?   @db.Uuid
+  effective_from       DateTime  @default(now()) @db.Timestamptz(6)
+  effective_to         DateTime? @db.Timestamptz(6)
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("_borrame_controls_evaluation")
+  @@ignore
+  @@schema("core")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model borrame_domains {
+  id                         String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  framework_version_id       String   @db.Uuid
+  code                       String
+  name                       String
+  description                String?
+  status                     String   @default("active")
+  created_at                 DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime @default(now()) @db.Timestamptz(6)
+  domain_type_id             String?  @db.Uuid
+  risk_scope_id              String?  @db.Uuid
+  supervisory_relevance_id   String?  @db.Uuid
+  weight_factor_id           String?  @db.Uuid
+  applicability_rule_id      String?  @db.Uuid
+  inherent_risk_relevance    Boolean?
+  risk_management_relevance  Boolean?
+  emerging_risk_flag         Boolean?
+  requires_specialist_review Boolean?
+  mtrix_status_id            String?  @db.Uuid
+  codigo_reino               String?
+  lider_id                   String?  @db.Uuid
+  process_id                 String?  @db.Uuid
+  domain_category            BigInt?
+
+  @@index([lider_id], map: "idx_core_domain_lider_id")
+  @@index([process_id], map: "idx_core_domain_process_id")
+  @@map("_borrame_domains")
+  @@ignore
+  @@schema("core")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model borrame_elements {
+  id                           String   @id(map: "domain_elements_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  element_type                 String
+  code                         String
+  name                         String?
+  title                        String?
+  description                  String?
+  statement                    String?
+  rationale                    Json?
+  is_active                    Boolean  @default(true)
+  is_hard_gate                 Boolean?
+  criticality                  Int?     @db.SmallInt
+  evidence_strength            Int?     @db.SmallInt
+  criticality_id               Int?     @db.SmallInt
+  evidence_strength_id         Int?     @db.SmallInt
+  evaluation_focus             String?
+  expected_evidence            String?
+  risk_implication             String?
+  inherent_risk_impact         Boolean?
+  control_effectiveness_impact Boolean?
+  sequence_order               Int?
+  created_at                   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime @default(now()) @db.Timestamptz(6)
+  source_table                 String?
+  source_pk                    String?  @db.Uuid
+  codigo_reino                 String?
+  id_lider                     String?  @db.Uuid
+  id_frequency                 String?  @db.Uuid
+
+  @@map("_borrame_elements")
+  @@schema("core")
+}
+
+model borrame_map_company_x_reino {
+  id         String   @id(map: "map_company_x_reino_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String   @db.Uuid
+  reino_id   String   @db.Uuid
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([company_id, reino_id], map: "uq_map_company_x_reino_company_reino_active", where: raw("(is_active = true)"))
+  @@index([company_id], map: "idx_map_company_x_reino_company")
+  @@index([is_active], map: "idx_map_company_x_reino_is_active")
+  @@index([reino_id], map: "idx_map_company_x_reino_reino")
+  @@map("_borrame_map_company_x_reino")
+  @@schema("core")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model borrame_map_domain_element {
+  id         String   @db.Uuid
+  map_code   String
+  domain_id  String   @db.Uuid
+  element_id String   @db.Uuid
+  is_primary Boolean  @default(true)
+  rationale  Json?
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@map("_borrame_map_domain_element")
+  @@ignore
+  @@schema("core")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model borrame_map_framework_reino_jurisdiction {
+  map_id               String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  framework_version_id String   @db.Uuid
+  reino_id             String   @db.Uuid
+  jurisdiction_id      String   @db.Uuid
+  map_code             String?
+  is_primary           Boolean? @default(false)
+  rationale            Json?
+  created_at           DateTime @default(now()) @db.Timestamp(6)
+  updated_at           DateTime @default(now()) @db.Timestamp(6)
+  relation_type        String
+
+  @@map("_borrame_map_framework_reino_jurisdiction")
+  @@ignore
+  @@schema("core")
+}
+
+model borrame_map_lineal_risk_risk_control {
+  map_lineal_risk_risk_control_id String   @id(map: "map_lineal_risk_risk_control_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  catalog_lineal_risk_id          String   @db.Uuid
+  catalog_lineal_control_id       String   @db.Uuid
+  is_active                       Boolean  @default(true)
+  created_at                      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([catalog_lineal_risk_id, catalog_lineal_control_id], map: "uq_map_lineal_risk_risk_control")
+  @@map("_borrame_map_lineal_risk_risk_control")
+  @@schema("core")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model borrame_map_reino_domain {
+  id            String   @db.Uuid
+  map_code      String
+  reino_id      String   @db.Uuid
+  domain_id     String   @db.Uuid
+  link_strength Decimal? @db.Decimal(5, 4)
+  rationale     Json?
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  updated_at    DateTime @default(now()) @db.Timestamp(6)
+
+  @@map("_borrame_map_reino_domain")
+  @@ignore
+  @@schema("core")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model borrame_risks {
+  id                                  String           @unique(map: "core_risk_id_unique") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                                String
+  name                                String
+  risk_type                           String
+  description                         String?
+  created_at                          DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at                          DateTime         @default(now()) @db.Timestamptz(6)
+  risk_type_id                        Int?             @db.SmallInt
+  risk_layer_id                       Int              @default(2) @db.SmallInt
+  parent_risk_id                      String?          @db.Uuid
+  risk_origen                         String
+  codigo_reino                        String?
+  is_active                           Boolean          @default(true)
+  risk_emerging_source_id             BigInt?
+  risk_emerging_status_id             BigInt?
+  risk_factor_id                      BigInt?
+  operational_risk_loss_event_type_id BigInt?
+  catalog_impact_id                   BigInt?
+  catalog_probability_id              BigInt?
+  risk_treatments                     risk_treatment[]
+
+  @@index([is_active], map: "idx_core_risk_is_active")
+  @@index([operational_risk_loss_event_type_id], map: "idx_risk_operational_risk_loss_event_type_id")
+  @@index([risk_emerging_source_id], map: "idx_risk_risk_emerging_source_id")
+  @@index([risk_emerging_status_id], map: "idx_risk_risk_emerging_status_id")
+  @@index([risk_factor_id], map: "idx_risk_risk_factor_id")
+  @@map("_borrame_risks")
+  @@schema("core")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model domain_types {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String    @unique(map: "uq_domain_types_code")
+  name        String    @unique(map: "uq_domain_types_name")
+  description String?
+  status      Boolean   @default(true)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+  domains     domains[]
+
+  @@index([status], map: "idx_domain_types_status")
+  @@map("_domain_types")
+  @@schema("core")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model element_types {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String     @unique(map: "uq_element_types_code")
+  name        String     @unique(map: "uq_element_types_name")
+  description String?
+  status      Boolean    @default(true)
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime   @default(now()) @db.Timestamptz(6)
+  elements    elements[]
+
+  @@map("_element_types")
+  @@schema("core")
+}
+
+model risk {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String    @unique(map: "uq_core_risk_code")
+  name         String    @unique(map: "uq_core_risk_name")
+  description  String?
+  risk_type_id String    @db.Uuid
+  is_active    Boolean   @default(true)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @default(now()) @db.Timestamptz(6)
+  risk_type    risk_type @relation(fields: [risk_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_core_risk_risk_type")
+
+  @@index([risk_type_id], map: "idx_core_risk_risk_type_id")
+  @@map("_risk")
+  @@schema("core")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tests {
+  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                 String              @unique
+  control_id           String              @db.Uuid
+  name                 String
+  test_type            String
+  objective            String
+  test_method          String
+  expected_result      String?
+  frequency_id         String?             @db.Uuid
+  sample_rule          String?
+  evidence_requirement String?
+  severity_if_fail     String?
+  owner_role           String?
+  is_key_test          Boolean             @default(false)
+  status_id            Int                 @db.SmallInt
+  assertion            String?
+  pass_criteria        String?
+  fail_criteria        String?
+  remediation_guidance String?
+  created_at           DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime            @default(now()) @db.Timestamptz(6)
+  controls             controls            @relation(fields: [control_id], references: [id], map: "fk_tests_control")
+  controls_frequency   controls_frequency? @relation(fields: [frequency_id], references: [id], onDelete: Restrict, map: "fk_tests_frequency")
+
+  @@map("_tests")
+  @@schema("core")
+}
+
+model control_types {
+  id                    String     @id @db.Uuid
+  code                  String     @unique
+  name                  String
+  description           String
+  control_nature        String
+  mitigates_probability Boolean    @default(false)
+  mitigates_impact      Boolean    @default(false)
+  detects_event         Boolean    @default(false)
+  enables_response      Boolean    @default(false)
+  is_hard_gate          Boolean    @default(false)
+  status_id             Int
+  created_at            DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime   @default(now()) @db.Timestamptz(6)
+  controls              controls[]
+
+  @@schema("core")
+}
+
+model controls_frequency {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  name        String
+  description String
+  sort_order  Int
+  status_id   Int
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  tests       tests[]
+
+  @@schema("core")
+}
+
+model risk_category {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String      @unique(map: "uq_risk_category_code")
+  name        String      @unique(map: "uq_risk_category_name")
+  description String?
+  status      Boolean     @default(true)
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime    @default(now()) @db.Timestamptz(6)
+  risk_type   risk_type[]
+
+  @@index([name], map: "idx_risk_category_name")
+  @@index([status], map: "idx_risk_category_status")
+  @@schema("core")
+}
+
+model risk_subtype {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  risk_type_id String    @db.Uuid
+  code         String    @unique(map: "uq_risk_subtype_code")
+  name         String
+  description  String?
+  status       Boolean   @default(true)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @default(now()) @db.Timestamptz(6)
+  risk_type    risk_type @relation(fields: [risk_type_id], references: [id], map: "fk_risk_subtype_risk_type")
+
+  @@unique([risk_type_id, name], map: "uq_risk_subtype_risk_type_name")
+  @@index([name], map: "idx_risk_subtype_name")
+  @@index([risk_type_id], map: "idx_risk_subtype_risk_type")
+  @@index([status], map: "idx_risk_subtype_status")
+  @@schema("core")
+}
+
+model risk_type {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  risk_category_id String         @db.Uuid
+  code             String         @unique(map: "uq_risk_type_code")
+  name             String
+  description      String?
+  status           Boolean        @default(true)
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime       @default(now()) @db.Timestamptz(6)
+  risk             risk[]
+  risk_subtype     risk_subtype[]
+  risk_category    risk_category  @relation(fields: [risk_category_id], references: [id], map: "fk_risk_type_risk_category")
+
+  @@unique([risk_category_id, name], map: "uq_risk_type_risk_category_name")
+  @@index([name], map: "idx_risk_type_name")
+  @@index([risk_category_id], map: "idx_risk_type_risk_category")
+  @@index([status], map: "idx_risk_type_status")
+  @@schema("core")
+}
+
+model users {
+  id                          String                       @id(map: "security_users_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                       String                       @unique(map: "security_users_email_key") @db.VarChar(255)
+  password_hash               String
+  name                        String?                      @db.VarChar(255)
+  last_name                   String?
+  whatsapp                    String?
+  is_active                   Boolean?                     @default(true)
+  must_change_password        Boolean                      @default(true)
+  activation_status           String                       @default("pending")
+  role_id                     String?                      @db.Uuid
+  created_at                  DateTime?                    @default(now()) @db.Timestamp(6)
+  updated_at                  DateTime?                    @default(now()) @db.Timestamp(6)
+  last_login_at               DateTime?                    @db.Timestamptz(6)
+  password_updated_at         DateTime?                    @db.Timestamptz(6)
+  company_id                  String?                      @db.Uuid
+  domains                     domains[]
+  elements                    elements[]
+  risk_treatment_responsibles risk_treatment_responsible[]
+  map_users_x_roles           map_users_x_roles[]
+  borrame_company             borrame_company?             @relation(fields: [company_id], references: [id], map: "fk_security_users_company_id")
+
+  @@map("_users")
+  @@schema("security")
+}
+
+model roles {
+  id          String   @id(map: "role_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique(map: "role_code_key")
+  name        String
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@schema("security")
 }
