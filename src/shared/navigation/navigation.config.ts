@@ -79,8 +79,8 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
       },
       {
         key: 'risk-identify',
-        label: 'Identificar riesgos',
-        href: '/gestion/identificar',
+        label: 'Evaluación de riesgo',
+        href: '/gestion/evaluacion_riesgo',
         icon: 'ClipboardCheck',
         module: 'core',
         order: 22,
@@ -110,6 +110,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
         permission: 'risk.linear.read',
         order: 211,
       },
+
       {
         key: 'risk-tracking',
         label: 'Seguimiento',
@@ -150,7 +151,7 @@ export const NAVIGATION_CONFIG: NavigationItem[] = [
   },
   {
     key: 'structural-risk',
-    label: 'Riesgo estructural',
+    label: 'Riesgo estructura',
     icon: 'Network',
     module: 'structural-risk',
     order: 25,
